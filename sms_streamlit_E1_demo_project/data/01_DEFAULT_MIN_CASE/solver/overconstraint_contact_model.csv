@@ -1,0 +1,2 @@
+﻿overconstraint_model_id,sample_id,stage_id,extended_domain_id,q_ext_vector_id,W_ext_matrix_id,unilateral_indices,bilateral_indices_optional,lambda_ext_unknown_definition,gap_sign_convention,solver_config_id,regularization_config_id_optional,fallback_policy,validity_region,metadata
+OCM_DEFAULT,SAMPLE_001,S_LOCATE_01,ECD_DEFAULT,Q_EXT_DEFAULT,W_EXT_DEFAULT,[0],[],generalized_extended_contact_force,g_ext>0 separation,SOLVER_CFG_DEFAULT,REG_DEFAULT,WARN_AND_SKIP,ALL,"{""note"":""默认占位值；请替换为真实工程数据。"",""schema_version"":""V2.5""}"

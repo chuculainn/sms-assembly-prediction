@@ -1,0 +1,5 @@
+﻿check_name,metric_name,metric_value,unit_optional,threshold_rule,result,action_required_optional
+CHECK_TOPOLOGY,serial_parallel_paths,1,boolean,==1,PASS,
+CHECK_COUPLING,nonzero_cross_interface_blocks,6,block_pairs,==6,PASS,
+CHECK_LCP,max_complementarity_residual,0.000e+00,N*mm,<=1e-8,PASS,
+CHECK_AUTHENTICITY,engineering_claim_allowed,0,boolean,==0 for synthetic fixture,PASS,replace with real FE/measurement data before engineering use

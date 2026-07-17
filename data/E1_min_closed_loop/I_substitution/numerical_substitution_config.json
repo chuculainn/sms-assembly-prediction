@@ -1,0 +1,11 @@
+{
+  "description": "数值替代模块配置：将局部FE/样件/解析近似得到的分区柔度、薄层柔度、粗糙接触、局部压陷、夹持/定位/连接等效柔度与释放回弹写入快速模型。",
+  "default_mode": "base_only",
+  "available_modes": [
+    "base_only",
+    "replace",
+    "add"
+  ],
+  "unit": "mm/N for compliance, mm for release rebound, MPa=N/mm^2 for pressure",
+  "schema_version": "v4_numeric_substitution"
+}

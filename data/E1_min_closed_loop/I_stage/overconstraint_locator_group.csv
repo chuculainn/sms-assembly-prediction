@@ -1,0 +1,4 @@
+﻿group_id,stage_id,locator_type,element_ids,activation_rule,reference_state_id
+OC_LOCATOR_GROUP_01,S_LOCATE_01,locator,LOC_LEFT|LOC_RIGHT,active from LOCATE to RELEASE,REF_LOCATE
+OC_CLAMP_GROUP_01,S_CLAMP_02,clamp,CMP_CENTER,"active CLAMP and JOIN, removed in RELEASE",REF_CLAMP
+OC_JOINT_GROUP_01,S_JOIN_03,joint,JNT_CENTER,active JOIN and RELEASE,REF_JOIN

@@ -1,0 +1,2 @@
+﻿kcm_id,kcm_name,feature_type,target_object_type,target_object_id,stage_id_optional,nominal_location,evaluation_direction,extraction_or_measurement_matrix_id,nominal_value,expected_unit,measurement_method,required_uncertainty,update_target,metadata
+KCM_DEFAULT,DEFAULT_KCM,point_deviation,Part,P_PART_A,FREE,"[0,0,0]","[0,0,1]",H_M_DEFAULT,0.0,mm,DEFAULT,0.01,SMS,"{""note"":""默认占位值；请替换为真实工程数据。"",""schema_version"":""V2.5""}"

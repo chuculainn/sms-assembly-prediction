@@ -1,0 +1,2 @@
+﻿double_count_check_id,contribution_ledger_id,duplicate_source_ids,reference_state_conflicts,absolute_increment_conflicts,included_excluded_overlap,check_rules_version,pass_warn_fail,required_action,metadata
+DCC_DEFAULT,LEDGER_DEFAULT,,,,,V2.5_TEMPLATE,WARN,REVIEW_PLACEHOLDERS,"{""note"":""默认占位值；请替换为真实工程数据。"",""schema_version"":""V2.5""}"

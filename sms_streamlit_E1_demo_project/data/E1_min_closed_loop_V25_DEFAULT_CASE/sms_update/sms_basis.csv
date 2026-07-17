@@ -1,0 +1,2 @@
+﻿basis_id,part_id,basis_type,N_matrix_id,mode_names,mode_units,orthogonality_info,training_sample_ids,retained_energy_ratio_optional,boundary_constraints,observable_kcm_ids,metadata
+SMS_BASIS_E1,P_PANEL_L_001;P_RIB03_FLANGE_001,legacy_gap_component,,legacy_sms_component,mm,not_applicable,SAMPLE_E1_SYNTH_001,,,,"{""note"": ""SMS already mapped into gap_field"", ""source"": ""E1_TO_V25_CONVERTER"", ""schema_version"": ""V2.5"", ""generated_at"": ""2026-07-09T13:09:38""}"

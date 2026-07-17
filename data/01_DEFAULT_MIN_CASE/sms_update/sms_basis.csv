@@ -1,0 +1,2 @@
+﻿basis_id,part_id,basis_type,N_matrix_id,mode_names,mode_units,orthogonality_info,training_sample_ids,retained_energy_ratio_optional,boundary_constraints,observable_kcm_ids,metadata
+SMS_BASIS_DEFAULT,P_PART_A;P_PART_B,zero_mode_template,SMS_BASIS_MATRIX_DEFAULT,MODE_0,mm,UNKNOWN,,,,KCM_DEFAULT,"{""note"":""默认占位值；请替换为真实工程数据。"",""schema_version"":""V2.5""}"

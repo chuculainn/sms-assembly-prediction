@@ -1,0 +1,5 @@
+﻿interface_id,interface_name,part_i,part_j,side_i_region_id,side_j_region_id,material_pair,nominal_gap,contact_candidate_flag,key_contact_flag,coordinate_system_id,metadata
+G_PANEL_RIB,PANEL_A_TO_RIB_B,P_PANEL_A,P_RIB_B,REG_PANEL_AB,REG_RIB_AB,CFRP-CFRP,0.06,TRUE,TRUE,CS_ASSEMBLY,"{""connection_pattern"":""SERIAL_SEED_AND_DIRECT_PARALLEL_PATH"",""data_nature"":""SYNTHETIC""}"
+G_RIB_SPAR,RIB_B_TO_SPAR_C,P_RIB_B,P_SPAR_C,REG_RIB_BC,REG_SPAR_BC,CFRP-Metal,0.04,TRUE,TRUE,CS_ASSEMBLY,"{""connection_pattern"":""SERIAL"",""data_nature"":""SYNTHETIC""}"
+G_PANEL_BRACKET,PANEL_A_TO_BRACKET_D,P_PANEL_A,P_BRACKET_D,REG_PANEL_AD,REG_BRACKET_AD,CFRP-Metal,0.09,TRUE,TRUE,CS_ASSEMBLY,"{""connection_pattern"":""PARALLEL_BRANCH_1"",""data_nature"":""SYNTHETIC""}"
+G_RIB_BRACKET,RIB_B_TO_BRACKET_D,P_RIB_B,P_BRACKET_D,REG_RIB_BD,REG_BRACKET_BD,CFRP-Metal,0.08,TRUE,TRUE,CS_ASSEMBLY,"{""connection_pattern"":""PARALLEL_BRANCH_2_CLOSURE"",""data_nature"":""SYNTHETIC""}"

@@ -1,0 +1,6 @@
+kcp_id,extract_rule,source_stage,source_field,candidate_id,unit
+KCP_GAP_CENTER_RELEASE,gap_at_center_candidate,S_RELEASE_04,gap_g,C013,mm
+KCP_MAX_PRESSURE_JOIN,max_pressure,S_JOIN_03,pressure_p_n,*,MPa
+KCP_ACTIVE_RATIO_RELEASE,active_count_div_total,S_RELEASE_04,active_set,*,1
+KCP_SPRINGBACK_CENTER,gap_release_minus_gap_join_at_center,S_RELEASE_04,gap_g,C013,mm
+KCP_EDGE_STEP_RELEASE,mean_gap_top_edge_minus_bottom_edge,S_RELEASE_04,gap_g,edge_y_plus_minus,mm

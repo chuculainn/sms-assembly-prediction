@@ -1,0 +1,2 @@
+﻿model_version,released_at,released_by,valid_domain,frozen_object_ids,training_identification_data_summary,calibration_data_summary,validation_result_ids,known_limitations,required_revalidation_conditions,metadata
+MODEL_V2_5_TEMPLATE,,template_generator,template_only,[],none,none,VAL_DEFAULT,No real engineering data.,Any real use requires data replacement and validation.,"{""note"":""默认占位值；请替换为真实工程数据。"",""schema_version"":""V2.5""}"

@@ -1,0 +1,2 @@
+﻿quality_gate_id,gate_name,target_object_type,target_object_ids,check_items,thresholds,pass_fail,warn_items,fail_items,reviewer_optional,timestamp,metadata
+QG_MULTIPART,Multi-part serial-parallel fixture gate,Package,01_DEFAULT_MIN_CASE,CHECK_TOPOLOGY;CHECK_COUPLING;CHECK_LCP;CHECK_AUTHENTICITY,see check_item.csv,PASS,synthetic_data_not_engineering_evidence,,AUTO,2026-07-14T00:00:00+09:00,"{""data_nature"":""SYNTHETIC_NUMERICAL_CONSISTENCY_CASE"",""engineering_claim_allowed"":false,""schema_version"":""V2.5"",""schema_revision"":""MULTI_PART_SERIAL_PARALLEL_2026-07""}"

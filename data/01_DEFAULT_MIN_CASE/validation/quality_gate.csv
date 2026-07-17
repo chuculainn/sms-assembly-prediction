@@ -1,0 +1,2 @@
+﻿quality_gate_id,gate_name,target_object_type,target_object_ids,check_items,thresholds,pass_fail,warn_items,fail_items,reviewer_optional,timestamp,metadata
+QG_DEFAULT,Template completeness check,Package,PACKAGE_DEFAULT,CHECK_TEMPLATE_DEFAULT,{},WARN,placeholders_present,,,,"{""note"":""默认占位值；请替换为真实工程数据。"",""schema_version"":""V2.5""}"

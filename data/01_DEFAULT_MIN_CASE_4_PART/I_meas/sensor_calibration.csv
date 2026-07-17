@@ -1,0 +1,2 @@
+﻿sensor_calibration_id,sensor_id,sensor_type,calibration_method,bias,scale_factor,uncertainty,validity_domain_id,quality_flag,metadata
+SENCAL_SYNTH,SENSOR_SYNTH,DISPLACEMENT,SYNTHETIC_EXACT,0.0,1.0,COV_SENSOR_SYNTH,VD_MULTIPART,PASS,"{""data_nature"":""SYNTHETIC_NUMERICAL_CONSISTENCY_CASE"",""engineering_claim_allowed"":false,""schema_version"":""V2.5"",""schema_revision"":""MULTI_PART_SERIAL_PARALLEL_2026-07""}"

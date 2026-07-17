@@ -1,0 +1,125 @@
+[
+  {
+    "trace_id": "TRACE_MANUAL_S_LOCATE_01",
+    "sample_id": "SAMPLE_E1_MANUAL_9PT_001",
+    "stage_id": "S_LOCATE_01",
+    "contact_domain_id": "CD_G_RIB03_PANEL_L_MANUAL",
+    "gap_field_id": "GAP_INITIAL_MANUAL_9PT",
+    "q_vector_minmax": [
+      -0.011999999999999997,
+      0.026000000000000002
+    ],
+    "W_total_shape": [
+      9,
+      9
+    ],
+    "lambda_sum_N": 19.624942265126624,
+    "active_set": [
+      4
+    ],
+    "residuals": {
+      "gap_violation": 1.9624942296236902e-11,
+      "force_violation": 0.0,
+      "complementarity_residual": 3.851383595200907e-10,
+      "equilibrium_residual": 0.0
+    },
+    "quality_flag": "PASS"
+  },
+  {
+    "trace_id": "TRACE_MANUAL_S_CLAMP_02",
+    "sample_id": "SAMPLE_E1_MANUAL_9PT_001",
+    "stage_id": "S_CLAMP_02",
+    "contact_domain_id": "CD_G_RIB03_PANEL_L_MANUAL",
+    "gap_field_id": "GAP_INITIAL_MANUAL_9PT",
+    "q_vector_minmax": [
+      -0.065,
+      -0.008
+    ],
+    "W_total_shape": [
+      9,
+      9
+    ],
+    "lambda_sum_N": 380.72308202115426,
+    "active_set": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8
+    ],
+    "residuals": {
+      "gap_violation": 1.0790929261261795e-10,
+      "force_violation": 0.0,
+      "complementarity_residual": 1.164441635258339e-08,
+      "equilibrium_residual": 0.0
+    },
+    "quality_flag": "PASS"
+  },
+  {
+    "trace_id": "TRACE_MANUAL_S_JOIN_03",
+    "sample_id": "SAMPLE_E1_MANUAL_9PT_001",
+    "stage_id": "S_JOIN_03",
+    "contact_domain_id": "CD_G_RIB03_PANEL_L_MANUAL",
+    "gap_field_id": "GAP_INITIAL_MANUAL_9PT",
+    "q_vector_minmax": [
+      -0.08199999999999999,
+      -0.018000000000000002
+    ],
+    "W_total_shape": [
+      9,
+      9
+    ],
+    "lambda_sum_N": 573.7357997000735,
+    "active_set": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8
+    ],
+    "residuals": {
+      "gap_violation": 1.3980253066314674e-10,
+      "force_violation": 0.0,
+      "complementarity_residual": 1.954474689376796e-08,
+      "equilibrium_residual": 0.0
+    },
+    "quality_flag": "PASS"
+  },
+  {
+    "trace_id": "TRACE_MANUAL_S_RELEASE_04",
+    "sample_id": "SAMPLE_E1_MANUAL_9PT_001",
+    "stage_id": "S_RELEASE_04",
+    "contact_domain_id": "CD_G_RIB03_PANEL_L_MANUAL",
+    "gap_field_id": "GAP_INITIAL_MANUAL_9PT",
+    "q_vector_minmax": [
+      -0.038,
+      0.010000000000000002
+    ],
+    "W_total_shape": [
+      9,
+      9
+    ],
+    "lambda_sum_N": 120.96644774173916,
+    "active_set": [
+      3,
+      4,
+      5,
+      7
+    ],
+    "residuals": {
+      "gap_violation": 6.231969107428625e-11,
+      "force_violation": 0.0,
+      "complementarity_residual": 3.883743510386546e-09,
+      "equilibrium_residual": 0.0
+    },
+    "quality_flag": "PASS"
+  }
+]

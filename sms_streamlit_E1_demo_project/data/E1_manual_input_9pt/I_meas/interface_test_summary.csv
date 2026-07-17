@@ -1,0 +1,2 @@
+specimen_id,material_pair,surface_state,load_path,force_N,displacement_mm,pressure_MPa,compression_mm,unload_rebound_mm,data_role
+SPEC_MANUAL_CFRP_CFRP,CFRP/CFRP,demo_smooth,normal_compression,100,0.016,0.1111111111111111,0.016,0.004,IDENTIFY

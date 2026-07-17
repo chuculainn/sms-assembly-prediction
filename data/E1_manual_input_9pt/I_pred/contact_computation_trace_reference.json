@@ -1,0 +1,5 @@
+{
+  "trace_id": "TRACE_MANUAL_TEMPLATE",
+  "required_chain": "g0 -> q -> W_total -> lambda -> gap -> KCP",
+  "status": "template_only"
+}

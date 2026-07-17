@@ -1,0 +1,24 @@
+{
+  "sms_scale": {
+    "distribution_type": "normal",
+    "mean": 1.0,
+    "std": 0.08
+  },
+  "clamp_closure_scale": {
+    "distribution_type": "normal",
+    "mean": 1.0,
+    "std": 0.05
+  },
+  "Cn_scale": {
+    "distribution_type": "normal",
+    "mean": 1.0,
+    "std": 0.1
+  },
+  "correlations": [
+    {
+      "variable_i": "sms_scale",
+      "variable_j": "clamp_closure_scale",
+      "correlation": 0.1
+    }
+  ]
+}

@@ -1,0 +1,2 @@
+﻿validation_id,local_model_id,compared_global_case_ids,compared_quantities,error_metrics,acceptance_criteria,pass_fail,metadata
+LMV_DEFAULT,LOCAL_MODEL_DEFAULT,FE_CASE_DEFAULT,interface_displacement;contact_pressure,{},PLACEHOLDER,WARN,"{""note"":""默认占位值；请替换为真实工程数据。"",""schema_version"":""V2.5""}"

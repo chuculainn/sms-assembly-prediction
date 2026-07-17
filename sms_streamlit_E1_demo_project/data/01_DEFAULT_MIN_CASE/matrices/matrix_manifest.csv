@@ -1,0 +1,48 @@
+﻿matrix_id,npz_file,npz_key,shape,unit,description,quality_flag
+SMS_BASIS_MATRIX_DEFAULT,default_matrices.npz,SMS_BASIS_MATRIX_DEFAULT,"[1, 1]",mixed/default,默认占位矩阵；请替换为真实数据,WARN
+H_M_DEFAULT,default_matrices.npz,H_M_DEFAULT,"[1, 1]",mixed/default,默认占位矩阵；请替换为真实数据,WARN
+R_M_DEFAULT,default_matrices.npz,R_M_DEFAULT,"[1, 1]",mixed/default,默认占位矩阵；请替换为真实数据,WARN
+G_GAP_DEFAULT,default_matrices.npz,G_GAP_DEFAULT,"[1, 1]",mixed/default,默认占位矩阵；请替换为真实数据,WARN
+BN_DEFAULT,default_matrices.npz,BN_DEFAULT,"[1, 1]",mixed/default,默认占位矩阵；请替换为真实数据,WARN
+BT_DEFAULT,default_matrices.npz,BT_DEFAULT,"[2, 1]",mixed/default,默认占位矩阵；请替换为真实数据,WARN
+QA_MATRIX_DEFAULT,default_matrices.npz,QA_MATRIX_DEFAULT,"[1, 1]",mixed/default,默认占位矩阵；请替换为真实数据,WARN
+CN_DEFAULT,default_matrices.npz,CN_DEFAULT,"[1, 1]",mixed/default,默认占位矩阵；请替换为真实数据,WARN
+K_GAMMA_S_LOCATE_01,default_matrices.npz,K_GAMMA_S_LOCATE_01,"[1, 1]",mixed/default,默认占位矩阵；请替换为真实数据,WARN
+W_STRUCT_S_LOCATE_01,default_matrices.npz,W_STRUCT_S_LOCATE_01,"[1, 1]",mixed/default,默认占位矩阵；请替换为真实数据,WARN
+W_TOTAL_S_LOCATE_01,default_matrices.npz,W_TOTAL_S_LOCATE_01,"[1, 1]",mixed/default,默认占位矩阵；请替换为真实数据,WARN
+U_FREE_S_LOCATE_01,default_matrices.npz,U_FREE_S_LOCATE_01,[1],mixed/default,默认占位矩阵；请替换为真实数据,WARN
+Q_S_LOCATE_01,default_matrices.npz,Q_S_LOCATE_01,[1],mixed/default,默认占位矩阵；请替换为真实数据,WARN
+LAMBDA_S_LOCATE_01,default_matrices.npz,LAMBDA_S_LOCATE_01,[1],mixed/default,默认占位矩阵；请替换为真实数据,WARN
+GAP_S_LOCATE_01,default_matrices.npz,GAP_S_LOCATE_01,[1],mixed/default,默认占位矩阵；请替换为真实数据,WARN
+K_GAMMA_S_CLAMP_02,default_matrices.npz,K_GAMMA_S_CLAMP_02,"[1, 1]",mixed/default,默认占位矩阵；请替换为真实数据,WARN
+W_STRUCT_S_CLAMP_02,default_matrices.npz,W_STRUCT_S_CLAMP_02,"[1, 1]",mixed/default,默认占位矩阵；请替换为真实数据,WARN
+W_TOTAL_S_CLAMP_02,default_matrices.npz,W_TOTAL_S_CLAMP_02,"[1, 1]",mixed/default,默认占位矩阵；请替换为真实数据,WARN
+U_FREE_S_CLAMP_02,default_matrices.npz,U_FREE_S_CLAMP_02,[1],mixed/default,默认占位矩阵；请替换为真实数据,WARN
+Q_S_CLAMP_02,default_matrices.npz,Q_S_CLAMP_02,[1],mixed/default,默认占位矩阵；请替换为真实数据,WARN
+LAMBDA_S_CLAMP_02,default_matrices.npz,LAMBDA_S_CLAMP_02,[1],mixed/default,默认占位矩阵；请替换为真实数据,WARN
+GAP_S_CLAMP_02,default_matrices.npz,GAP_S_CLAMP_02,[1],mixed/default,默认占位矩阵；请替换为真实数据,WARN
+K_GAMMA_S_JOIN_03,default_matrices.npz,K_GAMMA_S_JOIN_03,"[1, 1]",mixed/default,默认占位矩阵；请替换为真实数据,WARN
+W_STRUCT_S_JOIN_03,default_matrices.npz,W_STRUCT_S_JOIN_03,"[1, 1]",mixed/default,默认占位矩阵；请替换为真实数据,WARN
+W_TOTAL_S_JOIN_03,default_matrices.npz,W_TOTAL_S_JOIN_03,"[1, 1]",mixed/default,默认占位矩阵；请替换为真实数据,WARN
+U_FREE_S_JOIN_03,default_matrices.npz,U_FREE_S_JOIN_03,[1],mixed/default,默认占位矩阵；请替换为真实数据,WARN
+Q_S_JOIN_03,default_matrices.npz,Q_S_JOIN_03,[1],mixed/default,默认占位矩阵；请替换为真实数据,WARN
+LAMBDA_S_JOIN_03,default_matrices.npz,LAMBDA_S_JOIN_03,[1],mixed/default,默认占位矩阵；请替换为真实数据,WARN
+GAP_S_JOIN_03,default_matrices.npz,GAP_S_JOIN_03,[1],mixed/default,默认占位矩阵；请替换为真实数据,WARN
+K_GAMMA_S_RELEASE_04,default_matrices.npz,K_GAMMA_S_RELEASE_04,"[1, 1]",mixed/default,默认占位矩阵；请替换为真实数据,WARN
+W_STRUCT_S_RELEASE_04,default_matrices.npz,W_STRUCT_S_RELEASE_04,"[1, 1]",mixed/default,默认占位矩阵；请替换为真实数据,WARN
+W_TOTAL_S_RELEASE_04,default_matrices.npz,W_TOTAL_S_RELEASE_04,"[1, 1]",mixed/default,默认占位矩阵；请替换为真实数据,WARN
+U_FREE_S_RELEASE_04,default_matrices.npz,U_FREE_S_RELEASE_04,[1],mixed/default,默认占位矩阵；请替换为真实数据,WARN
+Q_S_RELEASE_04,default_matrices.npz,Q_S_RELEASE_04,[1],mixed/default,默认占位矩阵；请替换为真实数据,WARN
+LAMBDA_S_RELEASE_04,default_matrices.npz,LAMBDA_S_RELEASE_04,[1],mixed/default,默认占位矩阵；请替换为真实数据,WARN
+GAP_S_RELEASE_04,default_matrices.npz,GAP_S_RELEASE_04,[1],mixed/default,默认占位矩阵；请替换为真实数据,WARN
+B_EXT_DEFAULT,default_matrices.npz,B_EXT_DEFAULT,"[1, 1]",mixed/default,默认占位矩阵；请替换为真实数据,WARN
+G_EXT0_DEFAULT,default_matrices.npz,G_EXT0_DEFAULT,[1],mixed/default,默认占位矩阵；请替换为真实数据,WARN
+Q_EXT_DEFAULT,default_matrices.npz,Q_EXT_DEFAULT,[1],mixed/default,默认占位矩阵；请替换为真实数据,WARN
+W_STRUCT_EXT_DEFAULT,default_matrices.npz,W_STRUCT_EXT_DEFAULT,"[1, 1]",mixed/default,默认占位矩阵；请替换为真实数据,WARN
+C_LOC_DEFAULT,default_matrices.npz,C_LOC_DEFAULT,"[1, 1]",mixed/default,默认占位矩阵；请替换为真实数据,WARN
+W_EXT_DEFAULT,default_matrices.npz,W_EXT_DEFAULT,"[1, 1]",mixed/default,默认占位矩阵；请替换为真实数据,WARN
+LAMBDA_EXT_DEFAULT,default_matrices.npz,LAMBDA_EXT_DEFAULT,[1],mixed/default,默认占位矩阵；请替换为真实数据,WARN
+GAP_EXT_DEFAULT,default_matrices.npz,GAP_EXT_DEFAULT,[1],mixed/default,默认占位矩阵；请替换为真实数据,WARN
+J_PART_DEFAULT,default_matrices.npz,J_PART_DEFAULT,"[1, 1]",mixed/default,默认占位矩阵；请替换为真实数据,WARN
+J_INTERFACE_DEFAULT,default_matrices.npz,J_INTERFACE_DEFAULT,"[1, 1]",mixed/default,默认占位矩阵；请替换为真实数据,WARN
+J_PROCESS_DEFAULT,default_matrices.npz,J_PROCESS_DEFAULT,"[1, 1]",mixed/default,默认占位矩阵；请替换为真实数据,WARN

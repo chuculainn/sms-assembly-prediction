@@ -1,0 +1,2 @@
+﻿area_weight_matrix_id,contact_domain_id,matrix_id,candidate_point_ids,area_values,unit,area_sum,quality_flag,metadata
+QA_DEFAULT,CD_G_RIB03_PANEL_L_MANUAL,QA_MATRIX_DEFAULT,M01;M02;M03;M04;M05;M06;M07;M08;M09,"[900.0,900.0,900.0,900.0,900.0,900.0,900.0,900.0,900.0]",mm^2,8100.0,PASS,"{""note"": ""converted area weights"", ""source"": ""E1_TO_V25_CONVERTER"", ""schema_version"": ""V2.5"", ""generated_at"": ""2026-07-09T13:09:39""}"

@@ -1,0 +1,2 @@
+﻿jt_model_id,kcp_ids,part_pose_source_ids,interface_error_source_ids,J_part_matrices,J_interface_matrices,J_process_matrix,linearization_state,validity_range,metadata
+JT_DEFAULT,KCP_GAP_DEFAULT,,EEI_DEFAULT,J_PART_DEFAULT,J_INTERFACE_DEFAULT,J_PROCESS_DEFAULT,REF_NOMINAL,VD_DEFAULT,"{""note"":""默认占位值；请替换为真实工程数据。"",""schema_version"":""V2.5""}"

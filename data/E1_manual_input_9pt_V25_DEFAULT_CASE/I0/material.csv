@@ -1,0 +1,2 @@
+﻿material_id,material_name,material_type,E,nu,G,density,orthotropic_constants,temperature_range,source,quality_flag,metadata
+MAT_CFRP_QI,MAT_CFRP_QI,CFRP,55000.0,0.31,4500.0,0,"{""E1_MPa"": 55000, ""E2_MPa"": 55000, ""G12_MPa"": 4500, ""nu12"": 0.31}","[20,20]",synthetic,PASS,"{""note"": ""converted from E1_manual_input_9pt/I0/materials.csv"", ""source"": ""E1_TO_V25_CONVERTER"", ""schema_version"": ""V2.5"", ""generated_at"": ""2026-07-09T13:09:39""}"

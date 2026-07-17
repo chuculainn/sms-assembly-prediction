@@ -1,0 +1,2 @@
+﻿response_id,source_type,local_model_id_optional,specimen_id_optional,boundary_inheritance_id_optional,loading_path_id,lambda_n,pressure_p_n,w_total,w_substrate_optional,w_interface_optional,tangential_slip_d_t_optional,rebound_delta_r_optional,strain_or_DIC_fields_optional,covariance_or_uncertainty,raw_data_reference,quality_flag,metadata
+LRD_DEFAULT,LOCAL_FE,LOCAL_MODEL_DEFAULT,SPEC_DEFAULT,BIR_DEFAULT,LOADPATH_DEFAULT,[0.0],[0.0],[0.0],[0.0],[0.0],[],[],,COV_RESPONSE_DEFAULT,,WARN,"{""note"":""默认占位值；请替换为真实工程数据。"",""schema_version"":""V2.5""}"

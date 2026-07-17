@@ -1,0 +1,2 @@
+﻿check_name,metric_name,metric_value,unit_optional,threshold_rule,result,action_required_optional
+CHECK_TEMPLATE_DEFAULT,placeholder_count,many,,replace placeholders before engineering use,WARN,fill_real_data

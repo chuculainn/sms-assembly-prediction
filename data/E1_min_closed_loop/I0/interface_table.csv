@@ -1,0 +1,2 @@
+interface_id,part_i,part_j,surface_i,surface_j,material_pair,nominal_gap,contact_candidate_region,key_interface_flag,revision
+G_RIB03_PANEL_L,P_PANEL_L_001,P_RIB03_FLANGE_001,SURF_PANEL_INNER_PATCH,SURF_RIB_FLANGE_OUTER,CFRP-CFRP,0.045,rib03_panel_left_local_400x80mm,1,E1_SYNTH_V0

@@ -1,0 +1,2 @@
+﻿trace_id,solution_id,iteration_contact_sets,mode_switch_count,rho_chi_history,final_rho_chi,oscillation_flag,stabilization_action,quality_flag,metadata
+AST_DEFAULT,ELCP_SOL_DEFAULT,[],0,[],0.0,FALSE,NONE,WARN,"{""note"":""默认占位值；请替换为真实工程数据。"",""schema_version"":""V2.5""}"

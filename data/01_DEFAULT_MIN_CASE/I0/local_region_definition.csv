@@ -1,0 +1,2 @@
+﻿local_region_id,interface_id,included_geometry_regions,candidate_contact_region_ids,kcp_sensitive_region_ids,margin_rule,margin_distance,cut_boundary_definition,selection_rationale,metadata
+LR_DEFAULT,G_PART_A_PART_B,REG_A_DEFAULT;REG_B_DEFAULT,CD_G_PART_A_PART_B,KCP_ZONE_DEFAULT,default_margin,10.0,PLACEHOLDER,默认局部域模板,"{""note"":""默认占位值；请替换为真实工程数据。"",""schema_version"":""V2.5""}"

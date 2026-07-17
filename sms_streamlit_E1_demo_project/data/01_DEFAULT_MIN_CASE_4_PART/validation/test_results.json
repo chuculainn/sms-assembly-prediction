@@ -1,0 +1,108 @@
+{
+  "package": "/workspace/scratch/d7dd6243c7b9/deliverables/SMS_multi_part_serial_parallel/01_DEFAULT_MIN_CASE",
+  "passed": 20,
+  "total": 20,
+  "status": "PASS",
+  "checks": [
+    {
+      "name": "四零件",
+      "passed": true,
+      "detail": "part_count=4"
+    },
+    {
+      "name": "四接口",
+      "passed": true,
+      "detail": "interface_count=4"
+    },
+    {
+      "name": "接口端点外键",
+      "passed": true,
+      "detail": "all interface endpoints resolve"
+    },
+    {
+      "name": "串联路径A-B-C",
+      "passed": true,
+      "detail": "A-B and B-C exist"
+    },
+    {
+      "name": "并联路径A-B与A-D-B",
+      "passed": true,
+      "detail": "direct and bridge paths exist"
+    },
+    {
+      "name": "每接口三个接触点",
+      "passed": true,
+      "detail": "{\"CD_PANEL_RIB\": 3, \"CD_RIB_SPAR\": 3, \"CD_PANEL_BRACKET\": 3, \"CD_RIB_BRACKET\": 3}"
+    },
+    {
+      "name": "12维向量布局",
+      "passed": true,
+      "detail": "AB[0:3], BC[3:6], AD[6:9], BD[9:12]"
+    },
+    {
+      "name": "矩阵清单与NPZ一致",
+      "passed": true,
+      "detail": "manifest=96, npz=96"
+    },
+    {
+      "name": "W_struct对称正定",
+      "passed": true,
+      "detail": "all four 12x12 operators"
+    },
+    {
+      "name": "W_total=W_struct+Cn",
+      "passed": true,
+      "detail": "all four stages"
+    },
+    {
+      "name": "跨接口交叉块非零",
+      "passed": true,
+      "detail": "all six interface block pairs coupled"
+    },
+    {
+      "name": "四阶段LCP互补性",
+      "passed": true,
+      "detail": "lambda>=0, gap>=0, lambda*gap≈0"
+    },
+    {
+      "name": "三条阶段转移完整",
+      "passed": true,
+      "detail": "[('S_LOCATE_01', 'S_CLAMP_02'), ('S_CLAMP_02', 'S_JOIN_03'), ('S_JOIN_03', 'S_RELEASE_04')]"
+    },
+    {
+      "name": "阶段边界载荷外键",
+      "passed": true,
+      "detail": "all StageInput references resolve"
+    },
+    {
+      "name": "阶段状态父链",
+      "passed": true,
+      "detail": "four aggregate snapshots"
+    },
+    {
+      "name": "逐零件逐接口状态",
+      "passed": true,
+      "detail": "part_states=16, interface_states=16"
+    },
+    {
+      "name": "JOIN锁定与RELEASE继承",
+      "passed": true,
+      "detail": "four non-zero-stiffness joints retained"
+    },
+    {
+      "name": "贡献账本唯一且可重构",
+      "passed": true,
+      "detail": "records=16"
+    },
+    {
+      "name": "真实性声明",
+      "passed": true,
+      "detail": "synthetic fixture, no engineering claim"
+    },
+    {
+      "name": "无旧案例核心ID残留",
+      "passed": true,
+      "detail": "legacy identifiers absent"
+    }
+  ]
+}

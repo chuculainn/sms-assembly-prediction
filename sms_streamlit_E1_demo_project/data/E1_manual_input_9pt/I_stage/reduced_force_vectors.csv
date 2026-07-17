@@ -1,0 +1,5 @@
+reduced_force_vector_id,stage_id,source_load_item_ids,gravity_component_norm_N,clamp_component_norm_N,preload_component_norm_N,equivalent_free_closure_mean_mm,unit
+RFV_S_LOCATE_01,S_LOCATE_01,LOAD_S_LOCATE_01,0.0,0.0,0.0,0.01655555555555556,mm
+RFV_S_CLAMP_02,S_CLAMP_02,LOAD_S_CLAMP_02,0.0,180.0,0.0,0.057111111111111126,mm
+RFV_S_JOIN_03,S_JOIN_03,LOAD_S_JOIN_03,0.0,0.0,260.0,0.06911111111111112,mm
+RFV_S_RELEASE_04,S_RELEASE_04,LOAD_S_RELEASE_04,0.0,0.0,0.0,0.035888888888888894,mm

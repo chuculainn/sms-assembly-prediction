@@ -1,0 +1,34 @@
+{
+  "package_name": "01_DEFAULT_MIN_CASE",
+  "schema_version": "V2.5",
+  "schema_revision": "MULTI_PART_SERIAL_PARALLEL_2026-07",
+  "row_mode": "synthetic_multi_part",
+  "created_at": "2026-07-14T00:00:00+09:00",
+  "source": "数学模型数据结构说明书 V2.5 + 多零件串并联同步修订稿",
+  "description": "4零件、4接口、12接触点；同时包含A-B-C串联和A-B与A-D-B并联路径",
+  "data_nature": "SYNTHETIC_NUMERICAL_CONSISTENCY_CASE",
+  "engineering_claim_allowed": false,
+  "topology_summary": {
+    "parts": 4,
+    "interfaces": 4,
+    "serial_path": [
+      "P_PANEL_A",
+      "P_RIB_B",
+      "P_SPAR_C"
+    ],
+    "parallel_paths_between_A_B": [
+      [
+        "G_PANEL_RIB"
+      ],
+      [
+        "G_PANEL_BRACKET",
+        "G_RIB_BRACKET"
+      ]
+    ]
+  },
+  "contact_vector_layout": "VL_CONTACT_ALL_12: AB[0:3], BC[3:6], AD[6:9], BD[9:12]",
+  "notes": [
+    "可用于解析、状态继承、跨接口耦合、贡献账本和自动测试。",
+    "不得用于论文工程数值结论；须由真实FE、测量与试验数据替换。"
+  ]
+}

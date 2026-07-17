@@ -1,0 +1,6 @@
+{
+  "N_MC": 100,
+  "random_seed": 20260708,
+  "sampling_method": "demo_normal",
+  "convergence_criteria": "software debug only"
+}

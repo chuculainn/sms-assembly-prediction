@@ -1,0 +1,11 @@
+{
+  "monte_carlo_config_id": "MC_E1_DEFAULT",
+  "N_MC": 100,
+  "random_seed": 20260708,
+  "sampling_method": "latin_hypercube_placeholder",
+  "convergence_criteria": {
+    "kcp_mean_tol_mm": 0.002,
+    "kcp_std_tol_mm": 0.002
+  },
+  "failure_handling": "mark_sample_warn_and_continue"
+}

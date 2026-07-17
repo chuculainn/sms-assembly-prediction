@@ -1,0 +1,2 @@
+﻿measurement_package_id,geometry_measurement_set_ids,kcm_measurement_set_ids,process_measurement_set_ids,interface_test_set_ids,kcp_measurement_set_ids,data_split_id,common_coordinate_system_id,unit_system_id,preprocessing_pipeline_id,metadata
+MEAS_PKG_E1_min_closed_loop,,,,,,,CS_ASSEMBLY,mm_N_MPa,,"{""note"": ""converted measurement package"", ""source"": ""E1_TO_V25_CONVERTER"", ""schema_version"": ""V2.5"", ""generated_at"": ""2026-07-09T13:09:38""}"

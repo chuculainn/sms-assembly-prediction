@@ -1,0 +1,10 @@
+﻿candidate_id,zone_id,release_rebound_mm,beta_r,active,quality_flag
+M01,edge,0.002275,0.7,1,PASS
+M02,edge,0.0035,0.7,1,PASS
+M03,edge,0.002275,0.7,1,PASS
+M04,edge,0.002275,0.7,1,PASS
+M05,center,0.0035,0.85,1,PASS
+M06,edge,0.002275,0.7,1,PASS
+M07,edge,0.002275,0.7,1,PASS
+M08,edge,0.0035,0.7,1,PASS
+M09,edge,0.002275,0.7,1,PASS

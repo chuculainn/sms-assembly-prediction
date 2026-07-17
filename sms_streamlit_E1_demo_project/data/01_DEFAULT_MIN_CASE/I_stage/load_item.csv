@@ -1,0 +1,2 @@
+﻿load_id,load_type,target_object_id,direction,magnitude,load_curve_optional,distributed_area_optional,stage_activation,uncertainty_model_id_optional,measured_value_id_optional,metadata
+LOAD_S_CLAMP_02,CLAMP_FORCE,P_PART_A,"[0,0,-1]",0.0,,1.0,S_CLAMP_02,,,"{""note"":""默认占位值；请替换为真实工程数据。"",""schema_version"":""V2.5""}"

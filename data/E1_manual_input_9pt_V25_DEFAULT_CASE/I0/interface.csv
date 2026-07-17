@@ -1,0 +1,2 @@
+﻿interface_id,interface_name,part_i,part_j,side_i_region_id,side_j_region_id,material_pair,nominal_gap,contact_candidate_flag,key_contact_flag,coordinate_system_id,metadata
+G_RIB03_PANEL_L_MANUAL,G_RIB03_PANEL_L_MANUAL,P_PANEL_MANUAL_001,P_RIB_MANUAL_001,SURF_PANEL_MANUAL,SURF_RIB_MANUAL,CFRP/CFRP,0.05,True,True,CS_ASSEMBLY,"{""note"": ""converted from E1_manual_input_9pt/I0/interface_table.csv"", ""source"": ""E1_TO_V25_CONVERTER"", ""schema_version"": ""V2.5"", ""generated_at"": ""2026-07-09T13:09:39""}"

@@ -1,0 +1,2 @@
+﻿mapping_id,part_id,sms_field_id,contact_domain_id,sms_representation_type,source_point_ids_or_mode_ids,target_contact_point_ids,interpolation_method,projection_direction_rule,G_gap_mapping_id,mapping_residual_statistics,validity_region,metadata
+SMSMAP_DEFAULT,P_PART_A,SMS_FIELD_DEFAULT,CD_G_PART_A_PART_B,modal,MODE_0,CP_001,identity_placeholder,ContactPoint.normal_n,G_GAP_DEFAULT,"{""rms"":0.0}",ALL,"{""note"":""默认占位值；请替换为真实工程数据。"",""schema_version"":""V2.5""}"

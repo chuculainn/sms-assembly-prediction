@@ -1,0 +1,2 @@
+﻿interface_parameter_id,interface_id,stage_id,contact_mode_id,contact_area,mean_pressure,pressure_nonuniformity,normal_compression_rms,tangential_slip_rms_optional,normal_compliance_local,tangential_compliance_optional,equivalent_error_vector,rebound_term,parameter_covariance,validity_range,calibration_quality,source_state_ids,reference_state_id,increment_definition_id,metadata
+IPAR_DEFAULT,G_PART_A_PART_B,ALL,MODE_DEFAULT,1.0,0.0,0.0,0.0,,0.0001,,[0.0],[0.0],COV_PARAM_DEFAULT,VD_DEFAULT,WARN,,REF_NOMINAL,INC_ABS,"{""note"":""默认占位值；请替换为真实工程数据。"",""schema_version"":""V2.5""}"

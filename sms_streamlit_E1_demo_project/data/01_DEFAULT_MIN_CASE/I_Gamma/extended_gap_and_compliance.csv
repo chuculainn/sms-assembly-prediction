@@ -1,0 +1,2 @@
+﻿ext_gap_compliance_id,sample_id,stage_id,extended_domain_id,g_ext0_vector_id,B_ext_mapping_id,free_displacement_vector_id,command_displacement_vector_id,q_ext_vector_id,W_struct_ext_id,C_interface_id,C_locator_id,C_joint_id,W_ext_matrix_id,unit_check_result,dependency_hash,quality_flag,metadata
+EGC_DEFAULT,SAMPLE_001,S_LOCATE_01,ECD_DEFAULT,G_EXT0_DEFAULT,B_EXT_DEFAULT,U_FREE_EXT_DEFAULT,D_CMD_DEFAULT,Q_EXT_DEFAULT,W_STRUCT_EXT_DEFAULT,CN_DEFAULT,C_LOC_DEFAULT,,W_EXT_DEFAULT,WARN,HASH_PLACEHOLDER,WARN,"{""note"":""默认占位值；请替换为真实工程数据。"",""schema_version"":""V2.5""}"

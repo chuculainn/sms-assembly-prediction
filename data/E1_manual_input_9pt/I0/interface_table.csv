@@ -1,0 +1,2 @@
+interface_id,part_i,part_j,surface_i,surface_j,material_pair,nominal_gap,contact_candidate_flag,key_interface_flag,revision
+G_RIB03_PANEL_L_MANUAL,P_PANEL_MANUAL_001,P_RIB_MANUAL_001,SURF_PANEL_MANUAL,SURF_RIB_MANUAL,CFRP/CFRP,0.05,1,1,manual_v1

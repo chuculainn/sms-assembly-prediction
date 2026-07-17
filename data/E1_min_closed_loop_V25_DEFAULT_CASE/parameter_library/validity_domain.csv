@@ -1,0 +1,2 @@
+﻿validity_domain_id,material_range,layup_or_thickness_range,surface_state_range,normal_pressure_range,tangential_load_range_optional,preload_range_optional,temperature_range_optional,contact_mode_range,boundary_method_range,loading_path_range,geometry_scale_range,metadata
+E1_SYNTHETIC_DEMO,,,,,,,,,,,,"{""note"": ""E1 synthetic valid only for software test"", ""source"": ""E1_TO_V25_CONVERTER"", ""schema_version"": ""V2.5"", ""generated_at"": ""2026-07-09T13:09:38""}"

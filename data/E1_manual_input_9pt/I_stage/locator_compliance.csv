@@ -1,0 +1,5 @@
+﻿element_id,C_locator,stiffness_source,calibration_case,covariance,D_valid,quality_flag
+LOC_LEFT,1.5384615384615384e-05,synthetic_locator_calibration,E1_demo,5.3254437869822485e-12,load 0-5000N; local demo,PASS
+LOC_RIGHT,1.6129032258064517e-05,synthetic_locator_calibration,E1_demo,5.85327783558793e-12,load 0-5000N; local demo,PASS
+CMP_CENTER,2.380952380952381e-05,synthetic_clamp_calibration,E1_demo,2.2675736961451252e-11,load 0-8000N; local demo,PASS
+JNT_CENTER,1.1764705882352942e-05,synthetic_joint_calibration,E1_demo,5.536332179930797e-12,load 0-10000N; local demo,PASS

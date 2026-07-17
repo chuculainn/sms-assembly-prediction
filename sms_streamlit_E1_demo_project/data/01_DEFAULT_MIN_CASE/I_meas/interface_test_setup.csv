@@ -1,0 +1,2 @@
+﻿setup_id,specimen_id,fixture_id,loading_machine_id,sensor_ids,coordinate_system_id,support_state,load_state,environmental_conditions,fixture_calibration_id,sensor_calibration_ids,metadata
+SETUP_DEFAULT,SPEC_DEFAULT,FIXTURE_DEFAULT,LOAD_MACHINE_DEFAULT,SENSOR_DEFAULT,CS_ASSEMBLY,FIXTURED,FREE,"{""temperature"":20}",FIXCAL_DEFAULT,SENCAL_DEFAULT,"{""note"":""默认占位值；请替换为真实工程数据。"",""schema_version"":""V2.5""}"

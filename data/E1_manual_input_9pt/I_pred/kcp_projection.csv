@@ -1,0 +1,6 @@
+kcp_id,stage_id,source_quantity,extraction_rule,unit
+KCP_GAP_CENTER_RELEASE,S_RELEASE_04,gap_center,"center point nearest (x=200,y=0)",mm
+KCP_MAX_PRESSURE_JOIN,S_JOIN_03,max_pressure,max(lambda/area),MPa
+KCP_ACTIVE_RATIO_RELEASE,S_RELEASE_04,active_ratio,active_count / candidate_count,1
+KCP_SPRINGBACK_CENTER,S_RELEASE_04,springback_center,gap_release_center - gap_join_center,mm
+KCP_EDGE_STEP_RELEASE,S_RELEASE_04,edge_step_proxy,mean(top edge gap) - mean(bottom edge gap),mm

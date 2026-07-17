@@ -1,0 +1,8 @@
+feature_id,feature_role,feature_type,target_part_or_interface,stage_id,position_x,position_y,position_z,direction_x,direction_y,direction_z,nominal_value,lower_tol,upper_tol,unit,measurement_method,update_target,data_role,description
+KCP_GAP_CENTER_RELEASE,KCP,gap,G_RIB03_PANEL_L_MANUAL,S_RELEASE_04,200.0,0.0,0.0,0.0,0.0,1.0,0.0,0.0,0.08,mm,manual_validation_or_extraction,KCP_VALIDATION,VALIDATE,释放阶段中心候选点平衡后间隙
+KCP_MAX_PRESSURE_JOIN,KCP,pressure,G_RIB03_PANEL_L_MANUAL,S_JOIN_03,200.0,0.0,0.0,0.0,0.0,1.0,0.0,0.0,0.15,MPa,manual_validation_or_extraction,KCP_VALIDATION,VALIDATE,连接阶段最大接触压力
+KCP_ACTIVE_RATIO_RELEASE,KCP,contact_ratio,G_RIB03_PANEL_L_MANUAL,S_RELEASE_04,200.0,0.0,0.0,0.0,0.0,1.0,0.0,0.0,1.0,1,manual_validation_or_extraction,KCP_VALIDATION,VALIDATE,释放阶段主动接触点比例
+KCP_SPRINGBACK_CENTER,KCP,springback,G_RIB03_PANEL_L_MANUAL,S_RELEASE_04,200.0,0.0,0.0,0.0,0.0,1.0,0.0,-0.01,0.09,mm,manual_validation_or_extraction,KCP_VALIDATION,VALIDATE,中心点 RELEASE 相对 JOIN 的间隙回弹增量
+KCP_EDGE_STEP_RELEASE,KCP,step_proxy,G_RIB03_PANEL_L_MANUAL,S_RELEASE_04,200.0,0.0,0.0,0.0,0.0,1.0,0.0,-0.06,0.06,mm,manual_validation_or_extraction,KCP_VALIDATION,VALIDATE,释放阶段上下边缘平均间隙差，作为阶差代理量
+KCM_PANEL_SURF_MANUAL,KCM,point_cloud,P_PANEL_MANUAL_001,FREE,200.0,0.0,0.0,0.0,0.0,1.0,0.0,-0.2,0.2,mm,manual_sms,SMS,IDENTIFY,manual SMS node deviation input
+KCM_CLAMP_FORCE_MANUAL,KCM,force,G_RIB03_PANEL_L_MANUAL,S_CLAMP_02,200.0,0.0,0.0,0.0,0.0,-1.0,180.0,100.0,250.0,N,manual_process_sensor,PROCESS_LOAD,CALIBRATE,manual clamp force record

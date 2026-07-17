@@ -1,0 +1,10 @@
+﻿candidate_id,zone_id,C_partition_mm_per_N,Ct_mm_per_N,mu,beta_r,quality_flag
+M01,edge,4e-05,1.5e-05,0.28,0.3,PASS
+M02,edge,4e-05,1.5e-05,0.28,0.3,PASS
+M03,edge,4e-05,1.5e-05,0.28,0.3,PASS
+M04,edge,4e-05,1.5e-05,0.28,0.3,PASS
+M05,center,2.5e-05,1e-05,0.32,0.36,PASS
+M06,edge,4e-05,1.5e-05,0.28,0.3,PASS
+M07,edge,4e-05,1.5e-05,0.28,0.3,PASS
+M08,edge,4e-05,1.5e-05,0.28,0.3,PASS
+M09,edge,4e-05,1.5e-05,0.28,0.3,PASS

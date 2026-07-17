@@ -1,0 +1,5 @@
+﻿layer_id,zone_id,thickness_mm,E_eff_MPa,active,quality_flag
+coat_surface,edge,0.08,1800.0,1,PASS
+coat_surface,center,0.08,2200.0,1,PASS
+thin_sealant_equiv,edge,0.04,900.0,1,PASS
+thin_sealant_equiv,center,0.03,1100.0,1,PASS

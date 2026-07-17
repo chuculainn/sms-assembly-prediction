@@ -1,0 +1,5 @@
+stage_id,sensor_id,measurement_type,position,direction,value,unit,covariance,timestamp,data_role
+S_LOCATE_01,LOC_MANUAL_01,gap,center,normal,0.022,mm,4e-06,2026-07-08T00:00:01,MONITOR
+S_CLAMP_02,CMP_MANUAL_01,force,center,-normal,180.0,N,4.0,2026-07-08T00:00:02,CALIBRATE
+S_JOIN_03,JNT_MANUAL_01,preload,fastener_group,normal,260.0,N,9.0,2026-07-08T00:00:03,CALIBRATE
+S_RELEASE_04,KCP_MANUAL_01,KCP,center,normal,0.004,mm,3.6e-05,2026-07-08T00:00:04,VALIDATE

@@ -1,0 +1,2 @@
+﻿decomposition_id,response_id,fixture_component,sensor_component,substrate_component,interface_component,removed_deformation_source_ids,remaining_deformation_source_ids,decomposition_method,component_covariances,identifiability_metrics,quality_flag,metadata
+DDR_DEFAULT,LRD_DEFAULT,[0.0],[0.0],[0.0],[0.0],FIXTURE;SENSOR;SUBSTRATE,INTERFACE,calibration_subtraction,{},{},WARN,"{""note"":""默认占位值；请替换为真实工程数据。"",""schema_version"":""V2.5""}"

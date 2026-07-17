@@ -1,0 +1,2 @@
+﻿rule_id,target_cache_type,dependency_fields,invalidation_condition,required_action,severity
+RULE_DEFAULT,I_RED,"mesh,material,boundary,joint",changed,REBUILD_IRED,WARN

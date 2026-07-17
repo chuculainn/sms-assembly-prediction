@@ -1,0 +1,2 @@
+﻿locator_element_id,locator_group_id,element_type,target_object_id,location,normal_n,tangent_basis_T,area_weight,unilateral_or_bilateral,initial_clearance_g0,command_displacement,preload_optional,active_stage_ids,source_ids,metadata
+LOC_001,LOCGRP_DEFAULT,LOCATOR_POINT,P_PART_A,"[0,0,0]","[0,0,1]","[[1,0,0],[0,1,0]]",1.0,UNILATERAL,0.1,0.0,0.0,S_LOCATE_01;S_CLAMP_02,SRC_LOC_001,"{""note"":""默认占位值；请替换为真实工程数据。"",""schema_version"":""V2.5""}"

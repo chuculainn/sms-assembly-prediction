@@ -1,0 +1,2 @@
+﻿kcp_id,kcp_name,feature_type,target_object_type,target_object_id,stage_id_optional,nominal_location,evaluation_direction,extraction_matrix_id,nominal_value,lower_tol,upper_tol,expected_unit,acceptance_rule,metadata
+KCP_GAP_DEFAULT,DEFAULT_GAP_KCP,gap,Interface,G_PART_A_PART_B,S_RELEASE_04,"[0,0,0]","[0,0,1]",J_KCP_DEFAULT,0.0,-0.5,0.5,mm,within_tolerance,"{""note"":""默认占位值；请替换为真实工程数据。"",""schema_version"":""V2.5""}"

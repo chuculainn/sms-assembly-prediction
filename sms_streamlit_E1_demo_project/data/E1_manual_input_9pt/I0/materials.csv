@@ -1,0 +1,2 @@
+material_id,material_type,E1_MPa,E2_MPa,G12_MPa,nu12,density,source
+MAT_CFRP_QI,CFRP,55000,55000,4500,0.31,demo,synthetic

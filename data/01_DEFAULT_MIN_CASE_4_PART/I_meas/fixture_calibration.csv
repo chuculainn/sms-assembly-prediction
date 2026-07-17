@@ -1,0 +1,2 @@
+﻿fixture_calibration_id,fixture_id,calibration_method,load_range,compliance_matrix_id,uncertainty,validity_domain_id,quality_flag,metadata
+FIXCAL_SYNTH,FIXTURE_SYNTH,SYNTHETIC_EXACT,"[0,100]",C_FIXTURE_SYNTH,0.0,VD_MULTIPART,PASS,"{""data_nature"":""SYNTHETIC_NUMERICAL_CONSISTENCY_CASE"",""engineering_claim_allowed"":false,""schema_version"":""V2.5"",""schema_revision"":""MULTI_PART_SERIAL_PARALLEL_2026-07""}"

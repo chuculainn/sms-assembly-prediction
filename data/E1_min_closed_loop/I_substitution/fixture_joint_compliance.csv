@@ -1,0 +1,5 @@
+﻿element_id,element_type,stage_id,x,y,effect_radius_mm,stiffness_N_per_mm,active,quality_flag
+LOC_PAD_NUM_01,locator,S_LOCATE_01|S_CLAMP_02|S_JOIN_03,0.0,0.0,55.0,80000.0,1,PASS
+CMP_HEAD_NUM_01,clamp,S_CLAMP_02|S_JOIN_03,150.0,40.0,45.0,50000.0,1,PASS
+CMP_HEAD_NUM_02,clamp,S_CLAMP_02|S_JOIN_03,250.0,-40.0,45.0,52000.0,1,PASS
+JNT_GROUP_NUM_01,joint,S_JOIN_03|S_RELEASE_04,200.0,0.0,65.0,110000.0,1,PASS

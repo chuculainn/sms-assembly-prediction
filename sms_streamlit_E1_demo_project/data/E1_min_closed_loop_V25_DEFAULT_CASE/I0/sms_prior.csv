@@ -1,0 +1,3 @@
+﻿sms_prior_id,part_id,prior_type,basis_id,alpha_mean,alpha_covariance_id,source_sample_ids,valid_region,quality_flag,metadata
+SMS_PRIOR_PANEL_L,P_PANEL_L_001,converted_legacy_sms_component,SMS_BASIS_P_PANEL_L_001,[0.0],COV_SMS_PRIOR_E1,SAMPLE_E1_SYNTH_001,ALL,PASS,"{""note"": ""SMS component already baked into GapField/matrices"", ""source"": ""E1_TO_V25_CONVERTER"", ""schema_version"": ""V2.5"", ""generated_at"": ""2026-07-09T13:09:38""}"
+SMS_PRIOR_RIB03,P_RIB03_FLANGE_001,converted_legacy_sms_component,SMS_BASIS_P_RIB03_FLANGE_001,[0.0],COV_SMS_PRIOR_E1,SAMPLE_E1_SYNTH_001,ALL,PASS,"{""note"": ""SMS component already baked into GapField/matrices"", ""source"": ""E1_TO_V25_CONVERTER"", ""schema_version"": ""V2.5"", ""generated_at"": ""2026-07-09T13:09:38""}"

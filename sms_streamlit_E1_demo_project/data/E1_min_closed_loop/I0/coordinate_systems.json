@@ -1,0 +1,89 @@
+{
+  "unit_system_id": "UNIT_mm_N_MPa",
+  "coordinate_systems": [
+    {
+      "coordinate_system_id": "CS_ASM_E1",
+      "name": "E1 assembly local coordinate",
+      "origin": [
+        0,
+        0,
+        0
+      ],
+      "rotation_matrix": [
+        [
+          1.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          1.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "parent": null,
+      "quality_flag": "PASS"
+    },
+    {
+      "coordinate_system_id": "CS_PART_PANEL_L",
+      "name": "panel part coordinate",
+      "origin": [
+        0,
+        0,
+        0
+      ],
+      "rotation_matrix": [
+        [
+          1.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          1.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "parent": "CS_ASM_E1",
+      "quality_flag": "PASS"
+    },
+    {
+      "coordinate_system_id": "CS_PART_RIB03",
+      "name": "rib 03 coordinate",
+      "origin": [
+        0,
+        0,
+        0.045
+      ],
+      "rotation_matrix": [
+        [
+          1.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          1.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "parent": "CS_ASM_E1",
+      "quality_flag": "PASS"
+    }
+  ]
+}
