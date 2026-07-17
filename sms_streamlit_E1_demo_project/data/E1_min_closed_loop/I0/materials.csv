@@ -1,3 +1,0 @@
-material_id,name,E1_MPa,E2_MPa,G12_MPa,nu12,density_kg_m3,source
-MAT_CFRP_QI,quasi-isotropic CFRP equivalent,52000,52000,4500,0.3,1580,synthetic literature-like prior
-MAT_AL7075,Aluminum 7075 equivalent,71000,71000,27000,0.33,2810,optional metal placeholder

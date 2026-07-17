@@ -1,2 +1,0 @@
-﻿statistical_result_id,mc_config_id,kcp_ids,mean_vector,covariance_matrix,quantiles,failure_probabilities,confidence_intervals,mode_frequency_statistics,out_of_domain_rate,nonconvergence_rate,overconstraint_mode_frequency_optional,runtime_statistics,metadata
-STAT_DEFAULT,MC_DEFAULT,KCP_GAP_DEFAULT,[0.0],[[0.0]],{},{},{},{},0.0,0.0,{},{},"{""note"":""默认占位值；请替换为真实工程数据。"",""schema_version"":""V2.5""}"

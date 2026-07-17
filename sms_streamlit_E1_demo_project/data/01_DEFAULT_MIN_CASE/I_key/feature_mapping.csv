@@ -1,2 +1,0 @@
-﻿feature_mapping_id,source_feature_id,target_feature_id,mapping_type,matrix_id,sign_convention,reference_state_id,quality_flag,metadata
-FM_DEFAULT,KCM_DEFAULT,KCP_GAP_DEFAULT,placeholder,J_KCP_DEFAULT,positive_gap,REF_NOMINAL,WARN,"{""note"":""默认占位值；请替换为真实工程数据。"",""schema_version"":""V2.5""}"

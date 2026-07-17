@@ -1,2 +1,0 @@
-﻿sensor_calibration_id,sensor_id,sensor_type,calibration_method,bias,scale_factor,uncertainty,validity_domain_id,quality_flag,metadata
-SENCAL_DEFAULT,SENSOR_DEFAULT,DEFAULT,DEFAULT,0.0,1.0,UNKNOWN,VD_DEFAULT,WARN,"{""note"":""默认占位值；请替换为真实工程数据。"",""schema_version"":""V2.5""}"

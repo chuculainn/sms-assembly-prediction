@@ -1,2 +1,0 @@
-﻿local_model_id,global_model_id,interface_id,local_region_id,extraction_method,global_to_local_node_map,global_to_local_surface_map,retained_material_ids,retained_layup_ids_optional,retained_joint_ids,cut_boundary_node_ids,mesh_refinement_rule,source_stage_ids,extraction_quality_metrics,metadata
-LOCAL_MODEL_DEFAULT,FE_DEFAULT,G_PART_A_PART_B,LR_DEFAULT,submodel_from_global,{},{},MAT_CFRP_DEFAULT;MAT_METAL_DEFAULT,LAYUP_DEFAULT,JNT_DEFAULT,[],DEFAULT,S_CLAMP_02,"{""status"":""not_evaluated""}","{""note"":""默认占位值；请替换为真实工程数据。"",""schema_version"":""V2.5""}"

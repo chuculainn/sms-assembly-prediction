@@ -1,5 +1,0 @@
-﻿topology_id,assembly_step,stage_id,part_in,existing_subassembly,interface_id,operation_type,predecessor,successor,metadata
-TOPO_DEFAULT,1,S_LOCATE_01,P_PART_B,ASM_DEFAULT,G_PART_A_PART_B,LOCATE,,S_CLAMP_02,"{""note"":""默认占位值；请替换为真实工程数据。"",""schema_version"":""V2.5""}"
-TOPO_DEFAULT,2,S_CLAMP_02,,ASM_DEFAULT,G_PART_A_PART_B,CLAMP,S_LOCATE_01,S_JOIN_03,"{""note"":""默认占位值；请替换为真实工程数据。"",""schema_version"":""V2.5""}"
-TOPO_DEFAULT,3,S_JOIN_03,,ASM_DEFAULT,G_PART_A_PART_B,JOIN,S_CLAMP_02,S_RELEASE_04,"{""note"":""默认占位值；请替换为真实工程数据。"",""schema_version"":""V2.5""}"
-TOPO_DEFAULT,4,S_RELEASE_04,,ASM_DEFAULT,G_PART_A_PART_B,RELEASE,S_JOIN_03,,"{""note"":""默认占位值；请替换为真实工程数据。"",""schema_version"":""V2.5""}"

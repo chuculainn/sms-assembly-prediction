@@ -1,5 +1,0 @@
-﻿stage_input_id,stage_id,boundary_item_ids,load_item_ids,active_joint_ids,constraint_activation_vector,load_activation_vector,joint_activation_vector,reduced_stiffness_id,reduced_force_vector_id,inherited_state_id,expected_measurement_set_ids,reference_state_id,metadata
-STAGE_INPUT_S_LOCATE_01,S_LOCATE_01,BND_S_LOCATE_01,LOAD_S_LOCATE_01,,[1],[0],[0],K_GAMMA_S_LOCATE_01,RFV_S_LOCATE_01,,,REF_NOMINAL,"{""note"":""默认占位值；请替换为真实工程数据。"",""schema_version"":""V2.5""}"
-STAGE_INPUT_S_CLAMP_02,S_CLAMP_02,BND_S_CLAMP_02,LOAD_S_CLAMP_02,,[1],[0],[0],K_GAMMA_S_CLAMP_02,RFV_S_CLAMP_02,STAGE_STATE_S_LOCATE_01,,REF_NOMINAL,"{""note"":""默认占位值；请替换为真实工程数据。"",""schema_version"":""V2.5""}"
-STAGE_INPUT_S_JOIN_03,S_JOIN_03,BND_S_JOIN_03,LOAD_S_JOIN_03,JNT_DEFAULT,[1],[0],[0],K_GAMMA_S_JOIN_03,RFV_S_JOIN_03,STAGE_STATE_S_CLAMP_02,,REF_NOMINAL,"{""note"":""默认占位值；请替换为真实工程数据。"",""schema_version"":""V2.5""}"
-STAGE_INPUT_S_RELEASE_04,S_RELEASE_04,BND_S_RELEASE_04,LOAD_S_RELEASE_04,JNT_DEFAULT,[1],[0],[0],K_GAMMA_S_RELEASE_04,RFV_S_RELEASE_04,STAGE_STATE_S_JOIN_03,,REF_NOMINAL,"{""note"":""默认占位值；请替换为真实工程数据。"",""schema_version"":""V2.5""}"

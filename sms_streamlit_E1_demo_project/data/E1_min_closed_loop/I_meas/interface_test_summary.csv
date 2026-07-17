@@ -1,2 +1,0 @@
-specimen_id,material_pair,surface_state,contact_area_mm2,load_path,force_min_N,force_max_N,C_n_local_mm_per_N,C_t_local_mm_per_N,mu,beta_r,fixture_removed,sensor_removed,substrate_removed,quality_flag
-SPEC_CFRP_CFRP_E1,CFRP-CFRP,demo_sanded_clean,32000.0,normal_compression_unload,0,1200,0.0002,8e-05,0.3,0.65,1,1,1,PASS

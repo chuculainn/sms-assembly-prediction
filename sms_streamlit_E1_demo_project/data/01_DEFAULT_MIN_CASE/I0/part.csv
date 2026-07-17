@@ -1,3 +1,0 @@
-﻿part_id,part_name,material_type,role_in_assembly,nominal_model_id,sms_prior_id,material_id,thickness_definition_id,layup_id_optional,local_coordinate_system_id,mesh_or_point_set_id,key_interface_ids,related_kcm_ids,related_kcp_ids,metadata
-P_PART_A,DEFAULT_PART_A,CFRP,side_i,NM_DEFAULT,SMS_PRIOR_A,MAT_CFRP_DEFAULT,THK_DEFAULT,LAYUP_DEFAULT,CS_ASSEMBLY,MESH_DEFAULT,G_PART_A_PART_B,KCM_DEFAULT,KCP_GAP_DEFAULT,"{""note"":""默认占位值；请替换为真实工程数据。"",""schema_version"":""V2.5""}"
-P_PART_B,DEFAULT_PART_B,Metal,side_j,NM_DEFAULT,SMS_PRIOR_B,MAT_METAL_DEFAULT,THK_DEFAULT,,CS_ASSEMBLY,MESH_DEFAULT,G_PART_A_PART_B,KCM_DEFAULT,KCP_GAP_DEFAULT,"{""note"":""默认占位值；请替换为真实工程数据。"",""schema_version"":""V2.5""}"

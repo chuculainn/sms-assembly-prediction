@@ -1,2 +1,0 @@
-﻿data_split_id,identification_sample_ids,calibration_sample_ids,validation_sample_ids,split_strategy,grouping_constraint,leakage_check_result,random_seed_optional,metadata
-DSPLIT_DEFAULT,SAMPLE_001,,,template_placeholder,none,NOT_CHECKED,202607,"{""note"":""默认占位值；请替换为真实工程数据。"",""schema_version"":""V2.5""}"

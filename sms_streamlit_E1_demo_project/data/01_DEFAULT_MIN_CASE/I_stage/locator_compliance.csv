@@ -1,2 +1,0 @@
-﻿compliance_id,locator_element_id,stiffness_or_compliance_type,normal_compliance_Cn,tangential_compliance_Ct_optional,covariance_optional,validity_domain_id,source_calibration_ids,quality_flag,metadata
-LCOMP_DEFAULT,LOC_001,COMPLIANCE,0.0001,0.0001,COV_LOC_DEFAULT,VD_DEFAULT,FIXCAL_DEFAULT,WARN,"{""note"":""默认占位值；请替换为真实工程数据。"",""schema_version"":""V2.5""}"

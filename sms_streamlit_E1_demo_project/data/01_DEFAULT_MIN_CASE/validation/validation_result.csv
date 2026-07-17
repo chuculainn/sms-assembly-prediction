@@ -1,2 +1,0 @@
-﻿validation_result_id,model_version,validation_sample_ids,reference_type,kcp_ids,predicted_values,reference_values,residuals,MAE,RMSE,maximum_absolute_error,correlation_optional,failure_probability_error_optional,contact_mode_agreement_optional,overconstraint_reaction_agreement_optional,acceleration_ratio_optional,acceptance_criteria,pass_fail,metadata
-VAL_DEFAULT,MODEL_V2_5_TEMPLATE,,NONE_PLACEHOLDER,KCP_GAP_DEFAULT,[0.0],[],[],,,,,,,,,NOT_DEFINED,WARN,"{""note"":""默认占位值；请替换为真实工程数据。"",""schema_version"":""V2.5""}"

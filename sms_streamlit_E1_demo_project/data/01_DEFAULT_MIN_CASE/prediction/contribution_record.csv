@@ -1,2 +1,0 @@
-﻿contribution_id,sample_id,target_kcp_id,source_class,source_id,origin_stage_id_optional,reference_state_id,increment_definition_id,absolute_or_increment,included_deformation_source_ids,excluded_deformation_source_ids,contribution_vector,covariance_optional,consumed_by_prediction_id,quality_flag,metadata
-CONTR_SMS_DEFAULT,SAMPLE_001,KCP_GAP_DEFAULT,SMS,SMS_TRANSFER_DEFAULT,,REF_NOMINAL,INC_ABS,absolute,SMS,GRAVITY_M;FIXTURE_M;LOCAL_CONTACT_M,[0.0],,PRED_DEFAULT,WARN,"{""note"":""默认占位值；请替换为真实工程数据。"",""schema_version"":""V2.5""}"

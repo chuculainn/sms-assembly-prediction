@@ -1,2 +1,0 @@
-﻿boundary_inheritance_id,local_model_id,stage_id,boundary_method,source_global_case_id,prescribed_cut_displacement_optional,prescribed_cut_force_optional,impedance_matrix_optional,coordinate_transform_id,interpolation_error,boundary_reaction_check,valid_load_range,quality_flag,metadata
-BIR_DEFAULT,LOCAL_MODEL_DEFAULT,S_CLAMP_02,DISPLACEMENT,FE_CASE_DEFAULT,[],[],,T_LOCAL_DEFAULT,UNKNOWN,UNKNOWN,"[0,0]",WARN,"{""note"":""默认占位值；请替换为真实工程数据。"",""schema_version"":""V2.5""}"

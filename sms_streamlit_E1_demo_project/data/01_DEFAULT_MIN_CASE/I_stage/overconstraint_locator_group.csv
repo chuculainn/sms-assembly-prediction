@@ -1,2 +1,0 @@
-﻿locator_group_id,stage_ids,locator_element_ids,group_type,activation_rule,reference_state_id,uncertainty_model_id,quality_flag,metadata
-LOCGRP_DEFAULT,S_LOCATE_01;S_CLAMP_02,LOC_001,N21,active_in_locate_and_clamp,REF_NOMINAL,UNC_LOC_DEFAULT,WARN,"{""note"":""默认占位值；请替换为真实工程数据。"",""schema_version"":""V2.5""}"

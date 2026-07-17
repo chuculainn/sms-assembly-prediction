@@ -1,3 +1,0 @@
-﻿nominal_model_id,model_name,cad_reference,mesh_reference,coordinate_system_id,revision_id,definition_source,quality_flag,metadata
-NM_MANUAL_PANEL,NM_MANUAL_PANEL,synthetic_E1_nominal.step,synthetic_E1_reduced_mesh.inp,CS_ASSEMBLY,E1_SYNTH,E1_manual_input_9pt,PASS,"{""note"": ""legacy E1 synthetic nominal model reference"", ""source"": ""E1_TO_V25_CONVERTER"", ""schema_version"": ""V2.5"", ""generated_at"": ""2026-07-09T13:09:39""}"
-NM_MANUAL_RIB,NM_MANUAL_RIB,synthetic_E1_nominal.step,synthetic_E1_reduced_mesh.inp,CS_ASSEMBLY,E1_SYNTH,E1_manual_input_9pt,PASS,"{""note"": ""legacy E1 synthetic nominal model reference"", ""source"": ""E1_TO_V25_CONVERTER"", ""schema_version"": ""V2.5"", ""generated_at"": ""2026-07-09T13:09:39""}"

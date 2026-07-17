@@ -1,2 +1,0 @@
-﻿separation_report_id,W_struct_id,Cn_local_id,included_physics_struct,included_physics_local,removed_fixture_compliance,removed_sensor_compliance,removed_substrate_compliance,overlap_source_ids,overlap_assessment,unit_consistency_check,area_weight_conversion_check,recommended_action,metadata
-CSR_DEFAULT,W_STRUCT_S_LOCATE_01,CN_DEFAULT,global_structure_placeholder,local_interface_placeholder,TRUE,TRUE,TRUE,,WARN,WARN,WARN,replace_placeholders_with_identified_data,"{""note"":""默认占位值；请替换为真实工程数据。"",""schema_version"":""V2.5""}"

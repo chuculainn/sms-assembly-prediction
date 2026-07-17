@@ -1,5 +1,0 @@
-﻿dof_partition_id,stage_id,full_free_dof_ids,internal_dof_ids,interface_dof_ids,kcp_related_dof_ids,prescribed_dof_ids,permutation_vector,rigid_body_mode_check,metadata
-DOFP_S_LOCATE_01,S_LOCATE_01,[0],[],[0],[0],[],[0],WARN,"{""note"":""默认占位值；请替换为真实工程数据。"",""schema_version"":""V2.5""}"
-DOFP_S_CLAMP_02,S_CLAMP_02,[0],[],[0],[0],[],[0],WARN,"{""note"":""默认占位值；请替换为真实工程数据。"",""schema_version"":""V2.5""}"
-DOFP_S_JOIN_03,S_JOIN_03,[0],[],[0],[0],[],[0],WARN,"{""note"":""默认占位值；请替换为真实工程数据。"",""schema_version"":""V2.5""}"
-DOFP_S_RELEASE_04,S_RELEASE_04,[0],[],[0],[0],[],[0],WARN,"{""note"":""默认占位值；请替换为真实工程数据。"",""schema_version"":""V2.5""}"

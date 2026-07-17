@@ -1,2 +1,0 @@
-﻿regularization_config_id,method,epsilon_value_optional,trigger_reason,affected_matrix_ids,output_impact_check,metadata
-REG_MULTIPART,NONE_REQUIRED_SPD,0.0,none,,PASS,"{""data_nature"":""SYNTHETIC_NUMERICAL_CONSISTENCY_CASE"",""engineering_claim_allowed"":false,""schema_version"":""V2.5"",""schema_revision"":""MULTI_PART_SERIAL_PARALLEL_2026-07""}"

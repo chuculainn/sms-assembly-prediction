@@ -1,5 +1,0 @@
-{
-  "contribution_ledger_id": "LEDGER_MANUAL_TEMPLATE",
-  "unique_source_key_rule": "source_id + increment_definition_id",
-  "status": "template_only"
-}

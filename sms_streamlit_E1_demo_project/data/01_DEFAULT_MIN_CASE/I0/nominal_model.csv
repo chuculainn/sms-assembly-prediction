@@ -1,2 +1,0 @@
-﻿nominal_model_id,model_name,cad_reference,mesh_reference,coordinate_system_id,revision_id,definition_source,quality_flag,metadata
-NM_DEFAULT,DEFAULT_NOMINAL_MODEL,PLACEHOLDER.step,PLACEHOLDER.inp,CS_ASSEMBLY,REV_000,DEFAULT_TEMPLATE,WARN,"{""note"":""默认占位值；请替换为真实工程数据。"",""schema_version"":""V2.5""}"

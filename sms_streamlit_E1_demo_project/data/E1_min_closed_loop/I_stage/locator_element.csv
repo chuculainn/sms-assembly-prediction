@@ -1,5 +1,0 @@
-﻿element_id,group_id,element_type,activation_stages,x,y,z,nx,ny,nz,area_weight,gap0,stiffness_N_per_mm,effect_radius_mm,stage_effect_mm,unilateral_flag,quality_flag
-LOC_LEFT,OC_LOCATOR_GROUP_01,locator,S_LOCATE_01|S_CLAMP_02|S_JOIN_03|S_RELEASE_04,0.0,-40.0,0.0,0.0,0.0,1.0,450.0,0.012,65000.0,88.0,0.02,1,PASS
-LOC_RIGHT,OC_LOCATOR_GROUP_01,locator,S_LOCATE_01|S_CLAMP_02|S_JOIN_03|S_RELEASE_04,400.0,40.0,0.0,0.0,0.0,1.0,450.0,0.014,62000.0,88.0,0.018,1,PASS
-CMP_CENTER,OC_CLAMP_GROUP_01,clamp,S_CLAMP_02|S_JOIN_03,200.0,0.0,0.0,0.0,0.0,1.0,900.0,0.01,42000.0,120.0,0.07,1,PASS
-JNT_CENTER,OC_JOINT_GROUP_01,joint,S_JOIN_03|S_RELEASE_04,200.0,0.0,0.0,0.0,0.0,1.0,700.0,0.008,85000.0,104.0,0.052,1,PASS

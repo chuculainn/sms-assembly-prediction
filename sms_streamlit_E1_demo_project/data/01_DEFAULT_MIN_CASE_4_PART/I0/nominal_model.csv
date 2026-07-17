@@ -1,2 +1,0 @@
-﻿nominal_model_id,model_name,cad_reference,mesh_reference,coordinate_system_id,revision_id,definition_source,quality_flag,metadata
-NM_MULTIPART,SYNTHETIC_FOUR_PART_ASSEMBLY,SYNTHETIC_NOT_PROVIDED,SYNTHETIC_REDUCED_MODEL,CS_ASSEMBLY,MULTIPART_2026_07,SYNTHETIC_NUMERICAL_FIXTURE,PASS,"{""data_nature"":""SYNTHETIC_NUMERICAL_CONSISTENCY_CASE"",""engineering_claim_allowed"":false,""schema_version"":""V2.5"",""schema_revision"":""MULTI_PART_SERIAL_PARALLEL_2026-07""}"

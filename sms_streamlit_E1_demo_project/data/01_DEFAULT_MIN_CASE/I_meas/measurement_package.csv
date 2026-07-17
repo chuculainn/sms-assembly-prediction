@@ -1,2 +1,0 @@
-﻿measurement_package_id,geometry_measurement_set_ids,kcm_measurement_set_ids,process_measurement_set_ids,interface_test_set_ids,kcp_measurement_set_ids,data_split_id,common_coordinate_system_id,unit_system_id,preprocessing_pipeline_id,metadata
-MPKG_DEFAULT,MSET_GEOM_DEFAULT,MSET_KCM_DEFAULT,MSET_PROC_DEFAULT,MSET_INTERFACE_DEFAULT,MSET_KCP_DEFAULT,DSPLIT_DEFAULT,CS_ASSEMBLY,UNIT_MM_N,PREPROC_DEFAULT,"{""note"":""默认占位值；请替换为真实工程数据。"",""schema_version"":""V2.5""}"

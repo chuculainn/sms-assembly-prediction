@@ -1,2 +1,0 @@
-﻿solver_config_id,solver_type,active_set_initialization,gap_tolerance,force_tolerance,complementarity_tolerance,maximum_iterations,scaling_rule,line_search_or_regularization_optional,warm_start_enabled,fallback_solver_optional,metadata
-SOLVER_CFG_MULTIPART,ACTIVE_SET_ENUMERATION_FIXTURE,WARM_START_PREVIOUS_STAGE,1e-8,1e-8,1e-8,4096,none,,TRUE,,"{""data_nature"":""SYNTHETIC_NUMERICAL_CONSISTENCY_CASE"",""engineering_claim_allowed"":false,""schema_version"":""V2.5"",""schema_revision"":""MULTI_PART_SERIAL_PARALLEL_2026-07""}"

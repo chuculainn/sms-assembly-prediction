@@ -1,2 +1,0 @@
-﻿data_split_id,identification_sample_ids,calibration_sample_ids,validation_sample_ids,split_strategy,grouping_constraint,leakage_check_result,random_seed_optional,metadata
-DS_MULTIPART,SAMPLE_001,,SAMPLE_ORACLE,SYNTHETIC_SEPARATE_ORACLE,fixture_only,PASS,,"{""data_nature"":""SYNTHETIC_NUMERICAL_CONSISTENCY_CASE"",""engineering_claim_allowed"":false,""schema_version"":""V2.5"",""schema_revision"":""MULTI_PART_SERIAL_PARALLEL_2026-07""}"

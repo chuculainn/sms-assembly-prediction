@@ -1,3 +1,0 @@
-layup_id,part_id,ply_stack,total_thickness_mm,local_stiffness_flag
-LAYUP_QI_24PLY,P_PANEL_MANUAL_001,[0/45/-45/90]3s,3.2,demo_equivalent
-LAYUP_QI_18PLY,P_RIB_MANUAL_001,[0/45/-45/90/0]s,2.8,demo_equivalent

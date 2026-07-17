@@ -1,2 +1,0 @@
-﻿specimen_id,interface_id,side_i_material_id,side_j_material_id,layup_ids_optional,thickness_values,surface_treatment,coating_or_sealant_optional,fastener_or_joint_description,geometry_similarity_to_real_interface,manufacturing_batch,metadata
-SPEC_DEFAULT,G_PART_A_PART_B,MAT_CFRP_DEFAULT,MAT_METAL_DEFAULT,LAYUP_DEFAULT,[],DEFAULT,,DEFAULT,UNKNOWN,BATCH_DEFAULT,"{""note"":""默认占位值；请替换为真实工程数据。"",""schema_version"":""V2.5""}"
