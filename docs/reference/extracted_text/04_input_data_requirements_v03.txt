@@ -1,0 +1,926 @@
+                       数学模型输入数据获取需求说明书
+                    沟通版 / 适用于《基于孪生体偏差仿真的异质叠层结构装配精度预测》
+                           版本：V0.3（V2.4/V2.5 全量保留同步修订版） 日期：2026-07-01
+
+
+
+文档目的
+本文件用于把数学模型中“论文研究内容假设已经获得”的输入数据单独梳理出来，便于与设计、工艺、测量、试验、仿真和软件实现人员沟通需求。
+本文件不规定点云如何采集、SMS 如何重建、测量系统如何建模，也不把数据获取流程作为论文研究创新点；只说明模型需要消费哪些数据、推荐以什么形式交付、最少应包含哪
+些字段，以及哪些状态信息不能混用。
+
+
+建议使用方式
+1. 与各专业沟通时，可先看第 2 章“输入数据总览”和第 6 章“最小可运行清单”。
+2. 交付数据时，按第 5 章推荐目录组织文件，并按第 7 章质量规则检查。
+3. 若只能提供部分数据，可按优先级 A/B/C 分阶段补齐；A 类数据不足时模型无法可靠启动。
+
+
+
+0 修订与适用范围
+项目                                              说明
+适用对象                                            某飞机垂尾翼盒及相似的 CFRP/金属异质叠层结构装配精度预测模型。
+使用阶段                                            论文方法实现、算例准备、仿真建库、试验/测量规划、工程需求沟通。
+                                                名义模型、装配拓扑、零件与结合面编号、装配顺序、实测或虚拟 SMS、定位夹持方
+输入边界
+                                                案、材料参数、工艺载荷、关键测量数据等均视为已知或可通过工程流程获得。
+                                                测量系统建模、点云采集算法、前端几何重建算法、制造误差来源识别、实时数字孪生
+不覆盖内容
+                                                平台建设。
+                                                形成标准化输入包，供多阶段接触状态计算、异质界面参数凝聚、JSS/J-T 误差传递和
+输出用途
+                                                Monte Carlo 快速预测调用。
+
+
+
+
+                                    数学模型输入数据获取需求说明书（沟通版）
+ 1 输入数据边界与模型消费关系
+ 论文主线关注“给定输入后的装配偏差仿真计算”。因此，输入数据获取文档应服务于工程需求沟通：数据提供方负责给出可追溯、可计算、坐标统一、带必
+ 要不确定度的数据；数学模型负责在这些输入基础上计算接触状态、界面等效参数和关键装配精度指标。
+     几何链输入：名义几何、零件制造态形貌 SMS、坐标变换、结合面候选区域，用于形成初始间隙 g⁰。
+     力学链输入：材料/铺层、结构刚度、定位夹持边界、预紧/夹持载荷、连接激活状态、界面参数，用于计算各阶段 S^(s)。
+     精度链输入：KCP/KCM 定义、JSS/J-T 误差传递关系、统计分布和验证数据，用于输出关键测点偏差、间隙阶差、释放回弹和超差概率。
+ 核心区分
+ SMS 是装配前参考状态下的制造态形貌；定位、夹持、连接和释放阶段产生的弹性变形、接触压缩与回弹属于阶段状态，不应再写回 SMS。装配后 KCP 数据用于独立验证时，也
+ 不应直接回流调参。
+
+
+
+ 2 输入数据总览：从沟通清单到模型输入包
+ 为了便于沟通，本文建议按 13 类数据需求向各专业收集；落到程序实现时，可归入技术说明书中的八类标准输入包 I₀、I_Γ、I_stage、I_key、I_meas、
+ I_red、I_pred 和 I_stat。V0.2 新增 D11 局部子模型、样件响应分解与接触计算追溯数据；V0.3 新增 D12 多点过约束与扩展互补数据。
+数据包                 主要内容                     优先级                   归属输入包                   推荐交付形式
+                    零件、结合面、阶段、装配顺序、坐标                                                      CAD/STEP、装配结构表 xlsx/csv、拓
+D0 对象与拓扑                                     A                     I₀ / I_pred
+                    系、名义几何                                                                 扑 json
+                    KCP、KCM、测量/评价方向、容差、质
+D1 关键特性                                      A                     I_key                   KCP_KCM 清单 xlsx/csv + 特征示意图
+                    量要求
+                    零件制造态形貌、点云、节点偏差、模                                                      point cloud、csv、npz/mat/h5、SMS
+D2 SMS/形貌                                    A                     I₀ / I_meas / I_stat
+                    态系数、虚拟 SMS 样本                                                          系数表
+                    支承、重力、夹持/载荷状态、坐标变
+D3 测量状态元数据                                   A                     I_meas                  metadata json/yaml + 测量记录表
+                    换、测量协方差
+                    定位、夹持、连接、释放阶段边界，夹                                                      stage_plan.xlsx、process_record.csv、
+D4 工艺阶段数据                                    A                     I_stage / I_meas
+                    持力、预紧力、连接激活状态                                                          json
+                    材料、铺层、厚度、网格、阶段刚度、
+D5 材料与结构模型                                   A/B                   I₀ / I_red              材料表、inp/mtx、npz/h5 矩阵包
+                    Schur 凝聚算子
+                    候选点、法/切向、面积权重、G、g⁰、
+D6 接触域与结合面映射                                 A/B                   I_Γ                     interface_domain.csv/json、npz/h5
+                    B_n/B_t
+                    CFRP/金属界面柔度、刚度、摩擦、回                                                    parameter_table.xlsx、曲线 csv、协方
+D7 异质界面参数                                    A/B                   I_Γ / I_meas / I_stat
+                    弹参数及适用域                                                                差矩阵
+D8 误差传递关系           JSS 路径、J-T/雅可比矩阵、局部并联    A/B                   I_pred                  path_matrix.xlsx/csv、matrix npz/mat
+
+                                            数学模型输入数据获取需求说明书（沟通版）
+                    路径、评价投影
+                    SMS、定位误差、夹持/预紧波动、界面                                                                distribution.json、correlation.csv、抽样
+D9 统计分布                                     B                          I_stat
+                    参数不确定度与相关性                                                                         设置
+                    标准算例、局部样件/高保真结果、部件                                                                 validation_result.csv、报告 pdf/docx、
+D10 验证与参照                                   B/C                        I_meas / validation
+                    KCP 实测、3DCS/RD&T 参照                                                                模型结果 csv
+     优先级说明：A=模型启动必需；B=强烈建议，缺失时可用先验/简化替代但不确定性显著增加；C=验证、对比或工程增强数据。
+
+
+     2.1 技术说明书八类标准输入包对应关系
+输入包                       建议内容                           模型用途                                 对应沟通数据
+                          零件、结合面、阶段、名义几何、材料、铺层、
+I₀                                                       模型基础、误差路径、几何参考零点。                    D0、D2、D5
+                          SMS 先验和装配拓扑。
+                          候选点、法/切向基、面积权重、G、g⁰、B_n/
+I_Γ                                                      接触状态求解、界面统计和参数识别。                    D6、D7
+                          B_t、初始界面参数。
+                          阶段边界、载荷、连接激活状态、K_r、F_r、初
+I_stage                                                  定位—夹持—连接—释放多阶段状态计算。                  D4、D5
+                          始状态。
+                          KCM/KCP 的位置、方向、特征定义、容差和质
+I_key                                                    SMS 更新、状态更新、KCP 提取。                  D1
+                          量要求。
+                          零件级、过程级、界面级和装配后实测值、协方
+I_meas                                                   实测更新、参数识别/校准、独立验证。                   D2、D3、D4、D7、D10
+                          差、时间戳和用途标签。
+                          自由度分区、Schur 补、W_struct、可选降阶基
+I_red                                                    在线快速接触求解。                            D5
+                          和分解缓存。
+                          JSS 关系、装配顺序、局部并联路径、J-T/投影
+I_pred                                                   整体误差传递与 KCP 预测。                      D0、D8
+                          矩阵。
+                          SMS/工艺/参数分布、相关性、抽样设置、验证
+I_stat                                                   Monte Carlo 与敏感性分析。                  D9、D10
+                          工况和收敛要求。
+
+
+
+
+     3 各类输入数据详细需求
+
+     D0 对象、编号、拓扑与名义模型数据
+     定义模型中的对象边界和偏差零点，是所有计算输入的主索引。
+数据项                       应包含字段                          推荐形式                                 备注
+名义 CAD/几何                 零件 CAD、装配 CAD、基准、孔/边/型面、结合面    STEP、Parasolid、CATPart/NX、IGES；同时提   CAD 是偏差零点，不等于实测零件。
+
+
+                                          数学模型输入数据获取需求说明书（沟通版）
+                     几何                                             供轻量预览 PDF/PNG
+                     part_id、part_name、material_type、thickness/                                    后续所有测量、仿真和状态包均通过 part_id 关
+零件编号表                                                               xlsx/csv
+                     layup_id、parent_assembly、revision                                             联。
+                     interface_id、part_i、part_j、surface_i、
+结合面编号表               surface_j、material_pair、nominal_gap、           xlsx/csv + CAD 面标注截图           建议提前区分 CFRP/金属关键结合面。
+                     contact_candidate_flag
+                     assembly_step、part_in、
+装配拓扑与顺序              existing_subassembly、interface_id、             json/yaml + xlsx/csv           用于 JSS 路径和多零件顺序装配状态继承。
+                     operation_type、predecessor/successor
+                     CS_id、CS_type、origin、axis、
+坐标系与基准                                                              json/yaml、csv、CAD 基准说明         所有数据最终需映射到统一装配模型坐标系。
+                     T_to_assembly、datum_features、uncertainty
+
+
+ D1 KCP/KCM 关键特性与评价定义
+ 把“最终装配质量要求”和“可用测量数据”转化为模型可调用的输入/输出接口。
+数据项                  应包含字段                                          推荐形式                           备注
+                     kcp_id、feature_type、part/interface、position、
+                                                                                                   如关键测点偏差、孔位协调、结合面间隙、阶差、
+KCP 清单               direction、nominal、lower_tol、upper_tol、unit、    xlsx/csv + 示意图
+                                                                                                   释放回弹。
+                     acceptance_rule
+                     kcm_id、measurement_type、target_part/
+KCM 清单               interface、stage、position、direction、method、     xlsx/csv                       KCM 是观测量，不等于所有 KCP。
+                     expected_accuracy、update_target
+                     点/线/面/孔中心拟合方式、投影方向、评价基准、
+特征提取规则                                                              docx/pdf + 脚本或伪代码              避免不同专业对“同一特征”理解不一致。
+                     滤波/区域范围
+                     tolerance_band、criticality、risk_level、
+容差与质量要求                                                             xlsx/csv                       用于超差概率和模型验证指标解释。
+                     reporting_precision
+
+
+ D2 SMS/零件制造态形貌数据
+ 描述零件装配前参考状态下相对于名义模型的制造态偏差，用于形成初始间隙 g⁰ 和 KCP 直接几何贡献。
+数据项                  应包含字段                                          推荐形式                           备注
+                     sample_id、part_id、point_id、x、y、z、                                             原始点云可归档，模型输入应提供已配准版本和配
+实测点云/扫描数据                                                           ply/pcd/las/xyz/csv；大数据建议 h5
+                     coord_system、normal/vector、quality_flag                                       准误差。
+                     node_id/point_id、dx、dy、dz 或
+节点/表面偏差场                                                            csv、npz、mat、h5                 适合与 FE 网格或名义计算域直接关联。
+                     normal_deviation、unit、sigma
+                     basis_version、mode_id、alpha、sigma、
+SMS 低维参数                                                            xlsx/csv + npz/mat 协方差         用于 Monte Carlo 抽样和 KCM 更新。
+                     covariance、source
+虚拟 SMS 样本            sample_id、part_id、basis_coefficients 或         npz/h5 + 样本索引表                 实测不足时用于统计预测和工况覆盖。
+
+                                                数学模型输入数据获取需求说明书（沟通版）
+                    node_displacement、probability_weight
+                    重构残差、基外形貌、接触区误差、KCP 敏感区误                                                     不要求论文研究获取算法，但需要知道输入可信
+SMS 质量报告                                                            pdf/docx + 指标 csv
+                    差、适用说明                                                                       度。
+
+
+ D3 测量状态、坐标变换与不确定度元数据
+ 保证“测量到的形状”能够正确转化为装配前参考态 SMS 或阶段状态，避免把测量夹持/重力变形重复计入。
+数据项                 应包含字段                                           推荐形式                         备注
+                    measurement_state_id、support_state、
+                                                                                                 FREE 或 KNOWN_SUPPORT 优先用于 SMS；
+测量状态记录              load_state、gravity_direction、temperature、       json/yaml + xlsx/csv
+                                                                                                 CLAMPED 需补偿或只能作为过程状态。
+                    fixture_id、clamp/support_points
+                    from_CS、to_CS、T_matrix、fit_datum、                                            扫描坐标系、测量坐标系、零件坐标系、装配坐标
+坐标变换链                                                               json/yaml + matrix csv
+                    registration_residual、version                                                系需可追溯。
+                    value_covariance、repeatability、
+测量不确定度              sensor_accuracy、registration_uncertainty、       csv/matrix、json              协方差用于 WLS/MAP 更新和 Monte Carlo。
+                    R_m/R_s
+                    u_struct^m、w_local^m、compensation_model、                                     若测量支承/重力/夹持变形已补偿，需记录补偿
+补偿信息                                                                npz/h5 + json
+                    excluded_source_ids、R_ref                                                    源，防止阶段重复施加。
+                    data_role、update_target、quality_flag、                                        IDENTIFY/CALIBRATE/VALIDATE/MONITOR 必
+用途标签                                                                measurement_record.csv
+                    timestamp、source                                                             须明确。
+
+
+ D4 定位、夹持、连接、释放工艺阶段数据
+ 定义多阶段状态计算的边界切换、载荷增量、连接锁定和释放回弹条件。
+数据项                 应包含字段                                           推荐形式                         备注
+                    stage_id、operation_order、operation_type、
+                                                                                                 建议统一 LOCATE、CLAMP、JOIN、RELEASE
+阶段计划                active_constraints、input_from_previous_stage、   stage_plan.xlsx/csv + json
+                                                                                                 四类阶段命名。
+                    output_to_next_stage
+                    locator_id、type、position、direction、
+定位方案                constraint_dof、stiffness、datum_reference、       xlsx/csv + CAD/工装图           N-2-1 定位、多点定位、销/支承约束均需明确。
+                    zero_offset
+                    clamp_id、position、direction、command_type、
+                                                                                                 命令值和实测值建议同时提供；强迫位移需给出位
+夹持方案                command_value、actual_force/displacement、        process_record.csv + 传感器日志
+                                                                                                 移方向。
+                    clamp_stiffness、time
+                    fastener/joint_id、location、activation_stage、
+                                                                                                 预紧力优先于扭矩；若只有扭矩需给转换模型或不
+连接方案                preload/torque、torque-tension relation、         xlsx/csv + 工艺卡
+                                                                                                 确定度。
+                    joint_stiffness、lock_state
+释放方案                release_stage、removed_constraints、              xlsx/csv                     释放回弹需要卸载前后边界和测量状态对应。
+
+                                                 数学模型输入数据获取需求说明书（沟通版）
+                   unload_increment、remaining_joints、
+                   measurement_before/after
+                   stage_id、sensor_id、measurement_type、
+                                                                                                        力、位移、间隙、应变、预紧力等均可作为状态/参
+过程实测               position、direction、value、unit、covariance、     process_measurement.csv
+                                                                                                        数更新输入。
+                   timestamp
+
+
+ D5 材料、铺层、厚度、结构模型与降阶算子
+ 提供结构刚度、柔度和阶段力学边界，是低维接触求解与界面凝聚的基础。
+数据项                应包含字段                                         推荐形式                                   备注
+                   material_id、E/G/ν、density、CTE、
+材料参数               orthotropic_constants、temperature_range、      materials.xlsx/csv                     CFRP 与金属分开定义，复材需说明坐标方向。
+                   source
+                   part_id、zone_id、ply_stack、ply_angle、
+                                                                                                        若不研究层合板内部损伤，仍需提供等效刚度输
+铺层与厚度              ply_thickness、total_thickness、                layup.xlsx/csv、FE 属性卡
+                                                                                                        入。
+                   local_stiffness_flag
+                   mesh_id、nodes/elements、element_type、
+FE 模型              property_assignment、boundary_sets、            ABAQUS inp/cae、nastran bdf、ansys cdb   用于离线高保真、Schur 凝聚和验证。
+                   interface_sets
+                   stage_id、K_r/K_Γ、F_r/F_Γ、
+阶段刚度/载荷                                                          mtx、npz、mat、h5                         可由仿真人员预先凝聚后交付，模型端只调用。
+                   boundary_version、connection_state
+                   I_red、W_struct、factor_cache、                                                         支持在线快速预测；任何网格/边界/材料变化需重
+降阶算子                                                             npz/h5 + metadata json
+                   mapping_to_interface、hash/version                                                    建。
+
+
+ D6 接触域、结合面映射与初始间隙数据
+ 把“结合面编号”转化为可直接求解的离散接触对象。
+数据项                应包含字段                                         推荐形式                                   备注
+                   interface_id、candidate_id、x、y、z、
+候选接触点                                                            interface_points.csv/h5                应覆盖可能接触迁移区域。
+                   part_i_point、part_j_point、coverage_region
+                   candidate_id、normal_nx/ny/nz、tangent_1、                                              法向方向需统一；面积权重用于压力和广义接触力
+局部方向与权重                                                          csv/h5
+                   tangent_2、area_weight                                                                转换。
+                   interface_id、G_rows/cols、basis_version、
+SMS-间隙映射 G                                                       npz/mat/h5 + json                      把两侧 SMS 投影为初始间隙 g⁰。
+                   mapping_type、nominal_gap
+                   interface_id、B_n、B_t、dof_order、
+位移映射 B_n/B_t                                                     npz/mat/h5                             方向与 K、G、Q_A 必须一致。
+                   node_mapping、sign_convention
+                   interface_id、C_n/C_t/k/μ/β_r initial value、
+初始界面参数 Θ_c⁰                                                      parameter table + matrix file          可来自先验、局部试验或局部仿真。
+                   source、validity
+
+
+                                               数学模型输入数据获取需求说明书（沟通版）
+ D7 CFRP/金属异质界面参数识别数据
+ 将局部接触、压缩、滑移和释放回弹响应转化为整体模型可调用的等效刚度/柔度/回弹参数。
+数据项                      应包含字段                                         推荐形式                                     备注
+                         specimen_id、material_pair、surface_state、
+局部样件试验                   load_path、force、displacement、pressure、        curve csv + test report                  需扣除夹具、传感器和基体柔度。
+                         compression、unload_rebound
+                         model_id、mesh/roughness、boundary、
+局部 FE/CG-FFT 结果          pressure_field、displacement_field、slip、       odb/vtk/h5/csv + 汇总表                     用于补足不可测场量和建立参数库。
+                         stress、valid_range
+                         interface_id、C_n、C_t、K_int、μ、β_r、R_n/
+参数识别结果                                                                 xlsx/csv + matrix npz/mat                建议同时给点估计、协方差和相关性。
+                         R_t/R_r、Σ_θ、confidence_interval
+                         load_range、pressure_range、temperature、
+适用域 D_valid              surface_state、preload_level、contact_mode、     json/yaml + 表格                           超出适用域需 WARN/FAIL 或回到高保真层。
+                         path_condition
+                         fit_error、cross_validation_error、Q_cal、
+校准质量                                                                   parameter_report.pdf/docx + csv          用于决定是否可进入预测。
+                         data_role、parameter_version
+
+
+ D8 误差传递路径、JSS/J-T 与评价投影数据
+ 把零件、结合面、阶段状态和界面等效项传递到最终 KCP。
+数据项                      应包含字段                                         推荐形式                                     备注
+                         source_id、target_kcp、path_id、interface_id、
+JSS 拓扑矩阵                                                               xlsx/csv、json                            回答“是否通过该路径影响 KCP”。
+                         participation_flag、path_order
+                         matrix_id、input_variable、output_kcp、
+J-T/雅可比矩阵                                                              npz/mat/h5 + csv 索引                      回答“影响系数是多少”。
+                         coefficient、unit、reference_state、valid_mode
+                         parallel_path_id、included_interfaces、
+局部并联路径                                                                 json/xlsx                                用于多结合面并联误差传递。
+                         weighting_rule、constraint_relation
+                         kcp_id、extract_matrix、direction、point_pair、
+KCP 提取投影                                                               json + npz/mat                           确保间隙、阶差、回弹的正负号一致。
+                         baseline、sign_convention
+
+
+ D9 统计输入、分布与相关性
+ 支持 Monte Carlo 抽样、超差概率和敏感性分析。
+数据项                      应包含字段                                         推荐形式                                     备注
+                         part_id、mode_id、mean、std、covariance、
+SMS 分布                                                                 distribution.json + covariance.csv/npz   后验协方差应进入统计预测。
+                         distribution_type、batch_condition
+
+
+                                                     数学模型输入数据获取需求说明书（沟通版）
+                        locator_error、clamp_force_variation、
+工艺误差分布                  preload_variation、fixture_bias、              xlsx/csv + json                              同一工装多个夹持点可能存在相关性。
+                        correlation_group
+                        parameter_id、mean、covariance、
+界面参数不确定度                                                             parameter_uncertainty.json/npz               不可只给单一确定值。
+                        valid_domain、sampling_rule
+                        N_MC、random_seed、sampling_method、
+抽样设置                                                                 stat_config.json/yaml                        用于可复现统计。
+                        convergence_criteria、failure_handling
+相关矩阵                    variable_i、variable_j、correlation、basis      correlation.csv/npz                          相关输入不宜默认独立。
+
+
+ D10 验证数据与工程参照数据
+ 用于分层验证和工程评价，不作为唯一真值，也不能与识别/校准数据混用。
+数据项                     应包含字段                                        推荐形式                                         备注
+                        case_id、geometry、load、
+标准算例/简化结构                                                            case folder + report                         用于验证接触状态更新流程和代码正确性。
+                        expected_contact_state、reference_solution
+                        case_id、interface_id、load_case、pressure/
+局部连接样件/高保真子模型                                                        FE result csv/h5 + report                    用于界面参数校核。
+                        displacement/rebound/reference
+                        assembly_id、kcp_id、stage、predicted_target、
+部件级 KCP 实测              measured_value、unit、uncertainty、             validation_kcp.csv/xlsx                      用于评价关键测点偏差、间隙阶差和释放回弹。
+                        data_role=VALIDATE
+                        software、version、model_assumption、
+工程软件参照                                                               3DCS/RD&T result csv + report                用于趋势一致性和效率对比，不作为唯一真值。
+                        input_version、output_kcp、runtime、notes
+                        MAE、RMSE、max_error、P_f error、runtime、
+验证指标                                                                 validation_report.xlsx/docx                  必须与 KCP 容差和用途挂钩。
+                        speedup、sensitivity_rank_consistency
+
+
+
+
+ D11 局部子模型、响应分解与接触计算追溯数据需求（正文融合）
+ 本补充面向技术说明书 V2.2 和数据结构说明书 V2.3。原沟通版已经能够向设计、工艺、测量、仿真和试验人员说明 D0-D10 数据需求；本次新增 D11，用于
+ 明确局部 FE 子模型、样件实测响应分解、SMS 离散映射和 ContactComputationTrace 的交付要求。
+
+ D11.1 更新必要性判断
+材料/章节                                   是否需要更新                                                        理由
+                                                                                                      V2.2 强化 SMS 散点到候接点的映射，需要增加
+D6 接触域、结合面映射与初始间隙                       需要
+                                                                                                      SMSPointCloudMapping 和 ContactComputationTrace。
+D7 CFRP/金属异质界面参数识别数据                    需要                                                            V2.2 强化从局部 FE/件，需明局部模型界承和位移分解据。
+D5 材料、结构模型与降阶算子                         轻微更新                                                          需说明 W_struct 已包含物理来源，并与 C_n_local 做防重复柔
+
+
+                                                   数学模型输入数据获取需求说明书（沟通版）
+                                                                                                                    度判。
+                                                                                                                    需增加局部模型/界面参数确认和 ContactComputationTrace 审
+D10 验证数据与参照                                            轻微更新
+                                                                                                                    据。
+
+
+ D11.2 新增 D11：局部子模型、样件响应分解与接触计算追溯
+数据包                              主要容                               优先级                                归属输入包                                    推荐交付形式
+                                 LocalSubmodelExtraction、
+                                 BoundaryInheritanceRecord、
+                                 InterfaceTestSpecimen、
+                                 LocalResponseData、                B；若论文重点论证界面参数来源则                                                            json/yaml、csv、npz/h5、局部 FE
+D11 局部子模型与响应分解                                                                                        I_Γ / I_meas / I_red / I_stat / I_pred
+                                 DeformationDecompositionResult    为 A/B                                                                       模型、试验曲线和参数报告
+                                 、ComplianceSeparationReport、
+                                 SMSPointCloudMapping、
+                                 ContactComputationTrace
+ D11 不改变论文“输入已知或可获取”的边界，只是把原先笼统写成“局部 FE/样件试验获得界面参数”的部分拆成可沟通的数据交付项。
+
+ D11.3 D11 详细字段需求
+数据项                                      应包含字段                                    推荐形式                                               备注
+                                         submodel_id、interface_id、
+                                         parent_global_model_id、local_region、
+LocalSubmodelExtraction                                                           json + FE 文件                                       说明局部模型从完整模型哪里提取。
+                                         margin、retained_features、
+                                         mesh_version、material_version
+                                         boundary_id、cut_boundary_nodes、
+BoundaryInheritanceRecord                inheritance_type、u_cut/F_cut/K_imp、      h5/npz + json/csv                                  说明局部模型切割边界如何继承全局模型。
+                                         source_stage、covariance、quality_flag
+                                         specimen_id、material_pair、CFRP_layup、
+InterfaceTestSpecimen                    metal_material、surface_state、            csv + 试验报告                                         说明样件是否代表真实 CFRP/金属界面。
+                                         contact_area、fastener_info、load_path
+                                         force、pressure、total_displacement、
+                                         fixture_displacement、sensor_bias、
+LocalResponseData                                                                 curve csv/h5                                       保存原始和分解后界面。
+                                         substrate_displacement、
+                                         interface_displacement、slip、rebound
+                                         removed_fixture、removed_sensor、
+DeformationDecompositionResult           removed_substrate、residual、              json/csv                                           证明夹具、传感器、基体柔度是否已扣除。
+                                         covariance、method、source_model_ids
+                                         W_struct_sources、Cn_local_sources、
+ComplianceSeparationReport               overlap_assessment、unit_check、           docx/pdf + csv                                     证明 W_struct 与 C_n_local 不重。
+                                         quality_flag
+SMSPointCloudMapping                     contact_point_id、source_sms_point_ids、   h5/npz + csv 索引                                    说明离散 SMS 点如何映射到接触候选点。
+
+
+                                                                  数学模型输入数据获取需求说明书（沟通版）
+                                         interpolation_weights、
+                                         projection_distance、mapping_quality
+                                         gap_field_id、q_id、W_struct_id、
+                                         Cn_local_id、W_total_id、lambda_id、
+ContactComputationTrace                                                        json + npz/h5   用于从 KCP 追溯接算全程。
+                                         active_set、residuals、
+                                         double_count_check_id
+
+
+ D11.4 对原 D5-D7 的字段补充
+      D5 材料与结构模型：CondensedOperator 或 W_struct 交付时应增加 included_physics_struct，说明是否包含基体弯曲、整体柔性、连接锁定和边界弹
+       性。
+      D6 接触域与结合面映射：ContactDomain 应增加 sms_mapping_version、candidate_region_margin、mapping_quality；GapField 应保留
+       nominal_component、sms_component、pose_component 和 double_count_check_id。
+      D7 界面参数：参数表应区分 C_n_total、C_n_substrate 和 C_n_local；若只提供总柔度，应标记为不可直接进入 W_total，需先做
+       ComplianceSeparation。
+      D9 统计输入：除 SMS、工艺误差和参数协方差外，建议加入局部子模型边界继承误差、界面参数识别残差和模型差异项。
+
+ D11.5 推荐交付目录结构补充
+ 07A_local_submodel_response_D11/
+     local_submodel_extraction/
+      local_submodel_extraction.csv
+      boundary_inheritance_record.csv
+      local_FE_models/
+     interface_test_specimens/
+      interface_test_specimen.csv
+      local_response_data.csv
+      deformation_decomposition_result.csv
+     compliance_separation/
+      compliance_separation_report.csv
+     sms_contact_mapping_trace/
+      sms_pointcloud_mapping.h5
+
+
+
+                                                                数学模型输入数据获取需求说明书（沟通版）
+     contact_computation_trace.json
+     trace_matrix_npz/
+
+ D11.6 最小可运行清单补充
+ 若仅做最小可运行算例，D11 可以先简化为以下四项；若要在论文中重点论证界面参数来源，则建议补全全部 D11。
+
+最小项                                        最低要求                                   缺失影响
+局部参数来源说明                                   说明 C_n/C_t/μ/β_r 来自局部 FE、样件试验还是工程先验。   答以解界面可信度。
+形分解                                        至少明具/基柔度是否除。                           C_n 可能与 W_struct 重复。
+SMS 到接触点映射                                 给出接触候选点的 g0 计算方法和 SMS 映射质量。            无法说明离散 SMS 如何入接。
+接触计算追溯                                     保存 q、W、λ、g、主动集和残差。                     KCP 结果无法追溯接触状态。
+
+
+ D11.7 面向各专业的新增沟通问题
+沟通对象                                       新增确认问题                                 新增交付物
+                                           能否从完整 FE 中提取局部子模型？切割边界采用位移、反力还         LocalSubmodelExtraction、BoundaryInheritanceRecord、
+CAE/仿真专业
+                                           是阻抗继承？                                 局部 FE 结果。
+试验专业                                       样件试验中夹具、传感器和基体柔度是否可分别标定或扣除？            LocalResponseData、DeformationDecompositionResult。
+                                           SMS 点云如何映射到接触候选点？映射残差和投影距离是否可记
+测量专业                                                                              SMSPointCloudMapping、映射质量报告。
+                                           录？
+软件实现人员                                     是否保存每次接触求解的 q、W、λ、g、主动集和残差？            ContactComputationTrace、RunLog、QualityGate。
+
+
+ D11.8 质量规则补充
+     局部子模型没有 parent_global_model_id、boundary_inheritance_type 或 source_stage 时，只能作为示意模型，不能作为参数识别来源。
+     样件总位移没有 DeformationDecompositionResult 时，不得直接识别 C_n/C_t，只能作为总响应校核。
+     C_n_local 与 W_struct 的 included_physics 存在重且未解，    ParameterLibrary 应标记 WARN/FAIL。
+     SMSPointCloudMapping 的投影距离、插值残差或映射质量超限时，应重新采样接触域或增加局部 SMS 基。
+     ContactComputationTrace 缺失，     KCP 预测结果仍可用于人工讨论，但不建议作为可审计程序结果发布。
+
+
+
+ D12 N-2-1 / 多点过约束数据需求（正文融合）
+ 本节新增 D12，用于与设计、工艺、测量、CAE、试验和软件实现人员沟通 N-2-1 / 多点过约束所需数据。D12 不改变“输入已知或可获取”的论文边界，只把原
+ 来隐藏在定位/夹持/连接方案中的有限刚度、多点接触和释放历史数据显式列出。
+
+
+
+                                                  数学模型输入数据获取需求说明书（沟通版）
+D12.1 更新必要性判断
+材料/章节                                            是否需要更新                                          理由
+                                                                                                 V2.4/V2.5 将定位器、夹持头、卡板和连接件作为扩展候选
+D4 工艺阶段数据                                        需要                                              约束对象，必须补充对象编号、刚度、间隙、激活/撤除规
+                                                                                                 则。
+                                                                                                 扩展柔度 W_ext 需要记录定位器/夹具/连接柔度是否已包
+D5 材料与结构模型                                       需要
+                                                                                                 含在结构算子中，防止重复。
+                                                                                                 普通 ContactDomain 需扩展为 I_ext，并保存 B_ext、
+D6 接触域与结合面映射                                     需要
+                                                                                                 g_ext^0、q_ext 和扩展求解结果。
+                                                                                                 定位器刚度、夹持力、预紧力和释放回弹需要协方差与相
+D9 统计输入                                          轻微更新
+                                                                                                 关性。
+                                                                                                 需要过约束专项验证算例和
+D10 验证与参照                                        需要
+                                                                                                 ForceNonuniquenessReport/ActiveSetStabilityTrace。
+
+
+D12.2 新增 D12：多点过约束数据包
+数据包                          主要容                            优先级                     归属输入包                                   推荐交付形式
+                             OverConstraintLocatorGroup、
+                             LocatorElement、
+                             LocatorCompliance、
+                             OverConstraintContactModel、
+                                                            A/B；若论文重点回应过约束计算        I₀ / I_Γ / I_stage / I_meas / I_red /   csv/json/npz/h5、工装图、传感
+D12 多点过约束与扩展互补数据             ExtendedLCPSolution、
+                                                            则为 A                    I_pred / I_stat                         器日志、验证报告
+                             ActiveSetStabilityTrace、
+                             ForceNonuniquenessReport、
+                             ConnectionLockHistory、
+                             ContactDiscretizationStudy
+
+
+D12.3 D12 详细字段需求
+数据项                                 应包含字段                                推荐形式                                     备注
+                                    group_id、stage_id、locator_type、
+OverConstraintLocatorGroup          element_ids、activation_rule、         json/csv                                 定义定位/卡板/夹持/连接对象组。
+                                    reference_state_id
+                                    element_id、position、direction、
+                                    gap0、area_weight、
+LocatorElement                                                           csv/h5                                   定义每个离散约束点。
+                                    unilateral_or_bilateral、stiffness、
+                                    quality_flag
+                                    element_id、C_locator、
+LocatorCompliance                                                        json/npz                                 表示定位/夹具/连接局部柔度。
+                                    calibration_source、covariance、
+
+                                                         数学模型输入数据获取需求说明书（沟通版）
+                             D_valid、included_physics
+                             I_ext_id、q_ext_id、W_ext_id、
+OverConstraintContactModel   B_ext_id、solver_config、                 json/npz                   扩展互补求解的输入包。
+                             validity_region
+                             lambda_ext、gap_ext、
+ExtendedLCPSolution          active_ext_indices、residuals、           json/npz                   扩展互补求解结果。
+                             rho_chi、convergence_status
+                             iteration、active_set、rho_chi、
+ActiveSetStabilityTrace                                              csv/json                   主动集稳定性记录。
+                             oscillation_flag、fallback_solver
+                             nullspace_dimension、
+ForceNonuniquenessReport     alternative_force_solutions、            json/report                判断力非唯一是否影响工程输出。
+                             output_variation_bounds、kcp_stability
+                             lock_id、joint_id、locked_reference、
+ConnectionLockHistory        preload_actual、joint_stiffness、         json/csv                   记录 JOIN 到 RELEASE 的路径依赖。
+                             slip_history、source_ids
+                             density_level、active_set、total_force、
+ContactDiscretizationStudy   contact_area、peak_pressure、             csv/report                 证明连续卡板或面接触离散收敛。
+                             kcp_value
+
+
+D12.4 对原沟通清单的最小修改
+第 2 章“输入数据总览”建议由 12 类数据需求扩展为 13 类：D0-D11 保留，新增 D12。若仅做最小可运行验证，D12 至少提供 locator/clamp/joint 对象清单、
+有限刚度或柔度、扩展接触域、实际载荷、释放前后 KCP/KCM、主动集稳定记录。
+
+最小项                                       最低要求                                     缺失影响
+                                          每个定位器、卡板、夹持头和连接件有唯一 ID、位置、方
+过约束对象清单                                                                            无法构造 I_ext。
+                                          向和阶段激活规则。
+                                          提供定位/夹具/连接刚度或工程先验范围，并标明是否进入
+有限刚度/柔度                                                                            容易把过约束做成过硬边界。
+                                          W_struct。
+扩展候选域                                     提供 g_ext^0、B_ext、Q_A_ext 或生成规则。          无法用统一 LCP/NCP 判断接触状态。
+                                          提供定位反力、夹持头位移、预紧力、孔边应变或释放回
+过程实测                                                                               无法校验过约束反力和路径依赖。
+                                          弹。
+专项验证                                      至少提供柔性 4/5 点或连续卡板的高保真/实测参照。              无法证明多点过约束处理可信。
+
+
+D12.5 面向各专业的新增沟通问题
+沟通对象                                      新增确认问题                                   新增交付物
+                                          N-2-1 中每个多余定位点、卡板线/面、夹持头和连接件何            overconstraint_locator_group.csv、
+工艺/工装专业
+                                          时激活/撤除？刚度或零偏是否可提供？                       locator_element.csv、stage activation 表。
+
+                                                  数学模型输入数据获取需求说明书（沟通版）
+                                       能否测定位反力/夹持头位移/放前后回？量是否能定到
+测量专业                                                                     process_measurement.csv、release_rebound.csv。
+                                       stage_id 和 locator_id？
+                                       W_struct 中是否已包含定位器/夹具/连接柔度？能否输出   B_ext/W_ext 矩阵包、included_physics_struct、FE 对比
+CAE 专业
+                                       B_ext、W_ext 或高保真对比？               报告。
+                                       能否做定位器/夹具/连接局部刚度标定和连续卡板离散验
+试验专业                                                                     LocatorCompliance、ContactDiscretizationStudy。
+                                       证？
+                                       能否保存 ExtendedLCPSolution、
+软件实现人员                                 ActiveSetStabilityTrace 和         求解日志、trace、quality gate。
+                                       ForceNonuniquenessReport？
+
+
+D12.6 质量规则补充
+D12 数据不得只有工艺文字说明而无对象编号；不得把连续卡板简单写成一个刚性固定边界；不得将定位器/夹具柔度同时写入 W_struct 和 C_locator；不得在
+主动集振荡或接触力非唯一影响 KCP 时标记 PASS；不得用验证数据回调定位器刚度或连接回弹参数。
+
+D12.7 推荐目录结构补充
+ 10_overconstraint_D12/
+  locator_clamp_joint_objects/
+   overconstraint_locator_group.csv
+   locator_element.csv
+   locator_compliance.csv
+  extended_contact_model/
+   overconstraint_contact_model.json
+   B_ext_W_ext_matrices.npz
+  solver_trace/
+   extended_lcp_solution.json
+   active_set_stability_trace.csv
+   force_nonuniqueness_report.json
+  connection_release_history/
+   connection_lock_history.csv
+   release_history_record.csv
+  validation/
+   contact_discretization_study.csv
+
+
+
+
+                                            数学模型输入数据获取需求说明书（沟通版）
+ 4 推荐数据形式与命名规则
+
+ 4.1 文件格式建议
+数据类型                         优先格式                                       备选格式                         说明
+几何/CAD                       STEP、Parasolid、CATPart/NX                  IGES、STL（仅预览/扫描面）            保留设计基准、装配基准和面/孔编号。
+                                                                                                     字段名固定，避免手写中文列名和程序列名不一
+表格型清单                        xlsx（沟通）+ csv（程序）                          json/yaml
+                                                                                                     致。
+                                                                                                     必须附 coordinate_system、support_state 和配
+点云/形貌                        ply/pcd/las + csv 索引                       xyz、h5
+                                                                                                     准质量。
+矩阵/协方差/算子                    npz、mat、h5                                 mtx、csv（小矩阵）                 大型稀疏矩阵不建议用普通 Excel。
+FE/高保真模型                     inp/odb/cae、bdf/op2、cdb/rst                vtk/vtu/h5                   同时提供模型版本和边界工况说明。
+                                                                                                     推荐长表：time/load/displacement/stage/
+曲线/试验数据                      csv + metadata json                        xlsx
+                                                                                                     sensor/unit。
+报告/说明                        docx/pdf                                   png/svg 示意图                  报告只作为人工解释，不替代机器可读数据。
+
+
+ 4.2 命名与版本建议
+ 建议所有文件名包含对象、阶段、数据类型、版本和日期，避免“最终版”“最新”等不可追溯命名。
+对象                                          命名示例                                            说明
+零件 SMS                                      P003_SMS_ref_FREE_v01_20260627.npz              P003 零件在 FREE/参考状态下的后验 SMS。
+阶段工艺记录                                      ASM017_CLAMP_process_record_v02_20260627.csv    ASM017 装配样本夹持阶段实际载荷和测量记录。
+结合面接触域                                      G012_contact_domain_nominal_v03.h5              G012 结合面候选点、法向、面积权重和映射。
+界面参数库                                       CFRP_AL_interface_param_v04.json                CFRP/铝合金界面参数、适用域和协方差。
+验证结果                                        ASM017_KCP_validate_release_v01.csv             释放后 KCP 独立验证数据。
+
+
+
+
+ 5 推荐交付目录结构
+ 建议以“项目/样本/数据包/版本”的方式组织文件。下面目录可直接作为数据交付包模板。
+
+ 目录模板
+ InputPackage_V0.1/
+  00_readme_and_index/
+   data_index.xlsx
+   coordinate_systems.json
+
+                                                     数学模型输入数据获取需求说明书（沟通版）
+ version_log.xlsx
+01_nominal_model_D0/
+ CAD/
+ part_table.csv
+ interface_table.csv
+ assembly_sequence.csv
+02_key_characteristics_D1/
+ KCP_KCM_list.xlsx
+ feature_extraction_rules.docx
+03_SMS_morphology_D2_D3/
+ point_cloud/
+ sms_coefficients/
+ measurement_state_metadata/
+ covariance/
+04_process_stage_D4/
+ stage_plan.xlsx
+ locator_clamp_join_release.csv
+ process_measurement/
+05_material_FE_reduced_D5/
+ material_layup.xlsx
+ FE_models/
+ reduced_operator/
+06_contact_domain_D6/
+ contact_points/
+ G_B_QA_matrices/
+07_interface_parameter_D7/
+ local_test_FE_CGFFT/
+ parameter_library/
+08_prediction_stat_D8_D9/
+ JSS_JT_matrices/
+ distributions_correlations/
+ mc_config.json
+09_validation_reference_D10/
+ local_validation/
+ component_KCP_validation/
+ engineering_reference_3DCS_RDT/
+
+
+
+
+                                   数学模型输入数据获取需求说明书（沟通版）
+    6 最小可运行输入清单
+    若为了先跑通数学模型流程，可先收集以下最小可运行数据。后续再补充局部样件、过程实测、统计分布和独立验证数据。
+序号                                         最小数据                        最低要求                                     缺失影响
+                                                                       零件 CAD、结合面编号、装配基准、坐标变
+1                                          名义模型与坐标系                                                             无法统一偏差零点和几何映射。
+                                                                       换。
+                                                                       part_id、interface_id、stage_id、
+2                                          零件/结合面/阶段/顺序编号                                                       无法构建误差路径和状态继承。
+                                                                       assembly_sequence。
+                                                                       关键测点、间隙阶差、释放回弹等位置/方向/容
+3                                          KCP/KCM 定义                                                           无法确定模型输出和输入观测。
+                                                                       差。
+                                                                       至少提供每个关键零件的形貌偏差场或低维
+4                                          SMS 或虚拟形貌样本                                                          无法构造初始间隙 g⁰。
+                                                                       SMS 参数。
+5                                          材料/铺层/厚度与简化结构刚度             材料参数、铺层或等效刚度、阶段边界。                       无法计算柔性变形和接触响应。
+                                                                       定位点、夹持点、力/位移、预紧力、释放规
+6                                          定位/夹持/连接/释放工艺数据                                                      无法建立阶段状态 S^(s)。
+                                                                       则。
+                                                                       至少提供候选接触面、法向、初始间隙计算方
+7                                          关键结合面接触域                                                             接触迁移和压力无法求解。
+                                                                       式。
+                                                                       C_n/K_int、C_t、μ、β_r 可先用工程先验或局
+8                                          界面参数初值                                                               无法表达异质界面柔度和回弹，预测只能粗略。
+                                                                       部仿真给范围。
+9                                          误差传递路径与评价投影                 KCP 与零件/结合面/阶段之间的 JSS/J-T 关系。            局部状态无法传递到整体精度输出。
+10                                         至少一组验证/参照数据                 标准算例、高保真结果或部件级关键测点数据。                    无法判断流程正确性和工程可信度。
+
+
+
+
+    7 数据质量门与防混用规则
+
+    7.1 每条实测记录最小字段
+字段                                                      含义                                          示例
+sample_id / part_id / assembly_id                       绑定到具体零件、子装配或装配样本。                           P_003、ASM_2026_017
+interface_id / stage_id                                 标明结合面和阶段。                                   G_012；FREE/LOCATE/CLAMP/JOIN/RELEASE
+measurement_type                                        明确物理量。                                      point_cloud、KCM、force、gap、strain、KCP
+position / direction / coordinate_system                决定观测矩阵、符号和投影方向。                             点坐标、法向、坐标系版本
+value / unit / covariance                               数值、单位和可信度。                                  mm、N、MPa、rad；R_m/R_s
+support_state / load_state                              区分自由形貌、规定支承和受载状态。                           FREE、KNOWN_SUPPORT、CLAMPED
+
+
+                                                             数学模型输入数据获取需求说明书（沟通版）
+                                                                               SMS、POSE、STAGE_STATE、
+update_target                              规定该数据更新什么对象。
+                                                                               INTERFACE_PARAMETER、KCP_VALIDATION
+data_role                                  规定是否允许参与识别/校准/验证。                   IDENTIFY、CALIBRATE、VALIDATE、MONITOR
+timestamp / source / quality_flag          用于追溯和质量治理。                          2026-06-27；PASS/WARN/REJECT
+
+
+  7.2 禁止或谨慎使用的数据情况
+     只有图片或报告截图、没有机器可读表格/矩阵的数据，不应作为程序输入，只能作为人工说明。
+     受夹持或连接状态下的测量形貌，不能直接标记为 SMS；必须补偿到 FREE/KNOWN_SUPPORT 参考态，或作为阶段状态差分输入。
+     装配后 KCP 验证数据若已用于参数校准，则不能再作为独立验证数据。
+     夹具、传感器、基体柔度没有扣除的局部试验位移，不能直接当作界面附加柔度 C_n/C_t。
+     只有扭矩而没有轴向预紧力转换关系的数据，会显著增加连接阶段不确定度。
+     未说明坐标系、法向符号、单位和版本的数据，暂不进入模型主流程。
+     超出材料、载荷、温度、表面状态或接触模式适用域的数据，不能静默外推，应标记 WARN/FAIL。
+
+
+  7.3 识别、校准、验证数据分组
+数据角色                                用途                      可以做什么                          不能做什么
+IDENTIFY                            识别界面参数、形貌基、凝聚算子等。       用于估计 C_n、C_t、μ、β_r、参数库。        不能直接评价模型最终泛化性能。
+CALIBRATE                           选择正则化、偏置、载荷修正和适用域。      用于调整模型版本。                      不能与独立验证集混用。
+                                                            计算 MAE、RMSE、最大误差、超差概率误差        不能回流调参。验证失败应新增识别/校准数据
+VALIDATE                            评价最终预测可信度。
+                                                            等。                             后形成新版本。
+MONITOR                             过程监测或工程追溯。              用于观察漂移和异常。                     不一定具备调参或验证资格。
+
+
+
+
+  8 面向各专业的需求沟通清单
+沟通对象                                       优先确认问题                              交付物建议
+                                           名义 CAD 是否冻结？零件、结合面、孔/边/型面编号是否与装配
+设计/结构专业                                                                        CAD、零件表、结合面表、材料/铺层表、坐标系说明。
+                                           工艺一致？材料、铺层和厚度版本是否可追溯？
+                                           定位、夹持、连接、释放顺序是什么？每个阶段哪些约束激活/撤
+工艺/装配专业                                                                        stage_plan、locator/clamp/join/release 清单、工艺载荷记录。
+                                           除？夹持力、预紧力、连接锁定如何记录？
+                                           SMS/KCM/KCP 分别在哪个状态测？支承、重力、坐标系、配准   点云/KCM/KCP 数据、measurement_record、坐标变换和协方
+测量专业
+                                           残差和不确定度是否记录？哪些数据允许用于验证？             差。
+仿真/CAE 专业                                  全阶模型如何对应名义几何？阶段边界和候选界面是否一致？能        FE 模型、阶段刚度/柔度、降阶算子、接触域映射。
+
+
+                                                 数学模型输入数据获取需求说明书（沟通版）
+                            否输出 K_Γ、W_struct、B/G/Q_A 或可复用矩阵？
+                            CFRP/金属局部样件或高保真子模型能否覆盖载荷、表面状态和
+试验/界面参数专业                                                         载荷-位移曲线、压力-压缩/滑移/回弹数据、参数识别报告。
+                            预紧范围？夹具/基体柔度是否可扣除？
+                            3DCS/RD&T 模型假设、输入版本和输出 KCP 是否与本文模型一
+工程容差分析专业                                                          工程软件结果表、建模假设说明、计算时间和版本记录。
+                            致？结果用作趋势参照还是校准数据？
+
+
+
+
+  9 附录：建议数据表字段模板
+  下面字段模板可直接复制到 Excel/CSV 中使用。实际工程可按保密与系统接口要求删减，但不建议删除 id、坐标系、状态、单位、协方差、角色和版本字段。
+
+  part_table.csv
+字段 1                        字段 2                                  字段 3
+part_id                     part_name                             material_type
+layup_id                    thickness_zone                        nominal_model_file
+coordinate_system           revision                              remark
+
+
+  interface_table.csv
+字段 1                        字段 2                                  字段 3
+interface_id                part_i                                part_j
+surface_i                   surface_j                             material_pair
+nominal_gap                 contact_candidate_region              key_interface_flag
+revision
+
+
+  KCP_KCM_list.csv
+字段 1                        字段 2                                  字段 3
+feature_id                  feature_role(KCP/KCM)                 feature_type
+target_part/interface       stage                                 position_x
+position_y                  position_z                            direction_x
+direction_y                 direction_z                           nominal_value
+lower_tol                   upper_tol                             unit
+measurement_method          update_target                         data_role
+
+
+  sms_point_or_node.csv
+字段 1                        字段 2                                  字段 3
+sample_id                   part_id                               point_or_node_id
+x                           y                                     z
+
+
+                                      数学模型输入数据获取需求说明书（沟通版）
+dx                          dy                                    dz
+normal_deviation            unit                                  coord_system
+support_state               sigma                                 quality_flag
+
+
+  measurement_record.csv
+字段 1                        字段 2                                  字段 3
+record_id                   sample_id                             part_id
+assembly_id                 interface_id                          stage_id
+measurement_type            position                              direction
+coord_system                value                                 unit
+covariance_id               support_state                         load_state
+update_target               data_role                             timestamp
+source                      quality_flag
+
+
+  stage_plan.csv
+字段 1                        字段 2                                  字段 3
+stage_id                    stage_order                           operation_type
+active_constraint_ids       load_ids                              connection_activation
+input_state                 output_state                          boundary_version
+remark
+
+
+  process_record.csv
+字段 1                        字段 2                                  字段 3
+record_id                   assembly_id                           stage_id
+actuator_or_sensor_id       measurement_type                      command_value
+actual_value                unit                                  position
+direction                   covariance_id                         timestamp
+quality_flag
+
+
+  interface_parameter.csv
+字段 1                        字段 2                                  字段 3
+parameter_set_id            interface_id                          material_pair
+surface_state               load_range                            temperature_range
+C_n                         C_t                                   K_int
+mu                          beta_r                                covariance_id
+D_valid_id                  data_role                             version
+source
+
+
+
+
+                                           数学模型输入数据获取需求说明书（沟通版）
+  validation_kcp.csv
+字段 1                                 字段 2                               字段 3
+validation_id                        assembly_id                        kcp_id
+stage                                predicted_value                    measured_value
+unit                                 uncertainty                        reference_source
+data_role                            quality_flag                       remark
+
+
+
+
+  10 交付前检查清单
+      所有文件是否有版本号、生成日期、数据来源和责任人/来源系统？
+      所有几何、测量、工艺和仿真数据是否能映射到统一装配模型坐标系？
+      所有数值是否包含单位，关键测量是否包含不确定度或协方差？
+      SMS 是否明确为 FREE/KNOWN_SUPPORT 参考状态；若不是，是否给出了补偿或状态差分？
+      KCP/KCM 是否明确位置、方向、容差和评价规则？
+      定位、夹持、连接、释放阶段是否有清晰边界和增量定义？
+      界面参数是否包含适用域 D_valid、来源、协方差和质量标志？
+      验证数据是否独立于识别/校准数据？
+      矩阵类文件是否提供行列索引、自由度顺序和符号约定？
+      是否提供 data_index.xlsx 作为总索引，能从任一 KCP 追溯到对应零件、结合面、阶段和输入源？
+                                  （原 V1.0/V0.1 正文结束；以下为 V2.2/V2.3 同步修订补充。）
+
+
+
+
+                                               数学模型输入数据获取需求说明书（沟通版）
+

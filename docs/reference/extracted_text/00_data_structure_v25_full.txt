@@ -1,0 +1,1979 @@
+               数学模型数据结构说明书 V2.5 状态传递、局部模型与 N-2-1 过约束配套版
+
+
+               异质叠层结构孪生体偏差仿真
+                  数学模型数据结构说明书
+            V2.5 状态传递、局部模型与 N-2-1 过约束配套版
+
+面向 SMS 输入、实测关键特性、测量状态补偿、接触面计算域、结构静力凝聚、界面互补求解、阶段状态/参数传递、
+            界面等效参数、KCP 快速预测、Monte Carlo 与 N-2-1 / 多点过约束装配。
+
+                文档类型：硕士论文配套数据结构说明书 / 程序接口依据
+         版本：V2.5 | 基准格式：V2.2 状态传递与防重复计算配套版 | 日期：2026 年 7 月
+重构说明
+本版以 V2.2 为底稿样式和章节顺序，保留其“数学形式 - 参数含义 - 数学形式与参数说明”写法；V2.3 的局部模型、样件响应、
+柔度分离和接触追溯对象，以及 V2.5 的 N-2-1 / 多点过约束对象被嵌入对应正文位置，不再以前置“第一部分/补充块”方式堆
+叠。
+
+
+修订记录
+版本               定位                  主要变化                         使用建议
+V1.0             接触面计算域数据结构          建立 Part、Interface、           支撑早期程序设计。
+                                     ContactDomain、Stage、
+                                     ContactState、
+                                     InterfaceParameter 与 KCP 预
+                                     测对象。
+V2.0             配套全流程版              补齐八类输入包、实测记录状态               作为全流程接口依据。
+                                     字段、参考状态/增量定义、过
+                                     程实测更新、质量门、缓存和最
+                                     小运行包。
+V2.1             公式增强版               在关键数据结构上补充数学形式               作为公式配套。
+                                     与参数说明，强化 SMS、过程
+                                     实测、W_struct/C_n 和
+                                     D_validate 边界。
+V2.2             状态传递与防重复计算配套版       新增                           作为主体结构与写法基准。
+                                     MeasurementStateSnapshot
+                                     、
+                                     SMSUpdateTransferPackage
+                                     、StageState/ParameterSnap
+                                     shot、
+                                     StageTransitionRecord、
+                                     StageIncrement、
+                                     ContributionLedger 和
+                                     DoubleCountCheckResult。
+V2.3             局部模型与离散接触实现配套版      新增局部模型提取、边界继承、               嵌入第 2、5、7、9、13、14
+                                     样件试验、柔度分离、SMS 离              章。
+                                     散点映射和
+                                     ContactComputationTrace。
+V2.5             N-2-1 / 多点过约束配套版    新增扩展候选域、有限刚度约束               作为技术说明书 V2.4 的现行数
+                                     元素、扩展 LCP/NCP、主动集            据接口依据。
+                                     稳定、接触力非唯一、连接锁定
+                                     和释放历史对象。
+
+
+
+制订说明
+本说明书规定数学模型需要哪些数据对象、字段、矩阵、量纲、版本、传递规则和质量标志。技术说明书说明“为什
+么这样建模、每一步如何执行、假设何时成立”；本说明书强调“程序中必须保存什么、对象之间如何引用、缓存何
+时失效、质量门如何落地”。
+
+                      硕士论文配套数据结构说明书 | 按 V2.2 写法与版式重构
+                           数学模型数据结构说明书 V2.5 状态传递、局部模型与 N-2-1 过约束配套版
+数据结构主线
+MeasurementState -> Compensation -> KCM_ref -> SMSPosterior/TransferPackage -> g^0 -> StagePosteriorPackage^(s) ->
+StageIncrement^(s) -> ContributionLedger -> Delta y_KCP -> ValidationResult
+
+
+目录（章节结构与 V2.2 保持一致）
+序号                                                          章节
+1                                                           文档定位、配套关系与版本范围
+2                                                           对象分层、全局数据链与八类输入包
+3                                                           通用元数据、编号、坐标系、单位与版本治理
+4                                                           实测数据包、用途划分与数据治理
+5                                                           SMS、KCM 更新与初始间隙构建数据结构
+6                                                           接触面计算域与阶段输入数据结构
+7                                                           离线结构凝聚 I_red 与缓存数据结构
+8                                                           互补求解、接触模式与阶段状态数据结构
+9                                                           局部界面参数识别、柔度分解与参数库
+10                                                          过程实测状态/参数更新与校准对象
+11                                                          界面等效误差项、KCP 预测与贡献分解
+12                                                          Monte Carlo、敏感性、验证与高保真对比
+13                                                          质量门、日志、缓存失效与操作交付物
+14                                                          端到端对象流、伪代码与实施清单
+附录 A                                                        枚举值、字段命名和最小可运行数据包
+
+
+
+
+                                   硕士论文配套数据结构说明书 | 按 V2.2 写法与版式重构
+                          数学模型数据结构说明书 V2.5 状态传递、局部模型与 N-2-1 过约束配套版
+
+1 文档定位、配套关系与版本范围
+1.1 与技术说明书的分工
+    层面                       技术说明书关注                  本数据结构说明书关注                    交付物
+    物理/理论层                   原理、假设、简化、适用边界、验          记录支撑这些原理的数据对象、字               对象字典、字段定义、维度表。
+                             证方式。                     段和矩阵维度。
+    算法/执行层                   离线-在线、主动集、参数识别、          把算法步骤变成输入、输出、状                流程接口和伪代码。
+                             Monte Carlo、验证闭环。        态、缓存、日志和质量门。
+    实测/校准层                   零件级 KCM、过程实测和 KCP 验      用 support_state、load_state、   实测数据 schema。
+                             证的职责边界。                  update_target、data_role 和
+                                                      DataSplit 防止混用。
+    工程治理层                    适用域、升级触发和模型发布。           记录模型版本、依赖哈希、缓存失               ModelVersionRelease、
+                                                      效条件和验证结果。                     RunLog。
+    N-2-1 过约束层               说明多点过约束接触如何建模、求          保存扩展候选域、有限刚度元素、               ExtendedContactDomain、
+                             解和验证。                    扩展互补解、稳定性和反力非唯一               ExtendedLCPSolution 等对象。
+                                                      报告。
+
+
+
+
+1.2 本版新增与强化内容
+     沿用 V2.2 的 ReferenceState、IncrementDefinition、MeasurementStateSnapshot、SMSUpdateTransferPackage、
+      StagePosteriorPackage、ContributionLedger 和 DoubleCountCheckResult，继续以“参考态 + 阶段增量 + 变形源台
+      账”为主线。
+     纳入 V2.3 的局部模型提取、边界继承、局部 FE/样件试验、位移分解、柔度分离、SMSPointCloudMapping 和
+      ContactComputationTrace。
+     新增 N-2-1 / 多点过约束对象：OverConstraintLocatorGroup、LocatorElement、LocatorCompliance、
+      ExtendedContactDomain、ExtendedGapAndCompliance、OverConstraintContactModel 和
+      ExtendedLCPSolution。
+     新增数值治理对象：ActiveSetStabilityTrace、LCPRegularizationConfig、ForceNonuniquenessReport、
+      ConnectionLockHistory 和 ReleaseHistoryRecord。
+     更新最小可运行包和质量门，要求每个过约束求解结果不仅保存 KCP，还保存 q_ext、W_ext、lambda_ext、
+      gap_ext、主动集稳定性、反力非唯一和防重复检查。
+
+
+
+
+                                   图 1-1 与技术说明书对应的总体执行流程和数据流
+
+
+
+
+                                 硕士论文配套数据结构说明书 | 按 V2.2 写法与版式重构
+              数学模型数据结构说明书 V2.5 状态传递、局部模型与 N-2-1 过约束配套版
+
+2 对象分层、全局数据链与八类输入包
+2.1 数据对象分层
+对象层            典型对象                             作用                              主要流向
+物理实体层          Part、Interface、                  定义研究对象、结合面、阶段和关键                进入 I0、Ikey、Ipred。
+               StageDefinition、KCMDefinition、   特性。
+               KCPDefinition
+几何与形貌层         NominalModel、SMSBasis、           描述名义几何、先验 SMS 和实测更              进入 I_Gamma 和 KCP。
+               SMSPrior、SMSField、               新后的后验 SMS。
+               SMSUpdateResult
+测量与试验层         MeasurementRecord、               保存实测值、坐标、不确定度和用途                用于 SMS 更新、过程校准和独立验
+               MeasurementSet、DataSplit、        划分。                             证。
+               RegistrationResult
+局部模型与样件层       LocalRegionDefinition、           记录局部模型从全局模型提取、边界                进入参数识别、柔度分离和适用域。
+               LocalSubmodelExtraction、         继承、样件设计和加载路径。
+               BoundaryInheritanceRecord、
+               InterfaceTestSpecimen、
+               LoadingPath
+局部响应与柔度分离层     LocalResponseData、               保存总响应、夹具/传感器/基体扣除               进入 ParameterLibrary 和质量门。
+               DeformationDecompositionResult   和 W_struct/C_n 防重复检查。
+               、ComplianceSeparationReport
+接触计算层          ContactDomain、ContactPoint、      把结合面转化为可求解接触域，并追                进入阶段互补求解和 RunLog。
+               GapField、AreaWeightMatrix、       溯 g0->q->W->lambda->p/w。
+               InterfaceLCPModel、
+               ContactComputationTrace
+过约束计算层         ExtendedContactDomain、           保存 N-2-1 或多点过约束的扩展候选            进入阶段状态、KCP 和验证。
+               LocatorElement、                  域、有限刚度元素、扩展互补问题和
+               LocatorCompliance、               求解结果。
+               OverConstraintContactModel、
+               ExtendedLCPSolution
+结构凝聚层          DOFPartition、                    记录 Schur 凝聚、阶段载荷右端项             进入 Ired 和在线求解器。
+               CondensedOperator、               和矩阵缓存。
+               ReducedBasis、
+               FactorizationCache、
+               ReducedForceVector
+状态与模式层         LCPSolution、ContactState、        保存阶段接触解、模式、阶段状态和                进入界面凝聚和快速预测。
+               ContactMode、                     阶段增量。
+               StageStateSnapshot、
+               StageTransitionRecord、
+               StageIncrement
+参数与凝聚层         ParameterEstimate、               保存界面参数、柔度分解、等效误差                进入 KCP 预测和 Monte Carlo。
+               ComplianceDecomposition、         项和适用域。
+               InterfaceParameter、
+               ParameterLibrary
+预测与验证层         KCPPredictionResult、             保存预测、统计、验证和模型发布结                用于论文评价和工程应用。
+               StatisticalPredictionResult、     果。
+               ValidationResult、
+               ModelVersionRelease
+
+
+
+
+2.2 八类标准输入包
+输入包            核心对象                             V2.5 增补对象                       用途
+I0             Part、Interface、NominalModel、     LocalRegionDefinition、N-2-1 约   名义模型、局部域定义和过约束对象
+               Material、AssemblyTopology、       束对象索引                           入口。
+               SMSPrior
+I_Gamma        ContactDomain、ContactPoint、      SMSPointCloudMapping、           接触域、扩展接触域和初始间隙/自
+               G、g0、Bn/Bt、QA、Theta_c0           ExtendedContactDomain、          由间隙构建。
+                                                ExtendedGapAndCompliance
+I_stage        StageInput、BoundaryItem、         OverConstraintLocatorGroup、     定位-夹持-连接-释放阶段边界、载荷
+               LoadItem、阶段激活状态、Kr/Fr            LocatorElement、                 和过约束历史。
+                                                ReducedForceVector、
+                                                ConnectionLockHistory
+I_key          KCMDefinition、KCPDefinition、     measurement_type/               定义关键输入/输出和过程观测量。
+               FeatureMapping、容差                update_target 的 N-2-1 枚举
+I_meas         MeasurementPackage、              InterfaceTestSpecimen、          实测、试验和校准数据治理。
+               MeasurementRecord、               FixtureCalibration、
+               MeasurementSet、DataSplit         SensorCalibration、
+                                                LocalResponseData
+
+                     硕士论文配套数据结构说明书 | 按 V2.2 写法与版式重构
+                         数学模型数据结构说明书 V2.5 状态传递、局部模型与 N-2-1 过约束配套版
+I_red                      DOFPartition、                      BoundaryInheritanceRecord、    结构凝聚、子模型边界继承和缓存失
+                           CondensedOperator、W_struct、        LocalModelValidationResult、   效。
+                           ReducedBasis、                      material/load dependency
+                           FactorizationCache
+I_pred                     JSSModel、JTTransferModel、          ContactComputationTrace、      KCP 传递、反力非唯一和释放回弹
+                           ErrorPath、ReferenceState           ForceNonuniquenessReport、     贡献追溯。
+                                                              ReleaseHistoryRecord
+I_stat                     MonteCarloConfig、                  ValidityDomain、局部参数协方         统计预测、敏感性和适用域治理。
+                           RandomSample、                      差、边界继承不确定度、模式频率
+                           JointDistribution、ValidationCase
+
+
+
+ I = {I_0, I_Gamma, I_stage, I_key, I_meas, I_red, I_pred, I_stat}
+
+参数含义：I_0 为名义模型与先验；I_Gamma 为接触面与扩展接触域；I_stage 为阶段边界、载荷和过约束激活；
+I_key 为 KCM/KCP 定义；I_meas 为实测与试验包；I_red 为离线结构凝聚包；I_pred 为误差传递与追溯包；I_stat 为
+统计与验证包。
+ StandardInputPackage = {
+   I0, I_Gamma, I_stage, I_key, I_meas, I_red, I_pred, I_stat,
+   schema_version, model_version, dependency_hash, quality_summary
+ }
+
+
+
+
+                                  图 2-1 输入包、坐标统一、SMS 更新与初始间隙构建
+
+
+3 通用元数据、编号、坐标系、单位与版本治理
+3.1 通用元数据 CommonMetadata
+ O = (id, type, ver, src, parent, Q),           O_new <- f(O_parent, data, method)
+
+参数含义：id/type 标识对象；ver/revision 记录版本；src/source 记录来源；parent 表示依赖对象；Q/quality_flag
+表示质量状态；checksum/dependency_hash 用于判断对象是否可追溯、可复用。
+ CommonMetadata = {
+   object_id, object_type, schema_version, revision_id,
+   project_id, sample_id_optional, source_type, source_uri_or_file,
+   created_at, created_by, coordinate_system_id_optional, unit_system_id,
+   checksum_optional, parent_object_ids, dependency_hash_optional,
+   quality_flag, lifecycle_state, notes
+ }
+
+
+3.2 统一编号规则
+对象                         推荐前缀                               示例                            说明
+
+                                 硕士论文配套数据结构说明书 | 按 V2.2 写法与版式重构
+                         数学模型数据结构说明书 V2.5 状态传递、局部模型与 N-2-1 过约束配套版
+ 零件                        P                          P_WALL_L_001                   应能识别部位、材料或左右件。
+ 结合面                       G                          G_RIB03_PANEL_L                建议包含两侧零件或装配区域。
+ 阶段                        S                          S_CLAMP_02                     定位、夹持、连接、释放等阶段。
+ KCM/KCP                   KCM/KCP                    KCM_HOLE_A1、KCP_GAP_R03        与特征定义表一一对应。
+ 接触域                       CD                         CD_G_RIB03_PANEL_L             由 Interface 派生，保存候选点和
+                                                                                     映射。
+ 扩展过约束域                    ECD                        ECD_G_RIB03_CLAMP              保存零件接触、定位器、夹持头、
+                                                                                     孔边连接等扩展候选域。
+ 过约束元素                     LOC/CMP/JNT                LOC_PAD_04、CMP_HEAD_02、        对应定位、夹持、连接局部对象。
+                                                      JNT_HOLE_A3
+ 结果                        RES                        RES_MC_20260704_A              用于预测、统计和验证批次。
+
+
+
+
+3.3 坐标、单位和参考状态
+ x_model = R x_meas + t;        Delta z = z - z_ref
+
+参数含义：R 为旋转矩阵，t 为平移向量；CoordinateSystem 定义坐标基准；ReferenceState 定义某项量相对于哪个
+状态；IncrementDefinition 定义某一贡献项是绝对量、增量还是残差。
+ CoordinateSystem = {
+   coordinate_system_id, name, parent_coordinate_system_id_optional,
+   origin[3], rotation_matrix[3,3], handedness,
+   definition_source, covariance_optional, metadata
+ }
+ ReferenceState = {
+   reference_state_id,
+   geometry_reference: "nominal | sms_updated | assembled_stage",
+   process_reference: "nominal_process | measured_process",
+   interface_reference: "nominal_interface | calibrated_interface",
+   stage_id_optional, description, locked_fields
+ }
+ IncrementDefinition = {
+   increment_definition_id, target_quantity, reference_state_id,
+   increment_type: "absolute | delta_from_reference | residual | stage_increment",
+   included_sources, excluded_sources, unit, sign_convention
+ }
+
+ReferenceState 与 IncrementDefinition 用于说明 SMS 直接贡献、接触压缩贡献、回弹贡献、定位/夹持增量和过程
+误差贡献相对于哪个基准状态计算，防止同一变形在 KCP 路径中重复计入。
+
+
+4 实测数据包、用途划分与数据治理
+4.1 实测数据包总定义
+ I_meas = {I_geom, I_KCM, I_proc, I_interface, I_KCP, I_split}
+
+参数含义：I_geom/I_KCM 用于零件级几何和关键测量；I_proc 用于阶段过程实测；I_interface 用于局部界面试验；
+I_KCP 用于装配后关键输出验证；I_split 规定识别、校准和验证的数据划分。
+ MeasurementPackage = {
+   measurement_package_id,
+   geometry_measurement_set_ids, kcm_measurement_set_ids,
+   process_measurement_set_ids, interface_test_set_ids, kcp_measurement_set_ids,
+   data_split_id, common_coordinate_system_id, unit_system_id,
+   preprocessing_pipeline_id, metadata
+ }
+
+
+4.2 单条实测记录 MeasurementRecord
+ z_l^(s) = h_l^(s)(x^(s), theta, e_proc) + v_l^(s),          v_l^(s) ~ N(0, R_l)
+
+参数含义：z_l^(s) 为第 s 阶段第 l 条实测量；h_l^(s) 为观测函数；x^(s) 为阶段状态；theta 为界面/工艺参数；
+e_proc 为过程误差；R_l 由 standard_uncertainty/covariance 给出；support_state、load_state、
+update_target、data_role 决定该数据能更新什么。
+ MeasurementRecord = {
+   measurement_id, measurement_set_id, sample_id,
+   object_type, object_id, feature_definition_id,
+   interface_id_optional, part_id_optional, assembly_id_optional,
+
+                                 硕士论文配套数据结构说明书 | 按 V2.2 写法与版式重构
+                           数学模型数据结构说明书 V2.5 状态传递、局部模型与 N-2-1 过约束配套版
+     stage_id, support_state, load_state,
+     timestamp_optional, location, direction, coordinate_system_id,
+     value, unit, standard_uncertainty, covariance_block_id_optional,
+     sensor_or_device_id, calibration_certificate_id_optional,
+     acquisition_method, preprocessing_history,
+     update_target, data_role, quality_flag,
+     reference_state_id_optional, increment_definition_id_optional,
+     missing_reason_optional, metadata
+ }
+
+字段                                    推荐枚举/形式                              作用
+support_state                         FREE、KNOWN_SUPPORT、FIXTURED、         说明零件是否处于自由/规定支承状态，是 SMS 更
+                                      UNKNOWN                              新能否成立的关键。
+load_state                            FREE、LOCATED、CLAMPED、JOINED、         区分装配前、过程中和装配后测量。
+                                      RELEASED、DISASSEMBLED_FREE
+update_target                         SMS、POSE、STAGE_STATE、                明确该测量允许更新的模型对象。
+                                      PROCESS_LOAD、INTERFACE_PARAMETER、
+                                      REBOUND_PARAMETER、KCP_VALIDATION、
+                                      OVERCONSTRAINT_STATE、
+                                      JOINT_LOCK_HISTORY、RELEASE_HISTORY
+data_role                             IDENTIFY、CALIBRATE、VALIDATE、         防止同一数据既调参又验证。
+                                      MONITOR、EXCLUDE
+measurement_type                      point_cloud、KCM、force、gap、strain、    描述观测物理量。
+                                      KCP、LOCATOR_REACTION、
+                                      CLAMP_HEAD_DISPLACEMENT、
+                                      FASTENER_PRELOAD、RELEASE_REBOUND
+quality_flag                          PASS、WARN、REJECT、                    控制数据是否允许进入计算。
+                                      OUTLIER_REVIEWED、MISSING
+
+
+
+
+4.3 数据划分 DataSplit
+ D_meas = D_identify ∪ D_calibrate ∪ D_validate,            D_validate ∩ (D_identify ∪ D_calibrate) =
+ empty
+
+参数含义：D_identify 用于参数识别；D_calibrate 用于模型校准和超参数选择；D_validate 只用于独立验证；
+grouping_constraint 防止同一零件/工况泄漏到不同集合。
+ DataSplit = {
+   data_split_id,
+   identification_sample_ids, calibration_sample_ids, validation_sample_ids,
+   split_strategy, grouping_constraint, leakage_check_result,
+   random_seed_optional, metadata
+ }
+
+
+
+
+                             图 4-1 实测数据更新机制：零件级、过程级和装配后数据的职责分离
+
+
+
+                                  硕士论文配套数据结构说明书 | 按 V2.2 写法与版式重构
+                         数学模型数据结构说明书 V2.5 状态传递、局部模型与 N-2-1 过约束配套版
+
+5 SMS、KCM 更新与初始间隙构建数据结构
+5.1 零件、名义模型与 SMS 对象
+ P = {P_i}_{i=1}^n,     X_i = X_i^0 + delta_i^SMS,       delta_i^SMS = N_i alpha_i
+
+参数含义：P_i 为零件；X_i^0 为名义几何；delta_i^SMS 为装配前制造形貌偏差；N_i 为形貌基；alpha_i 为低维形貌
+参数；SMSField 保存形貌场，SMSBasis 保存基矩阵和模态信息。
+ Part = {
+   part_id, part_name, material_type, role_in_assembly,
+   nominal_model_id, sms_prior_id, material_id,
+   thickness_definition_id, layup_id_optional,
+   local_coordinate_system_id, mesh_or_point_set_id,
+   key_interface_ids, related_kcm_ids, related_kcp_ids, metadata
+ }
+ SMSField = {
+   sms_field_id, part_id, representation_type,
+   reference_nominal_model_id, coordinate_system_id,
+   value_location_type, values, direction_type,
+   basis_id_optional, alpha_optional, covariance_optional,
+   support_state, gravity_compensation_state,
+   source_measurement_set_id_optional, reconstruction_error,
+   valid_region, metadata
+ }
+ SMSBasis = {
+   basis_id, part_id, basis_type, N,
+   mode_names, mode_units, orthogonality_info,
+   training_sample_ids, retained_energy_ratio_optional,
+   boundary_constraints, observable_kcm_ids, metadata
+ }
+
+
+5.2 KCM 定义和 SMS 更新对象
+ m_KCM = H_m N alpha + b_m + epsilon_m;   alpha_hat = argmin_alpha ||m_KCM - H_m N alpha -
+ b_m||^2_{R_m^-1} + lambda ||L(alpha-alpha_0)||^2
+
+参数含义：m_KCM 为关键测量特性；H_m 为观测矩阵；b_m 为偏置；R_m 为测量协方差；L/lambda 为正则化约
+束；alpha_0/alpha_hat 分别为先验和后验 SMS 参数；SMSUpdateResult 保存更新结果和质量指标。
+ KCMDefinition = {
+   kcm_id, kcm_name, feature_type,
+   target_object_type, target_object_id,
+   stage_id_optional, nominal_location, evaluation_direction,
+   extraction_or_measurement_matrix_id,
+   nominal_value, expected_unit, measurement_method,
+   required_uncertainty, update_target, metadata
+ }
+ SMSUpdateConfig = {
+   update_config_id, sms_prior_id, sms_basis_id,
+   kcm_measurement_set_ids, H_m_id, R_m_id,
+   regularization_type, regularization_matrix_L,
+   lambda_value, lambda_selection_method,
+   constraints_optional, solver_name, convergence_tolerance,
+   data_role_allowed: ["IDENTIFY", "CALIBRATE"], metadata
+ }
+ SMSUpdateResult = {
+   update_result_id, update_config_id,
+   alpha_prior, covariance_prior,
+   alpha_posterior, covariance_posterior,
+   reconstructed_sms_field_id, predicted_kcm, residual_kcm,
+   weighted_residual_norm, regularization_norm,
+   condition_number, observability_rank,
+   posterior_variance_reduction,
+   active_constraints, quality_flag, metadata
+ }
+
+
+5.3 初始间隙构建对象
+ g^0 = g_nom + G delta_hat_SMS + G_pose e_pose;         g_k^0 = n_k^T(x_{j,k}-x_{i,k})
+
+
+
+                                硕士论文配套数据结构说明书 | 按 V2.2 写法与版式重构
+                         数学模型数据结构说明书 V2.5 状态传递、局部模型与 N-2-1 过约束配套版
+参数含义：g^0 为初始间隙向量；g_nom 为名义间隙；G 为 SMS 到间隙的映射；e_pose 为位姿偏置；n_k 为第 k 个
+候选点法向；values_g、nominal_component、sms_component 分别记录总间隙、名义项和形貌项。
+ GapField = {
+   gap_field_id, contact_domain_id, sample_id,
+   stage_id_or_initial,
+   values_g, nominal_component, sms_component,
+   pose_bias_component_optional,
+   sign_convention: "g>0 separation; g=0 contact; g<0 initial interference",
+   source_sms_update_result_ids,
+   reference_state_id, unit, metadata
+ }
+
+GapField 必须记录 nominal_component 与 sms_component，这样后续 KCP 预测中可以区分“装配前几何直接贡
+献”和“接触压缩附加贡献”，避免重复计入。
+
+
+
+
+                                 图 5-1 输入包、坐标统一、SMS 更新与初始间隙构建
+
+
+5.4 测量状态与变形补偿对象
+ m_raw^(m) = H_delta N alpha + H_pose e_pose^(m) + H_u u_struct^(m) + H_c w_local^(m) + b_m +
+ epsilon_m
+
+参数含义：m_raw^(m) 为测量状态 m 下的原始 KCM；H_delta N alpha 为制造形貌贡献；H_pose e_pose 为测量姿
+态/配准贡献；H_u u_struct 为支承、重力或夹具造成的结构变形；H_c w_local 为局部接触压缩；b_m 为测量偏置；
+epsilon_m 为噪声。
+ MeasurementStateSnapshot = {
+   measurement_state_id, measurement_set_id, sample_id, part_id,
+   support_state, load_state, target_reference_state_id,
+   boundary_condition_ids, measured_load_ids, fixture_model_id,
+   gravity_vector, temperature_optional,
+   measurement_coordinate_system_id, model_coordinate_system_id,
+   coordinate_transform_id, transform_covariance_optional,
+   acquisition_timestamp, state_quality_flag, metadata
+ }
+ MeasurementDeformationEstimate = {
+   deformation_estimate_id, measurement_state_id,
+   pose_estimate, pose_covariance,
+   structural_displacement_field_id,
+   local_compression_field_id_optional,
+   fixture_deflection_field_id_optional,
+   compensation_vector_in_kcm_space,
+   compensation_covariance,
+   included_deformation_source_ids,
+   estimation_method, source_model_ids,
+
+
+                                硕士论文配套数据结构说明书 | 按 V2.2 写法与版式重构
+                             数学模型数据结构说明书 V2.5 状态传递、局部模型与 N-2-1 过约束配套版
+     residual_and_identifiability, quality_flag, metadata
+ }
+
+字段                                                      规则
+support_state / load_state                              必须与目标 reference_state 可转换；UNKNOWN 状态不得直接更新
+                                                        SMS。
+boundary/load/fixture IDs                               任一依赖变化，补偿缓存和 SMS 后验必须失效。
+included_deformation_source_ids                         为防重复台账提供唯一变形源标识，如 GRAVITY_M、FIXTURE_M、
+                                                        LOCAL_CONTACT_M。
+estimation_method                                       FE_CORRECTION、MULTI_POSE_SEPARATION、
+                                                        STATE_DIFFERENCE 或 NONE_REJECT。
+
+
+
+
+5.5 等效参考态 KCM、SMS 后验与首阶段传递包
+ m_ref = m_raw - c_pose - c_struct - c_local - b_m;           R_ref = R_raw + R_comp + R_transform
+
+参数含义：m_ref 为补偿后的参考态 KCM；c_pose、c_struct、c_local 分别为位姿、结构变形和局部接触补偿；
+R_ref 为合并原始测量、补偿和坐标转换不确定度后的等效协方差。
+ MeasurementStateCompensationResult = {
+   compensation_result_id, measurement_state_id,
+   raw_kcm_values, raw_covariance_R,
+   pose_component, structural_component,
+   local_contact_component_optional, bias_component,
+   equivalent_reference_kcm, equivalent_covariance_R_ref,
+   compensation_method, target_reference_state_id,
+   excluded_deformation_source_ids,
+   identifiability_metrics, quality_flag, metadata
+ }
+ SMSUpdateTransferPackage = {
+   sms_transfer_package_id, part_id, sample_id,
+   sms_update_result_id, reconstructed_sms_field_id,
+   alpha_posterior, covariance_posterior,
+   target_reference_state_id,
+   compensation_result_id,
+   included_source_ids, excluded_source_ids,
+   valid_for_stage_ids, gap_mapping_version,
+   package_hash, quality_flag, metadata
+ }
+ SMSUpdateConfig += {
+   measurement_state_snapshot_id, compensation_result_id,
+   target_reference_state_id, allowed_compensation_methods,
+   forbidden_deformation_source_ids
+ }
+ SMSUpdateResult += {
+   reference_state_id, compensation_trace_ids,
+   included_source_ids, excluded_source_ids,
+   transfer_package_id, posterior_cross_covariance_optional
+ }
+ GapField += {
+   source_sms_transfer_package_ids,
+   excluded_measurement_deformation_source_ids,
+   double_count_check_id
+ }
+
+
+5.6 SMS 离散点到接触计算追溯对象
+ g^0 = g_nom + G delta_SMS + G_pose e_pose
+
+参数含义：g^0 为候选接触点上的初始间隙；delta_SMS 可以来自点云、模态系数、FE 节点值或法向残差；G 负责插
+值/投影；G_pose e_pose 表示装配初始位姿偏置对间隙的影响。新增对象用于追溯 SMS 点或低维模态如何被投影到
+接触候选点，并与后续 q、W、lambda、p、w 的计算链关联。
+ SMSPointCloudMapping = {
+   mapping_id, part_id, sms_field_id, contact_domain_id,
+   sms_representation_type: "point_cloud | modal | FE_node | surface_normal",
+   source_point_ids_or_mode_ids,
+   target_contact_point_ids,
+   interpolation_method,
+   projection_direction_rule,
+   G_gap_mapping_id,
+   mapping_residual_statistics,
+                                  硕士论文配套数据结构说明书 | 按 V2.2 写法与版式重构
+                              数学模型数据结构说明书 V2.5 状态传递、局部模型与 N-2-1 过约束配套版
+   validity_region, metadata
+ }
+ ContactComputationTrace = {
+   trace_id, sample_id, stage_id, contact_domain_id,
+   sms_transfer_package_ids,
+   gap_field_id, stage_input_id, condensed_operator_id,
+   q_vector_id, W_struct_id, Cn_local_id, W_total_id,
+   lcp_solution_id,
+   pressure_field_id, local_compression_field_id,
+   cache_ids_used,
+   double_count_check_id,
+   quality_flag, metadata
+ }
+
+字段                                                        规则
+sms_representation_type                                   必须说明 SMS 是点云、模态系数、FE 节点值还是法向残差。
+projection_direction_rule                                 必须与 ContactPoint.normal_n 一致；法向改变时 G 和 GapField 失
+                                                          效。
+mapping_residual_statistics                               用于判断 SMS 插值/投影是否会影响接触集或 KCP。
+ContactComputationTrace                                   每个阶段求解至少保存一次，用于回放 g0 -> q -> W -> lambda -> p/w
+                                                          的计算链。
+
+
+
+
+6 接触面计算域与阶段输入数据结构
+6.1 接触面计算域 ContactDomain
+ I_{Gamma a} = {Omega_a, x_i^0, x_j^0, n_a, T_a, Q_A, G_a, B_{n,a}, B_{t,a}, Theta_{c,a}^0};
+ lambda_n = Q_A p_n
+
+参数含义：Omega_a 为候选接触点集合；n/T 为法向和切向基；Q_A 为面积权重；G 映射 SMS 到初始间隙；B_n/B_t
+映射结构位移到法向/切向相对运动；Theta_c^0 为初始接触参数。
+ ContactDomain = {
+   contact_domain_id, interface_id,
+   side_i_region_id, side_j_region_id,
+   contact_point_ids,
+   correspondence_method, normal_definition_method,
+   tangent_definition_method,
+   area_weight_matrix_id,
+   G_gap_mapping_id, Bn_mapping_id, Bt_mapping_id_optional,
+   nominal_gap_field_id, initial_contact_parameter_id,
+   candidate_region_margin, density_level,
+   validity_region, metadata
+ }
+ ContactPoint = {
+   point_id, contact_domain_id, local_index,
+   x_i0, x_j0, normal_n, tangent_basis_T,
+   area_weight, local_coordinate_system_id,
+   candidate_flag, edge_or_interior_flag,
+   correspondence_quality, metadata
+ }
+
+对象                                    推荐维度                                 说明
+G_gap_mapping                         m_a x n_geo 或 m_a x r_SMS            SMS 到法向初始间隙的几何映射。
+Bn_mapping                            m_a x n_Gamma                        界面自由度到法向闭合量的映射。
+Bt_mapping                            2m_a x n_Gamma                       界面自由度到切向相对位移的映射，可选。
+AreaWeightMatrix Q_A                  m_a x m_a                            候选点面积权重，用于力/压力转换和面积积
+                                                                           分。
+InitialContactParameter Theta_c0      按界面/阶段索引                             初始或预识别 Cn、Ct、mu、阈值等。
+
+
+
+
+6.2 阶段输入 StageInput、BoundaryItem 与 LoadItem
+ I_stage^(s) = {B^(s), L^(s), K_r^(s), F_r^(s), A_act^(s), S_0^(s)}
+
+参数含义：B^(s) 为阶段边界约束；L^(s) 为夹持/预紧/连接载荷；K_r^(s)、F_r^(s) 为消除规定边界后的阶段刚度与载
+荷；A_act^(s) 为约束/载荷/连接激活状态；S_0^(s) 为上一阶段继承状态。
+ StageInput = {
+   stage_input_id, stage_id,
+
+                                   硕士论文配套数据结构说明书 | 按 V2.2 写法与版式重构
+                         数学模型数据结构说明书 V2.5 状态传递、局部模型与 N-2-1 过约束配套版
+  boundary_item_ids, load_item_ids, active_joint_ids,
+  constraint_activation_vector, load_activation_vector, joint_activation_vector,
+  reduced_stiffness_id, reduced_force_vector_id,
+  inherited_state_id, expected_measurement_set_ids,
+  reference_state_id, metadata
+ }
+ BoundaryItem = {
+   boundary_id, boundary_type, target_object_id,
+   target_dofs, direction, prescribed_value,
+   stiffness_optional, stage_activation, uncertainty_optional,
+   measured_value_id_optional, metadata
+ }
+ LoadItem = {
+   load_id, load_type, target_object_id,
+   direction, magnitude, load_curve_optional,
+   distributed_area_optional, stage_activation,
+   uncertainty_model_id_optional, measured_value_id_optional,
+   metadata
+ }
+
+阶段                         主要边界/载荷                      推荐实测                       优先更新对象
+定位                         定位基准、销/支承约束、自重               定位点位移、初始局部间隙、相对            e_pose、夹具零偏、初始接触集
+                                                        位姿
+夹持                         定位 + 夹持力/位移                  夹持力、夹持头位移、局部间隙、            F_clamp、S^(2)、必要时 Cn
+                                                        应变
+连接                         夹持 + 预紧/连接锁定                 预紧力、孔位、连接区应变、切向            F_preload、连接状态、Ct/mu
+                                                        滑移
+释放                         保留连接，撤除部分夹持/定位               前后位移、最终间隙/阶差/回弹            S^(4)、beta_r；验证工况只评价
+
+
+
+
+7 离线结构凝聚 I_red 与缓存数据结构
+7.1 自由度分区与凝聚算子
+ [K_II K_IΓ; K_ΓI K_ΓΓ][u_I; u_Γ] = [F_I; F_Γ],           K_Γ = K_ΓΓ - K_ΓI K_II^{-1}K_IΓ,      W_struct
+ = B_Γ K_Γ^{-1} B_Γ^T
+
+参数含义：u_I 为内部自由度，u_Gamma 为界面/输出相关自由度；K_Gamma 为 Schur 凝聚刚度；W_struct 为结构
+贡献的界面柔度；DOFPartition 保存自由度分区，CondensedOperator 保存凝聚结果。
+ DOFPartition = {
+   dof_partition_id, stage_id,
+   full_free_dof_ids, internal_dof_ids, interface_dof_ids,
+   kcp_related_dof_ids, prescribed_dof_ids,
+   permutation_vector, rigid_body_mode_check, metadata
+ }
+ CondensedOperator = {
+   condensed_operator_id, stage_id, dof_partition_id,
+   K_II_id, K_I_Gamma_id, K_Gamma_I_id, K_Gamma_Gamma_id,
+   Kbar_Gamma, Fbar_Gamma,
+   W_struct_id,
+   factorization_id,
+   symmetry_error, positive_definiteness_check,
+   condition_estimate, derivation_source_model_id,
+   included_physics_struct, metadata
+ }
+
+included_physics_struct 应说明 W_struct 已经包含哪些结构响应，例如零件基体弯曲、整体柔性、连接锁定或边界
+弹性；这将作为防重复柔度判断的依据。
+
+7.2 缓存与失效规则
+ F_cache = factor(K_Gamma) or factor(K_II),           reuse <=> hash(K, B, mesh, material, boundary)
+ unchanged
+
+参数含义：factorization_type 为分解类型；matrix_checksum 和 reusable_conditions 判断缓存可复用性；
+CacheInvalidationRule 定义当几何、网格、材料、边界或映射变化时的重建/回算动作。
+ FactorizationCache = {
+   factorization_id, matrix_id, factorization_type,
+   permutation, factor_data_reference,
+
+                                硕士论文配套数据结构说明书 | 按 V2.2 写法与版式重构
+                            数学模型数据结构说明书 V2.5 状态传递、局部模型与 N-2-1 过约束配套版
+   matrix_checksum, software_version,
+   reusable_conditions, invalidation_rules, metadata
+ }
+ CacheInvalidationRule = {
+   rule_id, target_cache_type,
+   dependency_fields,
+   invalidation_condition,
+   required_action: "reuse | rebuild_operator | high_fidelity_recompute | reject_prediction",
+   severity: "INFO | WARN | FAIL"
+ }
+
+
+7.3 材料、边界与载荷缓存依赖
+CondensedOperator 进一步记录材料、铺层、厚度、连接和阶段边界依赖，保证材料/外载改变时缓存失效规则明
+确。
+ CondensedOperator += {
+   material_dependency_ids,
+   layup_dependency_ids_optional,
+   thickness_dependency_ids,
+   joint_state_dependency_ids,
+   boundary_condition_dependency_ids,
+   load_reference_ids,
+   valid_stage_load_range,
+   valid_geometry_deviation_range,
+   operator_rebuild_rule,
+   metadata
+ }
+ ReducedForceVector = {
+   reduced_force_vector_id, stage_id,
+   source_load_item_ids,
+   gravity_component,
+   clamp_component,
+   preload_component,
+   prescribed_displacement_equivalent_component_optional,
+   force_covariance_optional,
+   unit, metadata
+ }
+
+变化对象                                   失效对象                                  required_action
+material_dependency_ids /              K_Gamma、W_struct、FactorizationCache   REBUILD_IRED
+layup_dependency_ids
+load_reference_ids                     F_Gamma、u_Gamma,F、q                   RESOLVE_LCP
+boundary_condition_dependency_ids      K_Gamma、F_Gamma、q、W_struct            REBUILD_IRED 或 RESOLVE_LCP
+Cn_local_id                            W_total、W_CC 分解、LCP 模式                REBUILD_W
+G_gap_mapping_id /                     GapField、q、ContactMode                REBUILD_G0 + RESOLVE_LCP
+normal_definition_method
+
+
+
+
+                                    硕士论文配套数据结构说明书 | 按 V2.2 写法与版式重构
+                         数学模型数据结构说明书 V2.5 状态传递、局部模型与 N-2-1 过约束配套版
+                                      图 7-1 离线结构静力凝聚与 I_red 构建
+
+
+8 互补求解、接触模式与阶段状态数据结构
+8.1 InterfaceLCPModel 与求解配置
+ q^(s)=g^0-B_Gamma u_{Gamma,F}^(s),       W^(s)=W_struct^(s)+C_n^(s),   0 <= lambda_n^(s) ⟂
+ g^(s)=q^(s)+W^(s)lambda_n^(s) >= 0
+
+参数含义：q 为自由间隙；W 为总界面柔度；lambda_n 为法向接触广义力；g 为平衡后间隙；InterfaceLCPModel 保
+存 LCP 矩阵和未知量定义，SolverConfig 保存主动集/互补求解参数。
+ InterfaceLCPModel = {
+   lcp_model_id, sample_id, stage_id,
+   contact_domain_ids,
+   q_mapping_components,
+   W_struct, Cn_local, W_total,
+   area_weight_matrix_id,
+   unknown_type: "generalized_contact_force",
+   gap_sign_convention,
+   complementarity_tolerances,
+   solver_config_id,
+   validity_region, metadata
+ }
+ ComplementaritySolverConfig = {
+   solver_config_id, solver_type,
+   active_set_initialization,
+   gap_tolerance, force_tolerance, complementarity_tolerance,
+   maximum_iterations, scaling_rule,
+   line_search_or_regularization_optional,
+   warm_start_enabled, fallback_solver_optional,
+   metadata
+ }
+
+
+8.2 LCPSolution、ContactMode 与 ContactState
+ S^(s)={C,D,g,lambda_n,p_n,u_Gamma,w_n,d_t,Delta r,chi},        p_n=Q_A^{-1}lambda_n,   w_n=C_n
+ lambda_n
+
+参数含义：C/D 为接触/分离集合；chi 为接触模式；p_n 为压力；w_n 为局部压缩；d_t 为切向位移；Delta r 为回
+弹；LCPSolution 保存单次求解，ContactState 保存阶段状态及继承关系。
+ LCPSolution = {
+   solution_id, lcp_model_id, sample_id, stage_id,
+   lambda_n, pressure_p_n, gap_g,
+   active_contact_indices, inactive_indices,
+   equilibrium_residual, gap_violation, force_violation,
+   complementarity_residual, iteration_count,
+   convergence_status, warm_start_source_id_optional,
+   metadata
+ }
+ ContactMode = {
+   contact_mode_id, stage_id,
+   active_contact_indices, stick_indices, slip_indices,
+   mode_hash, feasible_region_description,
+   representative_sample_ids, occurrence_count, metadata
+ }
+ ContactState = {
+   contact_state_id, sample_id, stage_id,
+   interface_state_ids, global_or_interface_displacement,
+   equilibrium_residual,
+   inherited_from_state_id_optional,
+   state_update_source_measurement_ids,
+   convergence_summary, quality_flag, metadata
+ }
+
+
+
+
+                                硕士论文配套数据结构说明书 | 按 V2.2 写法与版式重构
+                         数学模型数据结构说明书 V2.5 状态传递、局部模型与 N-2-1 过约束配套版
+
+
+
+
+                                       图 8-1 多阶段主动集与互补求解流程
+
+
+8.3 阶段状态、参数快照与阶段传递对象
+ x_s^- = Phi_s(x_{s-1}^+, delta_hat_SMS, c_s, theta_s^-);          (x_s^+, theta_s^+) = U_s(x_s^-,
+ theta_s^-, z_s)
+
+参数含义：x_s^- 为第 s 阶段预测状态；x_s^+ 为融合实测后的后验状态；theta_s 为阶段或界面参数；c_s 为阶段控制
+输入；z_s 为阶段过程观测。
+ StageStateSnapshot = {
+   stage_state_snapshot_id, sample_id, stage_id,
+   state_role: "PREDICTED | POSTERIOR",
+   reference_state_id, parent_stage_state_id_optional,
+   pose_state, interface_displacement,
+   gap_g, lambda_n, lambda_t_optional,
+   pressure_p_n, local_compression_w_n,
+   tangential_slip_d_t_optional, contact_mode_id,
+   joint_lock_state_optional, state_covariance_id_optional,
+   absolute_or_increment, source_ledger_id,
+   quality_flag, metadata
+ }
+ StageParameterSnapshot = {
+   stage_parameter_snapshot_id, stage_id, interface_id_optional,
+   parameter_names, parameter_values,
+   covariance, parameter_scope,
+   persistence_policy, validity_domain_id,
+   source_prior_or_update_ids,
+   update_permission, active_bounds,
+   quality_flag, metadata
+ }
+ StageTransitionRecord = {
+   transition_id, from_stage_id, to_stage_id,
+   from_state_id, to_predicted_state_id,
+   state_transfer_matrix_or_function,
+   parameter_transfer_rules,
+   activated_boundary_ids, deactivated_boundary_ids,
+   activated_load_ids, removed_load_ids,
+   actual_load_increment, joint_activation_change,
+   locked_history_ids, covariance_transfer_id,
+   dependency_hash, quality_flag, metadata
+ }
+
+
+8.4 阶段增量、协方差传递与后验包
+ Delta x^(s)=x_s^+ - T_{s-1->s} x_{s-1}^+;        P_{s+1}^- = F_s P_s^+ F_s^T + Q_s
+
+
+                                硕士论文配套数据结构说明书 | 按 V2.2 写法与版式重构
+                         数学模型数据结构说明书 V2.5 状态传递、局部模型与 N-2-1 过约束配套版
+参数含义：Delta x^(s) 为阶段新增状态增量；T_{s-1->s} 为阶段间状态传递；P 为状态协方差；F_s 为阶段状态雅可
+比；Q_s 为过程噪声。
+ StageIncrement = {
+   stage_increment_id, sample_id, stage_id,
+   from_reference_state_id, to_reference_state_id,
+   source_state_id, target_state_id,
+   increment_vector, increment_components,
+   increment_definition_id,
+   deformation_source_ids,
+   covariance_optional,
+   consumed_by_ids, quality_flag, metadata
+ }
+ StageCovarianceTransfer = {
+   covariance_transfer_id, transition_id,
+   state_jacobian_F, parameter_jacobian_optional,
+   process_noise_Q, cross_covariance_rule,
+   prior_covariance_id, posterior_covariance_id,
+   approximation_validity, metadata
+ }
+ StagePosteriorPackage = {
+   stage_posterior_package_id, sample_id, stage_id,
+   posterior_state_snapshot_id,
+   posterior_parameter_snapshot_ids,
+   stage_increment_id, transition_record_id,
+   locked_history_ids, source_ledger_id,
+   parent_package_id_optional,
+   package_hash, quality_flag, metadata
+ }
+
+阶段                         主要更新                          持续传递                            不得传递/重复
+LOCATE                     pose、fixture bias、locating    定位后几何、活动约束、模式暖启                 不写回 SMS；不凭单点更新 C_n
+                           reaction、initial contact      动、P
+CLAMP                      actual clamp load、state、必要时   夹持后状态、实际载荷、接触历史、                不再次加入测量夹持补偿
+                           C_n                           参数后验
+JOIN                       preload、k_joint、lock、slip、必   locked_reference、joint state、   不把几何重置为 SMS
+                           要时 C_t/mu                     slip history
+RELEASE                    final state、rebound；校准时       最终状态、KCP 增量和质量标志                不同时累加 JOIN 与 RELEASE 绝对
+                           beta_r/R_r                                                    状态
+
+
+
+
+8.5 N-2-1 / 多点过约束对象与扩展互补数据结构
+本节与技术说明书中的 N-2-1 / 多点过约束接触状态计算统一模型一一对应，集中定义 N-2-1 / 多点过约束计算所需对
+象。写法沿用 V2.2 的“数学形式、参数含义、数学形式与参数说明”。
+
+
+
+
+                                        图 8-2 N-2-1 / 多点过约束数据对象闭环
+
+
+
+                                 硕士论文配套数据结构说明书 | 按 V2.2 写法与版式重构
+                         数学模型数据结构说明书 V2.5 状态传递、局部模型与 N-2-1 过约束配套版
+8.5.1 扩展候选域对象
+ I_ext^(s) = {I_Gamma^(s), I_locator^(s), I_clamp^(s), I_joint^(s), M_ext^(s)}
+
+参数含义：I_ext^(s) 表示第 s 阶段扩展候选接触域；I_Gamma^(s) 为零件-零件结合面域；I_locator^(s) 为定位器、
+支承点、卡板线/面等工装约束域；I_clamp^(s) 为夹持头、压头或强迫位移接触域；I_joint^(s) 为孔边、紧固件承
+压、预紧和连接锁定域；M_ext^(s) 为扩展域内点、线、面、孔边和连接自由度之间的映射关系。
+ ExtendedContactDomain = {
+   extended_domain_id, stage_id,
+   part_contact_domain_ids, locator_domain_ids, clamp_domain_ids, joint_domain_ids,
+   extended_contact_point_ids,
+   extended_gap_mapping_id, extended_B_mapping_id,
+   locator_group_ids, validity_region, quality_flag, metadata
+ }
+
+8.5.2 有限刚度定位/夹持/连接元素
+ e_j = (type_j, x_j, n_j, T_j, A_j, C_j, g_j^0, d_cmd,j, b_j, s_active,j)
+
+参数含义：e_j 为第 j 个过约束元素；type_j 表示 LOCATOR_POINT、SUPPORT_PAD、CARD_LINE、
+CLAMP_HEAD、FASTENER_BEARING 或 JOINT_LOCK；x_j 为作用位置；n_j/T_j 为法向与切向基；A_j 为面积权
+重；C_j 为该元素局部柔度或等效柔度矩阵；g_j^0 为初始间隙；d_cmd,j 为命令位移、预紧沉降或强迫闭合量；b_j
+为单边/双边属性；s_active,j 为激活阶段。
+ OverConstraintLocatorGroup = {
+   locator_group_id, stage_ids, locator_element_ids,
+   group_type: "N21 | MULTI_POINT | CARD | CLAMP | JOINT",
+   activation_rule, reference_state_id, uncertainty_model_id,
+   quality_flag, metadata
+ }
+ LocatorElement = {
+   locator_element_id, locator_group_id, element_type, target_object_id,
+   location, normal_n, tangent_basis_T, area_weight,
+   unilateral_or_bilateral, initial_clearance_g0, command_displacement,
+   preload_optional, active_stage_ids, source_ids, metadata
+ }
+ LocatorCompliance = {
+   compliance_id, locator_element_id, stiffness_or_compliance_type,
+   normal_compliance_Cn, tangential_compliance_Ct_optional,
+   covariance_optional, validity_domain_id,
+   source_calibration_ids, quality_flag, metadata
+ }
+
+字段说明：OverConstraintLocatorGroup 管理一组定位、卡板、夹持或连接元素；LocatorElement 描述几何、方
+向、面积权重、单边/双边属性、初始间隙和命令位移；LocatorCompliance 保存有限刚度/柔度及其不确定度。C_j 不
+应与 W_struct 中已包含的结构柔度重复。
+
+8.5.3 扩展自由间隙与扩展柔度
+ q_ext^(s) = g_ext^0 - B_ext^(s) u_F^(s) - d_cmd^(s)
+
+参数含义：q_ext^(s) 为第 s 阶段无接触反力时的扩展自由间隙；g_ext^0 为扩展候选域初始间隙；B_ext^(s) 为结构位
+移到扩展闭合量的映射；u_F^(s) 为由外载、重力、夹持力和预紧力产生的自由结构位移；d_cmd^(s) 为夹持头命令位
+移、卡板压紧量或连接预沉降向量。
+ W_ext^(s) = W_struct,ext^(s) + C_interface^(s) + C_locator^(s) + C_joint^(s)
+
+参数含义：W_ext^(s) 为扩展总柔度；W_struct,ext^(s)=B_ext(K_Gamma)^(-1)B_ext^T 为凝聚结构柔度在扩展域上
+的投影；C_interface^(s) 为零件结合面局部附加柔度；C_locator^(s) 为定位器、卡板、夹持头等局部柔度；
+C_joint^(s) 为紧固件、孔边承压和连接锁定局部柔度。
+ ExtendedGapAndCompliance = {
+   ext_gap_compliance_id, sample_id, stage_id, extended_domain_id,
+   g_ext0_vector_id, B_ext_mapping_id, free_displacement_vector_id,
+   command_displacement_vector_id,
+   q_ext_vector_id,
+   W_struct_ext_id, C_interface_id, C_locator_id, C_joint_id,
+   W_ext_matrix_id, unit_check_result,
+   dependency_hash, quality_flag, metadata
+ }
+
+                                硕士论文配套数据结构说明书 | 按 V2.2 写法与版式重构
+                         数学模型数据结构说明书 V2.5 状态传递、局部模型与 N-2-1 过约束配套版
+8.5.4 扩展 LCP / NCP 求解对象
+ 0 <= lambda_ext^(s) ⟂ g_ext^(s) = q_ext^(s) + W_ext^(s) lambda_ext^(s) >= 0
+
+参数含义：lambda_ext^(s) 为扩展接触广义力，包含零件接触力、定位/卡板反力、夹持反力和单边孔边承压力；
+g_ext^(s) 为平衡后扩展间隙；q_ext^(s) 为扩展自由间隙；W_ext^(s) 为扩展总柔度；互补关系表示接触点分离时力为
+零、受压时间隙为零。
+ OverConstraintContactModel = {
+   overconstraint_model_id, sample_id, stage_id, extended_domain_id,
+   q_ext_vector_id, W_ext_matrix_id,
+   unilateral_indices, bilateral_indices_optional,
+   lambda_ext_unknown_definition, gap_sign_convention,
+   solver_config_id, regularization_config_id_optional,
+   fallback_policy, validity_region, metadata
+ }
+ ExtendedLCPSolution = {
+   solution_id, overconstraint_model_id,
+   lambda_ext, gap_ext,
+   active_ext_indices, inactive_ext_indices,
+   bilateral_reaction_optional,
+   locator_reaction_components, clamp_reaction_components, joint_reaction_components,
+   pressure_field_id_optional, local_compression_field_id_optional,
+   equilibrium_residual, gap_violation, force_violation, complementarity_residual,
+   active_set_stability_trace_id,
+   force_nonuniqueness_report_id_optional,
+   convergence_status, quality_flag, metadata
+ }
+
+8.5.5 主动集稳定与正则化记录
+ rho_chi^(k) = |C^(k) Δ C^(k-1)| / |C^(k) ∪ C^(k-1)|
+
+参数含义：rho_chi^(k) 为第 k 次迭代主动集变化率；C^(k) 与 C^(k-1) 为相邻迭代主动集；Δ 为对称差；∪ 为并集。
+该指标用于识别主动集振荡。
+ W_epsilon = W_ext + epsilon I
+
+参数含义：W_epsilon 为正则化后的扩展总柔度；W_ext 为原扩展总柔度；epsilon 为正则化参数；I 为单位矩阵。
+epsilon 仅用于数值稳定，应进入日志和质量门。
+ ActiveSetStabilityTrace = {
+   trace_id, solution_id, iteration_contact_sets, mode_switch_count,
+   rho_chi_history, final_rho_chi, oscillation_flag,
+   stabilization_action: "NONE | MERGE_POINTS | REGULARIZE_W | CHANGE_TOLERANCE | FALLBACK_SOLVER",
+   quality_flag, metadata
+ }
+ LCPRegularizationConfig = {
+   regularization_config_id,
+   method: "NONE | EPSILON_I | DIAGONAL_SHIFT | TIKHONOV | QP",
+   epsilon_value_optional, trigger_reason,
+   affected_matrix_ids, output_impact_check, metadata
+ }
+
+8.5.6 接触力非唯一报告
+ N_f = null(W_CC),     lambda_C = lambda_C* + N_f z
+
+参数含义：N_f 为主动接触子矩阵 W_CC 的零空间；lambda_C 为主动集接触力；lambda_C* 为某一基准可行解；z
+为零空间自由参数。若 N_f 非空，局部接触力可能存在非唯一分配。
+ eta_y = max_z ||H_y(lambda_C(z)-lambda_C*)|| / T_y
+
+参数含义：eta_y 为工程输出稳定性指标；H_y 为接触力到 KCP 或等效工程输出的灵敏度；lambda_C(z) 为零空间扰
+动下的接触力；T_y 为 KCP 容差或工程允许尺度。eta_y 超限表示反力非唯一会影响工程判断。
+ ForceNonuniquenessReport = {
+   report_id, solution_id, active_submatrix_id, nullspace_dimension,
+   nullspace_basis_id_optional,
+   alternative_force_solution_summary,
+   output_variation_bounds, eta_y_values,
+   selected_regularization_rule,
+   kcp_output_stability: "STABLE | WARN | UNSTABLE",
+
+
+
+                                硕士论文配套数据结构说明书 | 按 V2.2 写法与版式重构
+                           数学模型数据结构说明书 V2.5 状态传递、局部模型与 N-2-1 过约束配套版
+     required_action, quality_flag, metadata
+ }
+
+8.5.7 连接锁定、释放回弹与历史对象
+ Delta x_release = x_release^+ - T_join_to_release x_join^+
+
+参数含义：Delta x_release 为释放阶段增量；x_release^+ 为释放阶段后验状态；x_join^+ 为连接阶段后验状态；
+T_join_to_release 为从连接阶段到释放阶段的状态传递矩阵。
+ ConnectionLockHistory = {
+   lock_history_id, sample_id, join_stage_id, joint_ids,
+   locked_reference_dofs, locked_reference_values,
+   preload_actual, joint_stiffness,
+   locked_contact_mode_id, slip_history_ids_optional,
+   source_ids, covariance_optional, metadata
+ }
+ ReleaseHistoryRecord = {
+   release_history_id, sample_id, release_stage_id, lock_history_id,
+   removed_boundary_ids, removed_load_ids, retained_joint_ids,
+   residual_force_before_release, rebound_displacement, release_increment_id,
+   kcp_contribution_ids, quality_flag, metadata
+ }
+
+8.5.8 N-2-1 过程测量枚举补充
+MeasurementRecord.measurement_type 建议增加 LOCATOR_REACTION、CARD_REACTION、
+CLAMP_HEAD_DISPLACEMENT、FASTENER_PRELOAD、HOLE_EDGE_STRAIN、
+CONTACT_OPEN_CLOSE_STATE、RELEASE_REBOUND、RESIDUAL_FORCE_BEFORE_RELEASE。update_target
+可增加 LOCATOR_COMPLIANCE、OVERCONSTRAINT_STATE、JOINT_LOCK_HISTORY 和 RELEASE_HISTORY。
+
+
+9 局部界面参数识别、柔度分解与参数库
+9.1 参数识别与先验对象
+ theta={C_n,C_t,mu,beta_r,e_proc};   theta_hat = argmin_theta ||y_obs-y_model(theta)||^2_W +
+ lambda ||L_theta(theta-theta_0)||^2
+
+参数含义：C_n/C_t 为局部界面柔度；mu 为摩擦系数；beta_r 为回弹参数；e_proc 为过程误差；ParameterPrior
+保存先验范围，IdentificationConfig 保存识别目标函数，ParameterEstimate 保存估计、协方差和适用域。
+ ParameterPrior = {
+   parameter_prior_id, parameter_names, mean_values, covariance,
+   lower_bounds, upper_bounds, physical_constraints, source, metadata
+ }
+ ParameterIdentificationConfig = {
+   identification_config_id, target_parameter_names,
+   identification_measurement_set_ids, local_model_ids,
+   parameter_prior_id, objective_terms, weighting_matrices,
+   regularization_type, regularization_weight,
+   physical_constraints, solver_name, convergence_settings, metadata
+ }
+ ParameterEstimate = {
+   parameter_estimate_id, parameter_names, estimated_values,
+   covariance_or_confidence_intervals, correlation_matrix_optional,
+   objective_value, residual_statistics, identifiability_metrics,
+   active_bounds, validity_range, used_sample_ids,
+   quality_flag, metadata
+ }
+
+
+9.2 柔度分解与参数库
+ W_total = W_struct + C_n^{local};         Delta gamma_c = R_n w_n + R_t d_t + R_r Delta r
+
+参数含义：W_struct 为结构基体柔度；C_n^{local} 为未被结构模型解析的界面附加柔度；R_n/R_t/R_r 为输出导向凝
+聚算子；InterfaceParameter 保存统计量、等效误差项和参数协方差。
+ ComplianceDecomposition = {
+   compliance_decomposition_id,
+   W_struct_id, Cn_local_id,
+   included_physics_struct, included_physics_local,
+
+                                  硕士论文配套数据结构说明书 | 按 V2.2 写法与版式重构
+                         数学模型数据结构说明书 V2.5 状态传递、局部模型与 N-2-1 过约束配套版
+   fixture_compliance_removed, substrate_compliance_removed,
+   overlap_assessment, unit_consistency_check, metadata
+ }
+ InterfaceParameter = {
+   interface_parameter_id,
+   interface_id, stage_id, contact_mode_id,
+   contact_area, mean_pressure, pressure_nonuniformity,
+   normal_compression_rms, tangential_slip_rms_optional,
+   normal_compliance_local, tangential_compliance_optional,
+   equivalent_error_vector, rebound_term,
+   parameter_covariance, validity_range,
+   calibration_quality, source_state_ids,
+   reference_state_id, increment_definition_id, metadata
+ }
+ ParameterLibrary = {
+   parameter_library_id,
+   interface_parameter_ids,
+   contact_mode_library_id,
+   indexing_variables, interpolation_rules, validity_domains,
+   out_of_domain_rule,
+   source_high_fidelity_case_ids, source_experiment_ids,
+   library_quality_summary, metadata
+ }
+
+out_of_domain_rule 不建议使用 silent_extrapolation；推荐使用 solve_LCP_with_current_operator、
+request_high_fidelity_case 或 reject_prediction。
+
+
+
+
+                                    图 9-1 局部界面参数识别、约束和参数库构建
+
+
+9.3 局部模型提取对象
+ Omega_local = Gamma_a ⊕ r_margin
+
+参数含义：Omega_local 为围绕关键结合面 Gamma_a 向外扩展 r_margin 得到的局部子模型区域；r_margin 应保证
+切割边界远离压力峰值和位移高梯度区。
+ LocalRegionDefinition = {
+   local_region_id, interface_id,
+   included_geometry_regions, candidate_contact_region_ids,
+   kcp_sensitive_region_ids, margin_rule, margin_distance,
+   cut_boundary_definition, selection_rationale, metadata
+ }
+ LocalSubmodelExtraction = {
+   local_model_id, global_model_id, interface_id,
+   local_region_id,
+   extraction_method: "geometry_cut | mesh_cut | submodel_from_global | independent_specimen_model",
+   global_to_local_node_map, global_to_local_surface_map,
+   retained_material_ids, retained_layup_ids_optional, retained_joint_ids,
+                                硕士论文配套数据结构说明书 | 按 V2.2 写法与版式重构
+                         数学模型数据结构说明书 V2.5 状态传递、局部模型与 N-2-1 过约束配套版
+  cut_boundary_node_ids, mesh_refinement_rule,
+  source_stage_ids, extraction_quality_metrics, metadata
+ }
+ BoundaryInheritanceRecord = {
+   boundary_inheritance_id, local_model_id, stage_id,
+   boundary_method: "DISPLACEMENT | FORCE | IMPEDANCE | MIXED",
+   source_global_case_id,
+   prescribed_cut_displacement_optional,
+   prescribed_cut_force_optional,
+   impedance_matrix_optional,
+   coordinate_transform_id, interpolation_error,
+   boundary_reaction_check, valid_load_range,
+   quality_flag, metadata
+ }
+ LocalModelValidationResult = {
+   validation_id, local_model_id,
+   compared_global_case_ids,
+   compared_quantities: ["cut_boundary_displacement", "reaction", "interface_displacement",
+ "contact_pressure"],
+   error_metrics, acceptance_criteria, pass_fail, metadata
+ }
+
+
+9.4 样件试验与局部响应对象
+ InterfaceTestSpecimen = {
+   specimen_id, interface_id,
+   side_i_material_id, side_j_material_id,
+   layup_ids_optional, thickness_values,
+   surface_treatment, coating_or_sealant_optional,
+   fastener_or_joint_description,
+   geometry_similarity_to_real_interface,
+   manufacturing_batch, metadata
+ }
+ InterfaceTestSetup = {
+   setup_id, specimen_id,
+   fixture_id, loading_machine_id, sensor_ids,
+   coordinate_system_id, support_state, load_state,
+   environmental_conditions,
+   fixture_calibration_id, sensor_calibration_ids,
+   metadata
+ }
+ LoadingPath = {
+   loading_path_id,
+   stage_equivalent: "LOCATE | CLAMP | JOIN | RELEASE | LOCAL_IDENTIFICATION",
+   normal_load_sequence, tangential_load_sequence_optional,
+   preload_sequence_optional, hold_time_sequence_optional,
+   unloading_sequence_optional, rate_information_optional, metadata
+ }
+ LocalResponseData = {
+   response_id,
+   source_type: "LOCAL_FE | SPECIMEN_TEST | CG_FFT | PROCESS_MEASUREMENT",
+   local_model_id_optional, specimen_id_optional,
+   boundary_inheritance_id_optional, loading_path_id,
+   lambda_n, pressure_p_n,
+   w_total, w_substrate_optional, w_interface_optional,
+   tangential_slip_d_t_optional, rebound_delta_r_optional,
+   strain_or_DIC_fields_optional,
+   covariance_or_uncertainty,
+   raw_data_reference, quality_flag, metadata
+ }
+
+
+9.5 位移分解、柔度分离与参数识别对象
+ u_meas = u_fixture + u_sensor + u_substrate + u_interface + epsilon
+
+参数含义：u_meas 为样件或局部模型总测量位移；u_fixture 为夹具柔度贡献；u_sensor 为传感器变形或偏置；
+u_substrate 为 CFRP/金属基体结构变形；u_interface 为界面附加响应；epsilon 为残差。只有 u_interface 应用于识
+别局部附加柔度。
+ DeformationDecompositionResult = {
+   decomposition_id, response_id,
+   fixture_component, sensor_component, substrate_component, interface_component,
+   removed_deformation_source_ids, remaining_deformation_source_ids,
+   decomposition_method: "calibration_subtraction | local_FE_subtraction | joint_identification |
+                                硕士论文配套数据结构说明书 | 按 V2.2 写法与版式重构
+                        数学模型数据结构说明书 V2.5 状态传递、局部模型与 N-2-1 过约束配套版
+bayesian_decomposition",
+  component_covariances, identifiability_metrics, quality_flag, metadata
+}
+ParameterIdentificationConfig += {
+  local_response_data_ids,
+  deformation_decomposition_ids,
+  target_discretization: "scalar | zonal_scalar | diagonal | block | full_matrix | nonlinear_piecewise",
+  area_weight_matrix_id,
+  generalized_force_conversion_rule,
+  boundary_inheritance_ids,
+  data_sufficiency_rule,
+  forbidden_flexibility_source_ids,
+  metadata
+}
+ParameterEstimate += {
+  source_local_response_data_ids,
+  source_boundary_inheritance_ids,
+  decomposition_result_ids,
+  estimated_Cn_local,
+  estimated_Ct_optional,
+  estimated_mu_optional,
+  estimated_beta_r_optional,
+  load_segment_breakpoints_optional,
+  posterior_covariance,
+  parameter_correlation_matrix,
+  validity_domain_id,
+  metadata
+}
+ComplianceSeparationReport = {
+  separation_report_id,
+  W_struct_id, Cn_local_id,
+  included_physics_struct, included_physics_local,
+  removed_fixture_compliance, removed_sensor_compliance, removed_substrate_compliance,
+  overlap_source_ids,
+  overlap_assessment: "PASS | WARN | FAIL",
+  unit_consistency_check, area_weight_conversion_check,
+  recommended_action, metadata
+}
+
+
+9.6 参数库对象字段补充与适用域
+ParameterLibrary += {
+  local_model_ids, local_region_ids, boundary_inheritance_ids,
+  specimen_ids, loading_path_ids,
+  compliance_separation_report_ids,
+  indexing_variables: ["material", "layup", "surface", "pressure", "preload", "temperature",
+"boundary_method", "contact_mode"],
+  out_of_domain_rule: "request_high_fidelity_case | reject_prediction | solve_LCP_with_current_operator",
+  library_quality_summary, metadata
+}
+ValidityDomain = {
+  validity_domain_id,
+  material_range,
+  layup_or_thickness_range,
+  surface_state_range,
+  normal_pressure_range,
+  tangential_load_range_optional,
+  preload_range_optional,
+  temperature_range_optional,
+  contact_mode_range,
+  boundary_method_range,
+  loading_path_range,
+  geometry_scale_range,
+  metadata
+}
+
+
+
+10 过程实测状态/参数更新与校准对象
+10.1 过程观测模型与状态更新
+z_meas^(s)=h^(s)(x^(s),theta,e_proc)+v^(s);   x_hat^(s),theta_hat = argmin ||z_meas-
+h(x,theta)||^2_{R^-1} + ||x-x_pred||^2_{P^-1} + ||theta-theta_0||^2_{Sigma^-1}
+
+                               硕士论文配套数据结构说明书 | 按 V2.2 写法与版式重构
+                         数学模型数据结构说明书 V2.5 状态传递、局部模型与 N-2-1 过约束配套版
+参数含义：z_meas 为阶段过程测量；x^(s) 为阶段状态；theta 为可校准参数；R/P/Sigma 分别表达测量、状态先验
+和参数先验不确定度；StateUpdateResult 保存更新前后残差和模式变化。
+ ProcessObservationModel = {
+   observation_model_id, stage_id,
+   measured_feature_ids, state_variable_ids, parameter_ids_optional,
+   H_z_or_function_reference,
+   bias_vector_optional,
+   covariance_R_z,
+   measurement_coordinate_rule,
+   validity_region, metadata
+ }
+ StateUpdateConfig = {
+   state_update_config_id,
+   stage_id,
+   predicted_state_id,
+   process_measurement_set_ids,
+   observation_model_id,
+   prior_state_covariance_id_optional,
+   update_method,
+   regularization_weight,
+   complementarity_constraints_enabled,
+   updated_state_field_names,
+   solver_config, metadata
+ }
+ StateUpdateResult = {
+   state_update_result_id,
+   predicted_state_id,
+   updated_state_id,
+   used_measurement_ids,
+   predicted_measurements,
+   residual_before, residual_after,
+   posterior_covariance_optional,
+   contact_mode_changed,
+   constraint_residuals,
+   updated_target_summary,
+   quality_flag, metadata
+ }
+
+
+10.2 模型校准对象
+ theta_hat = argmin_theta Sigma_s ||z_meas^(s)-h^(s)(delta_hat_SMS,theta)||^2_{R_s^-1} +
+ lambda_theta ||L_theta(theta-theta_0)||^2, sample notin D_validate
+
+参数含义：calibration_sample_ids 只能来自 D_calibrate；forbidden_validation_sample_ids 用于程序层面禁止验
+证集回流调参。
+ ModelCalibrationConfig = {
+   calibration_config_id,
+   calibrated_parameter_names,
+   calibration_sample_ids,
+   stage_ids,
+   sms_update_result_ids,
+   measurement_set_ids,
+   model_components,
+   loss_function,
+   regularization,
+   bounds_and_constraints,
+   cross_validation_rule,
+   forbidden_validation_sample_ids,
+   metadata
+ }
+
+
+10.3 更新决策、参数传播、重求与回退对象
+ UpdateDecisionRecord = {
+   update_decision_id, sample_id, stage_id,
+   residual_signature, candidate_update_targets,
+   selected_update_targets, frozen_targets,
+   identifiability_metrics,
+   update_permission_check,
+   evidence_measurement_ids,
+   rationale, quality_flag, metadata
+ }
+                                硕士论文配套数据结构说明书 | 按 V2.2 写法与版式重构
+                                     数学模型数据结构说明书 V2.5 状态传递、局部模型与 N-2-1 过约束配套版
+ ParameterPropagationRule = {
+   propagation_rule_id, parameter_name_or_group,
+   source_scope, target_scope,
+   allowed_from_stage_ids, allowed_to_stage_ids,
+   persistence_policy,
+   validity_domain_requirement,
+   transformation_or_reset_rule,
+   covariance_propagation_rule,
+   out_of_domain_action, metadata
+ }
+ ReSolveRequirement = {
+   resolve_requirement_id, update_result_id,
+   changed_q, changed_W, changed_K_or_B,
+   contact_mode_changed,
+   required_level: "NONE | RESOLVE_LCP | REBUILD_W | REBUILD_IRED | HIGH_FIDELITY",
+   invalidated_cache_ids, reason, metadata
+ }
+ UpdateRollbackRecord = {
+   rollback_id, failed_update_result_id,
+   restored_state_id, restored_parameter_snapshot_ids,
+   failure_reason, fallback_action,
+   retained_measurement_ids, metadata
+ }
+
+对象                                    允许更新                         传播                           重求级别
+alpha_sms / delta_sms                 PRE_ASSEMBLY_REFERENCE_MEA   READ_ONLY_ALL_STAGES         变化则 REBUILD_G0 + 全流程
+                                      SUREMENT
+pose / fixture_bias / actual_load     对应阶段过程测量                     STATE_INITIAL_CONDITION /    RESOLVE_LCP
+                                                                   LOAD_INCREMENT
+Cn / Ct / mu                          CALIBRATE 且可辨识、D_valid 内     INTERFACE_CONDITIONAL        REBUILD_W / 摩擦 NCP
+joint_stiffness / locked_reference    JOIN                         PERSIST_TO_RELEASE           REBUILD_IRED 或 RESOLVE_LCP
+beta_r / Rr                           RELEASE_CALIBRATE            FINAL_OUTPUT_ONLY            重算释放输出
+locator_compliance /                  LOCATE/CLAMP 过程测量且可辨识        OVERCONSTRAINT_CONDITIONAL   REBUILD_W_EXT 或 RESOLVE_LCP
+overconstraint_state
+
+
+
+
+11 界面等效误差项、KCP 预测与贡献分解
+11.1 等效误差 J-T 传递
+ Delta gamma_{c,a}^{(s)} = R_n w_{n,a}^{(s)} + R_t d_{t,a}^{(s)} + R_r Delta r_a^{(s)};
+ Delta y = J_part Delta q + J_interface Delta gamma + J_proc e_proc
+
+参数含义：Delta gamma 为界面等效误差向量；w_n/d_t/Delta r 为法向压缩、切向滑移和回
+弹；J_part/J_interface/J_proc 为小位移、界面项和过程误差到 KCP 的传递矩阵。
+ EquivalentErrorItem = {
+   equivalent_error_id,
+   interface_id, stage_id, contact_mode_id,
+   error_vector,
+   components: {
+      normal_compression_contribution,
+      tangential_slip_contribution_optional,
+      rebound_contribution_optional
+   },
+   mapping_operators: {Rn_id, Rt_id_optional, Rr_id_optional},
+   covariance_optional,
+   reference_state_id,
+   increment_definition_id,
+   source_state_ids,
+   quality_flag, metadata
+ }
+ JTTransferModel = {
+   jt_model_id,
+   kcp_ids,
+   part_pose_source_ids,
+   interface_error_source_ids,
+   J_part_matrices,
+   J_interface_matrices,
+   J_process_matrix,
+   linearization_state,
+
+
+                                             硕士论文配套数据结构说明书 | 按 V2.2 写法与版式重构
+                           数学模型数据结构说明书 V2.5 状态传递、局部模型与 N-2-1 过约束配套版
+     validity_range, metadata
+ }
+
+
+11.2 单样本预测结果 KCPPredictionResult
+ Delta y_KCP = J_SMS delta_hat_SMS + Sigma_s Sigma_a J_a^(s) Delta gamma_{c,a}^{(s)} + J_proc
+ e_proc
+
+参数含义：sms_contribution 为装配前几何贡献；contact/slip/rebound_contribution 为接触压缩、滑移和回弹贡
+献；process_contribution 为工艺误差贡献；contribution_reference_state_ids 用于检查各贡献参考状态是否一
+致。
+ KCPPredictionResult = {
+   prediction_result_id,
+   prediction_input_id,
+   kcp_ids,
+   predicted_values,
+   nominal_values,
+   tolerance_status,
+   sms_contribution,
+   contact_contribution,
+   slip_contribution_optional,
+   rebound_contribution,
+   process_contribution,
+   measurement_uncertainty_contribution_optional,
+   contribution_reference_state_ids,
+   contact_mode_ids,
+   out_of_domain_flags,
+   runtime_breakdown,
+   convergence_summary,
+   quality_flag, metadata
+ }
+
+
+
+
+                                   图 11-1 界面接触状态统计与输出导向等效凝聚
+
+
+11.3 变形贡献台账与重复计入检查
+ Source(SMS) ∩ Source(StageIncrement^(s)) = empty;         同一 KCP 路径内 (source_id,
+ increment_definition_id) 只能消一次
+ ContributionRecord = {
+   contribution_id, sample_id, target_kcp_id,
+   source_class: "SMS | STAGE_INCREMENT | PROCESS_ERROR | REBOUND | MEASUREMENT_UNCERTAINTY |
+ OVERCONSTRAINT_REACTION",
+   source_id, origin_stage_id_optional,
+   reference_state_id, increment_definition_id,
+   absolute_or_increment,
+   included_deformation_source_ids,
+
+                                硕士论文配套数据结构说明书 | 按 V2.2 写法与版式重构
+                        数学模型数据结构说明书 V2.5 状态传递、局部模型与 N-2-1 过约束配套版
+ excluded_deformation_source_ids,
+ contribution_vector, covariance_optional,
+ consumed_by_prediction_id, quality_flag, metadata
+}
+DeformationContributionLedger = {
+  contribution_ledger_id, sample_id,
+  contribution_record_ids,
+  allowed_source_classes,
+  aggregation_policy,
+  unique_source_key_rule,
+  parent_ledger_id_optional,
+  ledger_hash, quality_flag, metadata
+}
+DoubleCountCheckResult = {
+  double_count_check_id, contribution_ledger_id,
+  duplicate_source_ids,
+  reference_state_conflicts,
+  absolute_increment_conflicts,
+  included_excluded_overlap,
+  check_rules_version,
+  pass_warn_fail, required_action, metadata
+}
+KCPPredictionResult += {
+  contribution_ledger_id,
+  double_count_check_result_id,
+  aggregation_policy: "FINAL_ABSOLUTE_STATE | SUM_STAGE_INCREMENTS",
+  source_consumption_summary,
+  reference_state_consistency_flag
+}
+
+检查规则                                                 失败示例
+唯一变形源                                                测量夹持变形既包含在 SMS，又作为 CLAMP 增量加入。
+绝对/增量互斥                                              同时累加 JOIN 绝对状态与 RELEASE 绝对状态。
+参考态一致                                                SMS 相对 FREE，阶段增量相对未知测量态且无转换记录。
+包含/排除源不重叠                                            同一 source_id 同时出现在 included_sources 和 excluded_sources。
+过约束源唯一                                               定位反力既作为 LocatorElement 柔度补偿又作为 StageIncrement 贡
+                                                     献时未分清源。
+
+
+
+
+                                   图 11-2 KCP 误差传递与 Monte Carlo 外循环
+
+
+
+
+                               硕士论文配套数据结构说明书 | 按 V2.2 写法与版式重构
+                         数学模型数据结构说明书 V2.5 状态传递、局部模型与 N-2-1 过约束配套版
+
+12 Monte Carlo、敏感性、验证与高保真对比
+12.1 统计配置和随机样本
+ xi^(m) ~ D_xi,     xi=[alpha,e_proc,theta,epsilon_meas];   第 m 个样本调用 F_fast 得到 Delta
+ y_KCP^(m)
+
+参数含义：joint_distribution_id 定义联合分布；RandomSample 保存每次抽样的 SMS、界面参数和过程误差；
+correlation_preserved 说明是否保留输入相关性。N-2-1 情况下 xi 还可包含 locator_compliance_sample、
+command_displacement_sample 和 preload_sample。
+ MonteCarloConfig = {
+   mc_config_id,
+   random_variable_ids,
+   joint_distribution_id,
+   sample_count,
+   random_seed,
+   sampling_method,
+   batch_size,
+   parallel_settings,
+   mode_library_usage,
+   high_fidelity_fallback_budget,
+   stopping_rule_optional, metadata
+ }
+ RandomSample = {
+   random_sample_id,
+   mc_config_id,
+   sample_index,
+   alpha_sms,
+   interface_parameter_sample,
+   process_error_sample,
+   measurement_error_sample_optional,
+   locator_compliance_sample_optional,
+   preload_or_command_displacement_sample_optional,
+   correlation_preserved,
+   source_distribution_ids, metadata
+ }
+
+
+12.2 统计、敏感性与验证结果
+ mu_y=1/N Sigma_m y^(m),   Sigma_y=1/(N-1) Sigma_m (y^(m)-mu_y)(y^(m)-mu_y)^T,   P_f=1/N
+ Sigma_m 1[y^(m) notin [L,U]],   r_val=y_val-y_pred
+
+参数含义：mean/covariance/quantiles 描述 KCP 分布；failure_probabilities 表示超差概率；SensitivityResult 记
+录输入贡献；ValidationResult 记录独立验证残差和通过/失败结论。
+ StatisticalPredictionResult = {
+   statistical_result_id,
+   mc_config_id,
+   kcp_ids,
+   mean_vector,
+   covariance_matrix,
+   quantiles,
+   failure_probabilities,
+   confidence_intervals,
+   mode_frequency_statistics,
+   out_of_domain_rate,
+   nonconvergence_rate,
+   overconstraint_mode_frequency_optional,
+   runtime_statistics, metadata
+ }
+ SensitivityResult = {
+   sensitivity_result_id,
+   target_kcp_ids,
+   input_variable_groups,
+   method,
+   local_mode_sensitivities_optional,
+   first_order_indices,
+   total_order_indices_optional,
+   ranking,
+   confidence_intervals,
+   sample_ids, metadata
+
+                                硕士论文配套数据结构说明书 | 按 V2.2 写法与版式重构
+                         数学模型数据结构说明书 V2.5 状态传递、局部模型与 N-2-1 过约束配套版
+ }
+ ValidationResult = {
+   validation_result_id,
+   model_version,
+   validation_sample_ids,
+   reference_type,
+   kcp_ids,
+   predicted_values,
+   reference_values,
+   residuals,
+   MAE, RMSE, maximum_absolute_error,
+   correlation_optional,
+   failure_probability_error_optional,
+   contact_mode_agreement_optional,
+   overconstraint_reaction_agreement_optional,
+   acceleration_ratio_optional,
+   acceptance_criteria,
+   pass_fail, metadata
+ }
+
+
+
+
+                                     图 12-1 独立验证、适用域和升级触发流程
+
+
+13 质量门、日志、缓存失效与操作交付物
+13.1 质量门 QualityGate
+ Q=PASS <=> for all j, c_j(x) <= tau_j;          Q=WARN/FAIL 由超限程度和 action_required 判定
+
+参数含义：check_items 为检查项；metric_value 为计算值；threshold_rule 为阈值规则；pass_fail 为质量门结论；
+QualityGate 将技术说明书的操作卡落实为可执行检查。
+ QualityGate = {
+   quality_gate_id,
+   gate_name,
+   target_object_type,
+   target_object_ids,
+   check_items,
+   thresholds,
+   pass_fail,
+   warn_items,
+   fail_items,
+   reviewer_optional,
+   timestamp, metadata
+ }
+ CheckItem = {
+   check_name,
+   metric_name,
+
+                                硕士论文配套数据结构说明书 | 按 V2.2 写法与版式重构
+                           数学模型数据结构说明书 V2.5 状态传递、局部模型与 N-2-1 过约束配套版
+     metric_value,
+     unit_optional,
+     threshold_rule,
+     result: "PASS | WARN | FAIL",
+     action_required_optional
+ }
+
+环节                                      建议质量门                                       失败处理
+输入治理                                    坐标闭合、单位一致、缺失值、用途标签、数据                       重新配准、剔除或降级。
+                                        分组。
+SMS 更新                                  H_m N 秩/条件数、残差、后验方差、基外误差。                   减少模态、增加测点、修正基准或扩充 N。
+接触域                                     法向/位序、面积闭合、点质量、候选域覆盖。                       扩大候选域、重建对应、更新法向。
+结构凝聚                                    矩阵秩、对称性、半正定、条件数、全阶-凝聚误                      修正约束、重建 K_Gamma 或回到高保真。
+                                        差。
+互补求解                                    平衡、间隙、接触力、互补残差、主动集稳定。                       调整缩放/求解器、回算、扩展模式库。
+局部模型提取                                  局部域覆盖压力峰值和 KCP 敏感区；切割边界远                    扩大局部域、重建局部网格或回到全局高保真。
+                                        离高梯度区；映射关系完整。
+边界继承                                    位移/反力/阻抗边界误差满足阈值；边界反力与全                     改用阻抗边界或扩大局部域。
+                                        局模型一致。
+样件/位移分解                                 夹具/传感器校准有效；u_fixture、u_sensor、              重测、降级或增加多载荷、多位置数据。
+                                        u_substrate 可分离。
+柔度分离                                    W_struct 与 Cn_local 的 included_source_ids   扣除重复柔度、重做识别或标记 FAIL。
+                                        不重叠；单位和 Q_A 转换正确。
+N-2-1 过约束                               W_ext 对称/半正定、rho_chi 稳定、反力非唯一               MERGE_POINTS、REGULARIZE_W、
+                                        不影响 KCP、locator/joint 源不重复。                 FALLBACK_SOLVER、HIGH_FIDELITY 或
+                                                                                    REJECT。
+KCP 预测                                  参考状态一致、量纲、防重复贡献、模式可行。                       重定义贡献项或重求接触。
+验证                                      D_validate 独立性、MAE/RMSE、超差率误差、              重新发布、警告、拒绝或新版本。
+                                        适用域。
+
+
+
+
+13.2 运行日志与模型发布
+ M_v = {I, theta_hat, L_eta, code, Q, V},               release(M_v) <=> ValidationResult=PASS 且
+ QualityGate 全部通过
+
+参数含义：RunLog 记录一次运行的输入、缓存、警告、错误和输出；ModelVersionRelease 固化模型版本、适用
+域、识别/校准/验证数据摘要和再验证条件。
+ RunLog = {
+   run_id, model_version, input_package_id,
+   started_at, finished_at, operator_or_script,
+   software_versions,
+   object_ids_used,
+   cache_ids_used,
+   quality_gate_ids,
+   warnings,
+   errors,
+   runtime_summary,
+   output_object_ids, metadata
+ }
+ ModelVersionRelease = {
+   model_version,
+   released_at,
+   released_by,
+   valid_domain,
+   frozen_object_ids,
+   training_identification_data_summary,
+   calibration_data_summary,
+   validation_result_ids,
+   known_limitations,
+   required_revalidation_conditions, metadata
+ }
+
+
+
+14 端到端对象流、伪代码与实施清单
+14.1 离线建库阶段对象流
+ OfflineBuild: (I0, I_key, I_Gamma, I_stage, D_identify) -> (I_red, ParameterLibrary,
+ PropagationRules, Q_offline)
+
+
+                                     硕士论文配套数据结构说明书 | 按 V2.2 写法与版式重构
+                            数学模型数据结构说明书 V2.5 状态传递、局部模型与 N-2-1 过约束配套版
+    I0 = build_nominal_model(parts, interfaces, materials, topology)
+    I_key = define_KCM_KCP(features, tolerances, directions)
+    I_Gamma = build_contact_domains(I0, I_key)
+    I_stage = build_stage_inputs(process_plan, boundaries, loads)
+    I_red = condense_structure(I0, I_Gamma, I_stage)
+    for each key interface:
+        local_region = define_local_region(interface, KCP_sensitivity, margin_rule)
+        local_model = extract_local_submodel(global_FE, local_region)
+        boundary_records = inherit_boundaries(global_FE_cases, local_model, stages)
+        validate_local_model(local_model, boundary_records)
+        test_specs = design_interface_tests(material, surface, loading_path)
+        responses = collect_local_FE_CGFFT_and_test_response(local_model, test_specs)
+        decompositions = decompose_deformation(responses, fixture_calibration, sensor_calibration,
+    substrate_FE)
+        theta = identify_interface_parameters(decompositions)
+        compliance_report = check_compliance_separation(I_red.W_struct, theta.Cn_local)
+        ParameterLibrary.register(theta, compliance_report, D_valid)
+    for each overconstraint group:
+        build_locator_elements_and_compliance(group)
+        validate_extended_domain(group, I_Gamma, I_stage)
+    PropagationRules = define_stage_parameter_and_transition_rules()
+    QualityGate.run_all([I0, I_key, I_Gamma, I_stage, I_red, ParameterLibrary, OverConstraintDomains])
+
+
+14.2 单样本在线预测对象流
+    meas = load_measurements(sample_id)
+    ms = build_measurement_state_snapshot(meas.part_kcm)
+    comp = compensate_measurement_state(ms, fixture_model, measured_loads)
+    kcm_ref = build_reference_kcm(ms, comp)
+    sms_update = update_SMS(kcm_ref, SMSPrior, SMSBasis, KCMDefinition)
+    sms_pkg = build_sms_transfer_package(sms_update, comp)
+    gap = build_gap_field(sms_pkg, ContactDomain, SMSPointCloudMapping)
+    previous_pkg = initialize_stage_package(gap)
+    for stage in stages:
+        K_Gamma = load_condensed_operator(I_red[stage], material_boundary_hash)
+        F_Gamma = build_reduced_force_vector(I_stage[stage], actual_loads)
+        if overconstraint_enabled(stage):
+            ext = build_extended_gap_and_compliance(gap, K_Gamma, F_Gamma, LocatorGroups[stage])
+            model = build_overconstraint_contact_model(ext)
+            state = solve_extended_complementarity(model, warm_start=previous_pkg.mode)
+        else:
+            pred = stage_predict(previous_pkg, I_red[stage], I_stage[stage], ParameterLibrary)
+            state = solve_complementarity(pred, warm_start=previous_pkg.mode)
+        trace = build_contact_computation_trace(gap, state.q, state.W, dependencies)
+        trace.attach_solution(state)
+        if process_measurement_available(stage):
+            decision = diagnose_update_target(state, process_meas[stage])
+            state = constrained_update_and_resolve(state, decision, process_meas[stage])
+        increment = build_stage_increment(previous_pkg, state)
+        ledger.register(increment)
+        previous_pkg = build_stage_posterior_package(state, increment)
+    check_no_double_count(ledger)
+    eta = condense_interface_error(stage_packages)
+    pred = predict_KCP(sms_pkg, eta, I_pred, ledger)
+
+
+14.3 Monte Carlo 批量对象流
+    samples = draw_random_samples(I_stat, sms_update_cov, parameter_cov, process_error_cov)
+    for sample in samples:
+        pred_m = run_single_sample_fast_model(sample)
+        collect(pred_m)
+    stat_result = summarize_statistics(predictions)
+    sensitivity = compute_sensitivity(predictions, samples)
+    validation = compare_with_D_validate(stat_result, validation_set)
+
+
+14.4 防重复计算的实现约束
+     每次 run_single_sample_fast_model 必须创建独立 ContributionLedger。
+     阶段更新不得修改 SMSUpdateTransferPackage。
+     任何 q/W/K/模式变化必须由 ReSolveRequirement 驱动缓存失效和重求。
+     N-2-1 扩展对象的 locator/joint/clamp 源必须进入同一 source ledger，避免同一定位器变形既作为柔度又作为阶段贡
+      献重复计入。
+                                   硕士论文配套数据结构说明书 | 按 V2.2 写法与版式重构
+                            数学模型数据结构说明书 V2.5 状态传递、局部模型与 N-2-1 过约束配套版
+      ContactComputationTrace 至少记录 g0、q、W、lambda、p/w、主动集和残差，保证 KCP 可回放。
+
+
+附录 A 枚举值、字段命名和最小可运行数据包
+A.1 关键枚举值
+    枚举字段                                                 推荐取值
+    support_state                                        FREE、KNOWN_SUPPORT、FIXTURED、UNKNOWN
+    load_state                                           FREE、LOCATED、CLAMPED、JOINED、RELEASED、
+                                                         DISASSEMBLED_FREE
+    compensation_method                                  FE_CORRECTION、MULTI_POSE_SEPARATION、STATE_DIFFERENCE、
+                                                         NONE_REJECT
+    update_target                                        SMS、POSE、STAGE_STATE、PROCESS_LOAD、
+                                                         INTERFACE_PARAMETER、REBOUND_PARAMETER、KCP_VALIDATION、
+                                                         MONITOR_ONLY、LOCATOR_COMPLIANCE、
+                                                         OVERCONSTRAINT_STATE、JOINT_LOCK_HISTORY、
+                                                         RELEASE_HISTORY
+    measurement_type                                     point_cloud、KCM、force、gap、strain、KCP、LOCATOR_REACTION、
+                                                         CARD_REACTION、CLAMP_HEAD_DISPLACEMENT、
+                                                         FASTENER_PRELOAD、HOLE_EDGE_STRAIN、
+                                                         CONTACT_OPEN_CLOSE_STATE、RELEASE_REBOUND、
+                                                         RESIDUAL_FORCE_BEFORE_RELEASE
+    data_role                                            IDENTIFY、CALIBRATE、VALIDATE、MONITOR、EXCLUDE
+    boundary_method                                      DISPLACEMENT、FORCE、IMPEDANCE、MIXED
+    source_type                                          LOCAL_FE、SPECIMEN_TEST、CG_FFT、PROCESS_MEASUREMENT
+    decomposition_method                                 calibration_subtraction、local_FE_subtraction、joint_identification、
+                                                         bayesian_decomposition
+    target_discretization                                scalar、zonal_scalar、diagonal、block、full_matrix、
+                                                         nonlinear_piecewise
+    group_type                                           N21、MULTI_POINT、CARD、CLAMP、JOINT
+    element_type                                         LOCATOR_POINT、SUPPORT_PAD、CARD_LINE、CLAMP_HEAD、
+                                                         FASTENER_BEARING、JOINT_LOCK
+    required_level                                       NONE、RESOLVE_LCP、REBUILD_W、REBUILD_IRED、HIGH_FIDELITY
+    quality_flag                                         PASS、WARN、FAIL、REJECT、OUTLIER_REVIEWED、MISSING
+
+
+
+
+A.2 最小可运行数据包
+    P_min={I0,I_key,I_meas,I_Gamma,I_stage,I_red,L_eta,M_LCP,M_pred,Transition,Ledger,V}
+    MinimumRunnablePackage_V2_5 = {
+      I0: {Part, Interface, NominalModel, Material, AssemblyTopology, SMSPrior, LocalRegionDefinition},
+      I_key: {KCMDefinition, KCPDefinition, FeatureMapping},
+      I_meas: {MeasurementPackage, MeasurementRecord, DataSplit,
+               MeasurementStateSnapshot, MeasurementStateCompensationResult,
+               InterfaceTestSpecimen, InterfaceTestSetup, FixtureCalibration, SensorCalibration,
+    LoadingPath},
+      sms_update: {SMSUpdateConfig, SMSUpdateResult, SMSUpdateTransferPackage, SMSPointCloudMapping},
+      I_Gamma: {ContactDomain, ContactPoint, GapField, AreaWeightMatrix, G, Bn,
+                ExtendedContactDomain, ExtendedGapAndCompliance},
+      I_stage: {StageInput, BoundaryItem, LoadItem, ReducedForceVector,
+                OverConstraintLocatorGroup, LocatorElement, LocatorCompliance,
+                StageTransitionRecord, StageStateSnapshot, StageParameterSnapshot,
+                StageIncrement, StagePosteriorPackage, ConnectionLockHistory, ReleaseHistoryRecord},
+      I_red: {DOFPartition, CondensedOperator, W_struct, FactorizationCache,
+              LocalSubmodelExtraction, BoundaryInheritanceRecord, LocalModelValidationResult},
+      parameter_library: {LocalResponseData, DeformationDecompositionResult,
+                          ParameterEstimate, ComplianceSeparationReport,
+                          InterfaceParameter, ParameterLibrary, ValidityDomain},
+      solver: {InterfaceLCPModel, ComplementaritySolverConfig, ContactComputationTrace,
+               OverConstraintContactModel, ExtendedLCPSolution,
+               ActiveSetStabilityTrace, LCPRegularizationConfig, ForceNonuniquenessReport},
+      prediction: {EquivalentErrorItem, JTTransferModel, ContributionLedger,
+                   DoubleCountCheckResult, KCPPredictionResult},
+      validation: {ValidationResult, QualityGate, RunLog, ModelVersionRelease}
+    }
+
+
+A.3 与技术说明书章节对应速查
+    技术说明书章节                                              本数据结构说明书对象
+    第 3 章：KCM-SMS 与参考态                                   MeasurementStateSnapshot、MeasurementDeformationEstimate、
+                                   硕士论文配套数据结构说明书 | 按 V2.2 写法与版式重构
+                      数学模型数据结构说明书 V2.5 状态传递、局部模型与 N-2-1 过约束配套版
+                                          MeasurementStateCompensationResult、SMSUpdateTransferPackage
+第 4-5 章：接触域与结构凝聚                          ContactDomain、GapField、SMSPointCloudMapping、
+                                          CondensedOperator、ReducedForceVector、FactorizationCache
+第 6 章：局部界面参数识别                            LocalRegionDefinition、LocalSubmodelExtraction、
+                                          BoundaryInheritanceRecord、InterfaceTestSpecimen、
+                                          LocalResponseData、DeformationDecompositionResult、
+                                          ComplianceSeparationReport、ValidityDomain
+第 7 章：多阶段互补与 N-2-1 过约束                    InterfaceLCPModel、LCPSolution、StageStateSnapshot、
+                                          OverConstraintLocatorGroup、ExtendedContactDomain、
+                                          OverConstraintContactModel、ExtendedLCPSolution、
+                                          ActiveSetStabilityTrace、ForceNonuniquenessReport、
+                                          ConnectionLockHistory、ReleaseHistoryRecord
+第 8 章：过程实测更新                              ProcessObservationModel、StateUpdateConfig、StateUpdateResult、
+                                          UpdateDecisionRecord、ReSolveRequirement、UpdateRollbackRecord
+第 9-10 章：界面凝聚与 KCP                        EquivalentErrorItem、ContributionRecord、
+                                          DeformationContributionLedger、DoubleCountCheckResult、
+                                          KCPPredictionResult
+第 11-12 章：统计与验证                           MonteCarloConfig、StatisticalPredictionResult、SensitivityResult、
+                                          ValidationResult、ModelVersionRelease
+
+
+
+
+使用说明
+本说明书不要求一次性实现所有对象。硕士论文阶段可优先实现最小可运行数据包；若进入程序开发或工程试验阶
+段，再逐步扩展参数库、模式库、版本治理和质量门对象。任何新增字段都应保持两个原则：能够追溯来源，能够说
+明它相对于哪个参考状态定义。
+
+
+
+
+                           硕士论文配套数据结构说明书 | 按 V2.2 写法与版式重构
+

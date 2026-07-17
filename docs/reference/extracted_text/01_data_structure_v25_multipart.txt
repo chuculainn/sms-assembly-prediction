@@ -1,0 +1,458 @@
+数学模型数据结构说明书 | 多零件串并联同步修订稿
+
+
+
+
+                         数据结构同步修订稿
+
+
+
+             数学模型数据结构说明书
+
+          多零件串联/并联装配、全局耦合接触与误差链累积
+
+
+
+
+         配套数据包：01_DEFAULT_MIN_CASE（4 零件 / 4 接口 / 12 接触点）
+
+                  基准说明书：V2.5 | 同步修订日期：2026 年 7 月
+
+
+
+
+                                                           第1页
+数学模型数据结构说明书 | 多零件串并联同步修订稿
+
+
+
+修订结论
+
+ 生效范围：本稿不推翻原说明书对象体系，而是替换和补充第 2、3、6、7、8、11、14 章及附录 A 中与
+
+ 多零件装配有关的条款。未涉及的测量、参数识别和版本治理条款继续沿用原说明书。
+
+
+原结构能够列出多个 Part 与 Interface，也允许 InterfaceLCPModel 引用多个 ContactDomain；但缺
+
+少子装配体成员快照、统一向量分块、接口交叉柔度、逐零件/逐接口状态和多路径贡献唯一键。修订
+
+后，这些对象均有明确 CSV 与主键，可直接支持串联、并联和闭环连接。
+
+
+项目             修订前最小案例                    修订后案例
+
+零件/接口          2/1                        4/4
+
+接触离散           1 点、1 维                    每接口 3 点、全局 12 维
+
+装配拓扑           单一二元接口                     A-B-C 串联；A-B 与 A-D-B 并联
+
+求解矩阵           1×1、无交叉块                   12×12、六对接口交叉块均非零
+
+阶段状态           4 个聚合向量                    聚合状态 + 16 条零件状态 + 16 条接口状态
+
+自动测试           字段读取                       20 项结构/矩阵/LCP/账本检查全部通过
+
+
+
+
+1 修订目标与原则
+
+本修订用于使数据结构同时满足多零件拓扑表达、多接口统一接触求解、阶段状态继承、JOIN 锁定/
+
+RELEASE 回弹以及最终 KCP 贡献重构。
+
+  拓扑唯一：零件是节点，接口和连接是边，装配步骤具有独立 topology_step_id。
+
+  向量可解释：所有全局向量和矩阵必须引用 VectorLayout，禁止仅靠隐含顺序解释。
+
+  状态可继承：聚合快照、零件快照和接口快照必须有父状态链。
+
+  耦合可验证：W_struct 的接口交叉块必须保存并纳入质量门。
+
+  贡献不重复：每个零件 SMS 只登记一次；每个接口阶段增量只登记一次。
+
+  真实性分级：本案例明确为合成数值一致性数据，不得替代工程 FE、测量或试验数据。
+
+
+
+
+                                                                       第2页
+数学模型数据结构说明书 | 多零件串并联同步修订稿
+
+
+
+2 多零件拓扑定义
+
+
+
+
+图 2-1 多零件串并联拓扑。A-B-C 为串联传递路径；A 与 B 之间同时存在直接接口 G_PANEL_RIB 和桥
+
+接路径 A-D-B，由此形成并联载荷路径和闭环耦合。
+
+ AssemblyGraph = {Parts, Interfaces, Joints, Subassemblies, TopologySteps}
+ SerialPath(A,C) = [G_PANEL_RIB, G_RIB_SPAR]
+ ParallelPaths(A,B) = [[G_PANEL_RIB], [G_PANEL_BRACKET, G_RIB_BRACKET]]
+
+
+AssemblyTopology 的主键由原来的 topology_id 扩展为 topology_step_id；topology_id 表示同一装
+
+配计划，topology_step_id 标识计划中的唯一操作。一个新零件在同一步激活多个接口时，应在
+
+activated_interface_ids 中同时列出，不能拆成互相独立的两次求解。
+
+
+
+3 对象层同步修订
+
+对象                    文件                             作用                      状态
+
+Subassembly           I0/subassembly.csv             记录每一步子装配体的成员、接口和连接      新增
+
+SubassemblyMembe      I0/                            将零件成员关系从分号列表规范化         新增
+rship                 subassembly_membership.cs
+                      v
+
+JointDefinition       I0/joint_definition.csv        定义连接两端、刚度、预紧与激活阶段       新增
+
+StageDefinition       I0/stage_definition.csv        定义阶段顺序及激活零件/接口          新增
+
+PartStageState        I_stage/part_stage_state.csv   逐零件保存位姿和结构位移            新增
+
+InterfaceStageState   I_stage/                       逐接口保存 g、λ、p、w 与接触模式     新增
+
+                      interface_stage_state.csv
+
+
+                                                                                  第3页
+数学模型数据结构说明书 | 多零件串并联同步修订稿
+
+
+对象                 文件                             作用                         状态
+
+VectorLayout       matrices/vector_layout.csv     定义大向量和矩阵块的对象归属             新增
+
+AssemblyTopology   I0/assembly_topology.csv       增加结果子装配体、激活接口和连接模式         修改
+
+MatrixManifest     matrices/matrix_manifest.csv   增加行/列布局和推导来源               修改
+
+
+
+
+4 新增对象字段定义
+
+4.1 Subassembly 与成员关系
+ Subassembly = {
+   subassembly_id, parent_subassembly_id, assembly_step,
+   member_part_ids, active_interface_ids, active_joint_ids,
+   reference_state_id, metadata
+ }
+ SubassemblyMembership = {
+   membership_id, subassembly_id, part_id, added_at_step,
+   removed_at_step_optional, membership_role, metadata
+ }
+
+
+member_part_ids 便于整包读取，SubassemblyMembership 用于数据库约束和逐行外键检查；两者
+
+必须一致。
+
+
+4.2 JointDefinition
+ JointDefinition = {
+   joint_id, interface_id, part_i, part_j, joint_type,
+   constrained_dofs, stiffness_matrix_id, preload_definition_id,
+   activation_stage_id, retention_rule, metadata
+ }
+
+
+ConnectionLockHistory 只记录一次样本在 JOIN 阶段的实际锁定结果；JointDefinition 记录不随样本
+
+变化的连接定义。二者不得合并。
+
+
+4.3 PartStageState 与 InterfaceStageState
+ PartStageState = {sample_id, stage_id, subassembly_id, part_id,
+   parent_part_state_id, pose_state, structural_displacement_vector_id,
+   reference_state_id, absolute_or_increment, covariance_id, quality_flag}
+
+
+ InterfaceStageState = {sample_id, stage_id, subassembly_id, interface_id,
+   contact_domain_id, parent_interface_state_id, vector_layout_id,
+   gap_g, lambda_n, pressure_p_n, local_compression_w_n,
+   contact_mode_local_indices, joint_lock_history_id, reference_state_id}
+
+
+
+
+                                                                                  第4页
+数学模型数据结构说明书 | 多零件串并联同步修订稿
+
+
+
+5 全局向量布局与耦合矩阵
+
+本案例采用 VL_CONTACT_ALL_12 作为四阶段公共布局：
+
+
+块序        接口                    接触域                      全局索引        含义
+
+0         G_PANEL_RIB           CD_PANEL_RIB             0–2         A-B 直接接口
+
+1         G_RIB_SPAR            CD_RIB_SPAR              3–5         B-C 串联接口
+
+2         G_PANEL_BRACKET       CD_PANEL_BRACKET         6–8         A-D 并联支路
+
+3         G_RIB_BRACKET         CD_RIB_BRACKET           9–11        D-B 并联闭合支路
+
+
+
+ lambda = [lambda_AB; lambda_BC; lambda_AD; lambda_BD]
+ q      = [q_AB;      q_BC;      q_AD;      q_BD]
+
+
+ W_struct = [[W_AB,AB, W_AB,BC, W_AB,AD, W_AB,BD],
+             [W_BC,AB, W_BC,BC, W_BC,AD, W_BC,BD],
+             [W_AD,AB, W_AD,BC, W_AD,AD, W_AD,BD],
+             [W_BD,AB, W_BD,BC, W_BD,AD, W_BD,BD]]
+
+
+对角块表示接口自身柔度，非对角块表示共享零件和装配闭环引起的跨接口影响。本案例四个阶段的六
+
+对非对角接口块均非零。
+
+ W_total^(s) = W_struct^(s) + C_n^(s)
+ 0 <= lambda^(s) perpendicular g^(s) = q^(s) + W_total^(s) lambda^(s) >= 0
+
+
+ 禁止规则：不得分别求解四个 3×3 接口问题后再拼接结果；这样会丢失 W_e,f 交叉块，无法表示串
+
+ 联/并联载荷传递。
+
+
+
+6 多阶段状态传递与连接历史
+ S_LOCATE -> S_CLAMP -> S_JOIN -> S_RELEASE
+
+
+ x_s^- = Phi_s(x_(s-1)^+, controls_s, parameters_s)
+ Delta x^(s) = x_s^+ - T_(s-1->s) x_(s-1)^+
+ lock_JOIN = {joint_ids, locked_reference_dofs, locked_reference_values, preload_actual,
+ joint_stiffness}
+
+
+每条 StageTransitionRecord 必须同时记录激活/撤除的边界、载荷和连接变化。JOIN 生成
+
+LOCK_HIST_MULTIPART；RELEASE 撤除夹具边界和夹持载荷，但保留四个 JointDefinition。
+
+
+阶段              边界/载荷变化                              接触活动点       继承要求
+
+LOCATE          定位支承 + 重力                          0             建立初始聚合/零件/接口状态
+
+CLAMP           激活 4 组夹持载荷                         5             继承 LOCATE 并全局重求
+
+JOIN            增加 4 组预紧并激活连接                      5             保存连接锁定历史
+
+RELEASE         撤除定位/夹持，保留连接                       4             读取锁定历史并计算回弹
+
+
+                                                                                           第5页
+数学模型数据结构说明书 | 多零件串并联同步修订稿
+
+
+
+
+7 多零件误差链和贡献账本
+ Delta y_KCP = sum_i J_SMS,i delta_SMS,i
+             + sum_s sum_e J_e^(s) Delta gamma_e^(s)
+             + J_process e_process
+
+
+零件索引 i 覆盖 4 个 Part；接口索引 e 覆盖 4 个 Interface；阶段索引 s 覆盖 LOCATE、CLAMP、JOIN
+
+和 RELEASE。ContributionRecord 的唯一键同步修订为：
+
+ sample_id + source_class + source_id + origin_stage_id + increment_definition_id
+
+
+本案例账本包含 4 条零件 SMS 绝对贡献和 12 条接口阶段增量贡献，总计 16 条。
+
+KCPPredictionResult.predicted_values 可由这 16 条记录逐项求和重构。
+
+
+
+8 数据包实现
+
+对象/检查                                                           数量
+
+Part                                                            4
+
+Interface                                                       4
+
+ContactPoint                                                    12
+
+StageStateSnapshot                                              4
+
+PartStageState                                                  16
+
+InterfaceStageState                                             16
+
+StageTransitionRecord                                           3
+
+ContributionRecord                                              16
+
+MatrixManifest                                                  96
+
+自动测试                                                            20/20 PASS
+
+
+
+
+矩阵文件 multi_part_matrices.npz 包含四阶段 q、W_struct、W_total、λ、g、压力、局部压缩、零
+
+件位移、SMS 映射和 J-T 矩阵。MatrixManifest 记录每个数组的形状和布局。
+
+
+
+9 外键和质量门
+
+  Interface.part_i/part_j 必须存在于 Part。
+
+  ContactDomain.interface_id 必须存在于 Interface，ContactPoint 必须属于唯一 ContactDomain。
+
+
+
+                                                                                    第6页
+数学模型数据结构说明书 | 多零件串并联同步修订稿
+
+
+  StageInput 中的 BoundaryItem、LoadItem 和 JointDefinition 必须全部可解析。
+
+  StageStateSnapshot、PartStageState 和 InterfaceStageState 的父状态必须形成无环链。
+
+  MatrixManifest 中的 npz_key、shape 与实际 NPZ 完全一致。
+
+  W_struct 必须对称正定或半正定；W_total 必须等于 W_struct 与局部柔度之和。
+
+  LCP 必须满足 λ≥0、g≥0 和 max|λ⊙g|≤1e-8。
+
+  ContributionLedger 中的 source 唯一键不得重复，预测值必须可由账本重构。
+
+  合成数据必须声明 engineering_claim_allowed=false。
+
+ 自动测试结果：随包验证脚本共执行 20 项检查，当前 20 项通过，状态为 PASS。
+
+
+
+10 原说明书章节同步关系
+
+原章节                      同步内容                                              本稿位置
+
+第 2 章 对象分层               增加子装配体、连接、逐对象阶段状态和布局对象                            第 3–4 节
+
+第 3 章 编号治理               TopologyStep、Subassembly、Joint、Part/              第 2、4 节
+
+                         InterfaceState 编号
+
+第 6 章 接触域                规定多 ContactDomain 必须采用公共 VectorLayout             第5节
+
+第 7 章 结构凝聚               W_struct 升级为带接口交叉块的全局算子                           第5节
+
+第 8 章 阶段状态               增加聚合/零件/接口三级状态和完整三条转移                             第6节
+
+第 11 章 KCP 贡献            唯一键增加 stage 与 interface 来源语义                      第7节
+
+第 14 章 对象流               每阶段统一构建并求解所有激活接口                                  第 11 节
+
+附录 A 最小包                 最小多零件案例改为 4 零件/4 接口/12 点                          第 8、12 节
+
+
+
+
+11 软件执行流程（替换原 14.2 相关步骤）
+ graph = load_assembly_graph(I0)
+ layout = load_vector_layout('VL_CONTACT_ALL_12')
+ state = initialize_part_and_interface_states(graph, layout, sms_packages)
+ for stage in [LOCATE, CLAMP, JOIN, RELEASE]:
+     active = graph.active_subassembly(stage)
+     q = assemble_global_q(active.interfaces, state, stage, layout)
+     W_struct = load_condensed_operator(stage, topology_hash, layout)
+     W_total = W_struct + assemble_interface_compliance(active.interfaces, layout)
+     solution = solve_global_lcp(q, W_total, warm_start=state.contact_mode)
+     state = update_part_interface_and_aggregate_states(state, solution)
+     if stage == JOIN: save_connection_lock_history(state)
+     if stage == RELEASE: apply_retained_joints_and_compute_rebound(state)
+     ledger.register_unique(stage_interface_increments(state))
+ check_no_double_count(ledger)
+ predict_kcp(J_part, J_interface, J_process, ledger)
+
+
+
+
+                                                                                      第7页
+数学模型数据结构说明书 | 多零件串并联同步修订稿
+
+
+
+12 最小案例验收标准
+
+多零件最小案例只有同时满足以下条件，才可替代原 2 零件占位案例作为软件集成基准：
+
+  至少 3 个零件、2 个接口；本案例为 4 个零件、4 个接口。
+
+  同时存在一条长度不少于 2 的串联路径和两条连接同一端点的并联路径。
+
+  至少一个柔性零件被两个以上接口共享。
+
+  全局 W 包含非零交叉块；改变一个接口的 q 或载荷会改变另一接口结果。
+
+  JOIN 有非零连接刚度或锁定位移，RELEASE 继承该历史。
+
+  直接 KCP 提取与 ContributionLedger 重构一致。
+
+  所有自动质量门通过，且合成/工程真实性标签明确。
+
+
+
+附录 A 文件与对象索引
+
+以下为本次新增或重点修改文件；其余对象继续遵循原 V2.5 说明书。
+
+
+组            文件                           关键主键
+
+I0           subassembly.csv              subassembly_id
+
+I0           subassembly_membership.csv   membership_id
+
+I0           joint_definition.csv         joint_id
+
+I0           stage_definition.csv         stage_id
+
+I_stage      part_stage_state.csv         part_stage_state_id
+
+I_stage      interface_stage_state.csv    interface_stage_state_id
+
+matrices     vector_layout.csv            vector_layout_id + block_order
+
+validation   validate_package.py          命令行校验脚本
+
+
+
+
+附录 B 数据真实性说明
+
+ 重要限制：本数据包的拓扑、矩阵和结果均为合成数值一致性数据。它证明数据结构和算法接口能够连
+
+ 通，但不证明飞机垂尾翼盒或任何实际装配体的精度、载荷、柔度、接触压力或失效概率。工程使用前
+
+ 必须替换 CAD/网格、材料、SMS、边界载荷、W_struct、界面参数和验证数据。
+
+
+
+
+                                                                           第8页
+

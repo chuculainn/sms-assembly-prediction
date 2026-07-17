@@ -1,0 +1,1138 @@
+          基于 SMS 输入的异质叠层结构装配精度预测
+数学模型操作流程说明书（V1.2 全量保留同步修订版）
+               实验操作 + 数据处理 + 公式 + 伪代码 + 简单示意图（非流程图版）
+
+适用目的：用于硕士论文方法章节、程序实现说明、实验方案检查、答辩时解释模型如何从实测/虚拟 SMS 走到
+                                              KCP 预测与验证。
+
+           依据材料：技术说明书 V2.4、数据结构说明书 V2.5、两个柔性薄壁板过约束连接示例报告。
+
+
+
+
+0 总体闭环：先确认这套流程为什么能走通
+本模型的可运行核心不是“画一个流程图”，而是把每个物理对象变成可计算的数据对象，并保证每个对象只
+有一个明确来源、参考态和消费位置。整体上，它要解决三件事：装配前形貌如何进入初始间隙；阶段边界和
+接触如何改变结构状态；局部界面响应如何传递为最终 KCP。
+I = {I0, IΓ, Istage, Ikey, Imeas, Ired, Ipred, Istat}
+
+F_fast : ξ -> [g0 -> {S^(s)}_{s=1..4} -> {Δγ_c^(s)} -> Δy_KCP]
+
+ξ = [α_SMS, e_proc, θ_interface, ε_model]^T
+
+最小可走通条件如下。
+条件                                  必须具备的数据或算子                    若缺失会卡在哪里
+几何与形貌                               名义模型 X0、SMS 基 N、KCM 或虚拟 SMS   无法得到 δ_SMS 和 g0
+接触域                                 候选点 Ω、法向 n、面积权重 QA、G、Bn       无法把间隙和接触力写成 LCP
+结构响应                                阶段 W_struct 或 KΓ 缓存           每个样本都必须回全阶有限元
+界面参数                                Cn/Ct/μ/βr 或其先验               局部压缩、滑移、回弹无法进入 KCP
+                                    定位、夹持、连接、释放的边界/载荷/锁定
+阶段工艺                                                              无法形成路径依赖和释放回弹
+                                    规则
+预测映射                                JSS/J-T、KCP 定义、贡献台账           无法把接触状态变成质量指标
+验证与统计                               D_validate、Istat、质量门          无法证明模型可信或统计收敛
+物理示意（不是流程图）：
+
+
+装配前：     X_i = X_i0 + δ_i^SMS           -> 形成两侧结合面的初始几何差
+接触中：     0 <= λ_n ⟂ g = q + W λ_n >= 0 -> 求得阶段接触力、间隙、压缩
+预测端：     Δy_KCP = 几何直接项 + 接触附加项 + 工艺过程项
+统计端：     对每个 ξ 样本重复完整计算链，而不是只对一次 KCP 加噪声
+
+
+总体通过判据：只要八类输入包存在，SMS 后验能构造 g0，W_total 半正定且 LCP 可解，阶段状态能按参
+考态传递，贡献台账无重复源，KCP 能被独立验证，那么这套数学模型就可以端到端走通。
+
+
+
+1 环节一：实验对象、阶段、特性与数据分组
+本环节把实验对象从“一个结构”拆成零件、结合面、阶段、KCM 和 KCP。实验上要先确定哪些量用于更
+新、哪些量用于校准、哪些量只用于验证。
+
+                                    SMS 数学模型实验操作与数据处理流程说明书
+1.1 实验操作
+     冻结名义 CAD/FE、零件编号、材料/铺层、结合面编号和装配拓扑。
+     定义四个阶段：LOCATE 定位、CLAMP 夹持、JOIN 连接、RELEASE 释放。
+     定义 KCM：装配前型面点、孔位、边缘、局部间隙、夹持点位移等。
+     定义 KCP：最终间隙、阶差、孔位、释放回弹、关键区域形貌等。
+     给所有实测记录标注 support_state、load_state、update_target、data_role。
+
+
+1.2 数据处理公式
+    D_meas = D_identify ∪ D_calibrate ∪ D_validate
+
+    D_validate ∩ (D_identify ∪ D_calibrate) = ∅
+    伪代码：数据分组与入口检查
+
+
+    for record in MeasurementRecords:
+        assert record.coordinate_system_id is not None
+        assert record.unit is not None
+        assert record.update_target in allowed_targets
+        assert record.data_role in {IDENTIFY, CALIBRATE, VALIDATE, MONITOR, EXCLUDE}
+
+
+    check_no_leakage(D_identify, D_calibrate, D_validate)
+    freeze_definitions(I0, Ikey, Istage)
+
+
+
+
+1.3 多种处理方式与适用情况
+    数据来源                           主要用途                           适用情况                 不能做什么
+                                                                  装配前自由态或规定支承态可重       不能直接给出装配夹持后的接触
+    零件级 KCM/点云                     更新 SMS
+                                                                  复                    压力
+                                                                  定位、夹持、连接、释放中有传
+    过程实测                           更新阶段状态/载荷/参数                                        不能无补偿写回制造 SMS
+                                                                  感器记录
+    局部试验/局部 FE                     识别界面柔度和回弹参数                    界面局部响应难由全局网格解析       不能替代真实批次形貌感知
+    装配后 KCP                        独立验证                           最终质量指标可测             不能回流选择 λ 或校准参数
+                                   建立/校核 W_struct、模式库和
+    高保真 FE                                                        代表性样本和边界可建模          不负责每个 MC 样本实时计算
+                                   真值
+
+
+
+
+2 环节二：测量状态补偿，先得到可更新 SMS 的参考态 KCM
+柔性薄壁件在测量台上已经受重力、支承、检具和夹持影响。若把受载测量点直接当作制造形貌，后续阶段接
+触求解会把同一变形再算一遍。因此，必须先把原始测量拆分为制造形貌、刚体位姿、测量边界变形、局部接
+触压缩和偏置。
+    m_raw^(m) = H_δ N α + H_pose e_pose^(m) + H_u u_struct^(m) + H_c w_local^(m) + b_m + ε_m
+
+    m_ref = m_raw - H_pose ê_pose - H_u û_struct - H_c ŵ_local - b̂ _m
+
+    R_ref = R_raw + J_comp Σ_comp J_comp^T + J_T Σ_T J_T^T
+    简单示意：测量值不是 SMS 本身
+
+
+    m_raw   =   制造形貌 + 位姿误差 + 测量支承/重力变形                     +   局部接触压缩      +   仪器偏置
+    m_ref   =   m_raw    - 可辨识的非制造项
+    SMS     =   用 m_ref 更新，而不是用 m_raw 更新
+
+
+                                            SMS 数学模型实验操作与数据处理流程说明书
+2.1 实验操作
+     记录测量时的支承点、重力方向、温度、检具编号、夹持/支承力、坐标转换关系。
+     在 FREE 或 KNOWN_SUPPORT 状态下测量优先；若必须在夹持状态测量，必须记录夹持边界并补偿。
+     进行坐标配准和不确定度评估，保留 transform_covariance。
+
+
+2.2 三种处理路线
+    路线                             核心做法                           适用情况                  输出与限制
+                                                                                        输出可用于 SMS 更新的
+                                   用测量夹具 FE、重力补偿或多                测量边界、载荷、重力和补偿模
+    A 参考态补偿                                                                             KCM_ref；补偿项只进入协方差
+                                   姿态分离，得到 m_ref                  型可获得
+                                                                                        和台账
+                                   不恢复自由态，而使用                     自由态不可恢复，但测量态和装        输出是状态参考几何，不能标记
+    B 状态差分
+                                   X^(s)=X^(m)+[u^(s)-u^(m)]      配态均可建模                为通用 SMS
+                                                                  支承/夹持边界未知，载荷缺         应重测、补充边界记录或降级为
+    C 禁止更新                         数据不进 SMS，只作监控或校准
+                                                                  失，补偿不可辨识              MONITOR/CALIBRATE
+    伪代码：测量状态补偿
+
+
+    ms = build_measurement_state_snapshot(raw_measurements)
+    if ms.support_state in {FREE, KNOWN_SUPPORT} and boundary_known(ms):
+        comp = estimate_deformation(ms, method="FE_CORRECTION or MULTI_POSE")
+        kcm_ref = raw_kcm - comp.pose - comp.structural - comp.local - comp.bias
+        R_ref = propagate_uncertainty(raw_R, comp)
+    elif state_difference_available(ms):
+        kcm_ref = build_state_referenced_geometry(ms)
+        mark_as_state_referenced_geometry(kcm_ref)
+    else:
+        reject_for_SMS_update(raw_measurements)
+
+
+通过条件：MeasurementStateSnapshot、MeasurementStateCompensationResult 和
+excluded_source_ids 完整；UNKNOWN 测量状态不得进入 SMS 更新。
+
+
+
+3 环节三：KCM 更新 SMS，得到装配前制造形貌后验
+SMS 只表示零件在装配前参考状态下的制造态形貌。它不包含定位变形、夹持变形、连接压缩和释放回弹。
+    X_i = X_i^0 + δ_i^SMS,       δ_i^SMS = N_i α_i
+
+    m_KCM = H_m N α + b_m + ε_m,        ε_m ~ N(0, R_m)
+
+    α_hat = argmin_α { ||m_ref - H_m N α - b_m||^2_{R_ref^{-1}} + λ ||L(α-α0)||_2^2 }
+
+    Σ_α,post ≈ (N^T H_m^T R_ref^{-1} H_m N + λ L^T L)^{-1}
+    简单示意：低维形貌基
+
+
+    零件表面偏差 δ_SMS(x,y)
+       ≈ α1 · 整体弯曲模态
+        + α2 · 扭转/斜率模态
+        + α3 · 边缘翘曲模态
+        + ...
+
+
+
+
+                                            SMS 数学模型实验操作与数据处理流程说明书
+3.1 实验操作
+     采集点云、KCM 型面点、孔位、边缘、厚度等；每条记录包含测量方向和不确定度。
+     选定 SMS 基 N：工程模态、PCA/KL、样条/RBF/FE 形函数或混合基。
+     准备先验 α0 和 Σ0：来自历史批次、粗点云、制造仿真、虚拟 SMS 或零偏差。
+     执行可观测性检查：rank(H_m N)、σ_min(H_m N)、κ(H_m N)。
+
+
+3.2 多种处理方式
+    场景                             推荐方法                           优点                     注意事项
+                                   点云-名义差拟合 Nα，可区域加                                      要报告配准误差、基外残差和接
+    完整高质量点云                                                       全场信息充分
+                                   权                                                     触区误差
+    少量 KCM                         正则化 WLS/MAP 更新                 适合测点少但有先验              必须检查可观测性和后验协方差
+    无先验且少量 KCM                     α0=0 + 低阶物理基 + 强正则             可以先走通流程                未测区域不确定度要保守
+    历史样本多                          PCA/KL 模态 + 当前 KCM 更新          统计重构能力强                历史样本需代表当前工艺/批次
+                                   混合基：全局模态 + 局部
+    局部缺陷明显                                                        兼顾整体翘曲与局部敏感区           参数量增加，需更强观测
+                                   RBF/FE 基
+    伪代码：SMS 更新
+
+
+    A = H_m @ N
+    check_observability(A)
+    Lambda = inv(Sigma0) + lambda_value * (L.T @ L)
+    alpha_post = solve(A.T @ inv(R_ref) @ A + Lambda,
+                       A.T @ inv(R_ref) @ (m_ref - b_m) + Lambda @ alpha0)
+    Sigma_post = inv(A.T @ inv(R_ref) @ A + Lambda)
+    delta_sms = N @ alpha_post
+    sms_pkg = freeze_sms_transfer(delta_sms, alpha_post, Sigma_post, excluded_sources)
+
+
+通过条件：SMSUpdateTransferPackage 被冻结，所有阶段只能读取它，不能在装配过程中改写 α。
+
+
+
+4 环节四：构建接触面计算域与初始间隙 g0
+结合面编号本身不能求解接触，必须扩展为候选点、法向、切向、面积权重、映射矩阵和初始间隙。
+    I_{Γa} = {Ω_a, x_i^0, x_j^0, n_a, T_a, A_a, G_a, g_a^0, B_{n,a}, B_{t,a}, Θ_{c,a}^0}
+
+    g^0 = g_nom + G_i δ_i^SMS + G_j δ_j^SMS + G_pose e_pose
+
+    λ_n = Q_A p_n,      p_n = Q_A^{-1} λ_n
+    局部接触点示意：
+
+
+          零件 j 表面： x_j0 + δ_j
+               · C_k
+               ↑ n_k g_k0 = n_k^T[(x_j0+δ_j)-(x_i0+δ_i)]
+               · C_k
+          零件 i 表面： x_i0 + δ_i
+
+
+    g_k0 > 0：分离趋势；g_k0 < 0：几何干涉趋势；实际压缩还要等接触平衡求解。
+
+
+
+
+4.1 实验/建模操作
+     在 CAD/网格上确定每一对可能接触的结合面 Γa。
+     布置候选接触点 Ω，候选域要覆盖接触迁移区域。
+
+                                            SMS 数学模型实验操作与数据处理流程说明书
+     定义法向 n、切向基 T、面积权重 QA，检查面积闭合。
+     构造 G：把两侧 SMS 投影到法向间隙；构造 Bn/Bt：把结构自由度映射为相对闭合/滑移。
+
+
+4.2 多种处理方式
+    问题                             处理方式                           适用情况                           风险/回退
+                                                                  SMS 小、法向旋转小，批量样本               若最近点关系变化大，需更新对
+    点对应                            名义参数坐标固定对应
+                                                                  要一致                            应
+    点对应                            最近点/投影搜索                       几何偏差可能改变对应关系                   每样本搜索成本高，需防跳变
+                                                                  接触迁移范围已通过代表性 FE
+    候选域                            固定名义域                                                         漏接触时扩大候选域
+                                                                  验证
+    候选域                            多域/分区建库                        不同模式区域差异明显                     需要模式管理和更多缓存
+    点密度                            均匀离散                           压力梯度平缓                         边缘压力峰可能不足
+    点密度                            局部加密                           边缘、孔边、KCP 敏感区                  需用面积权重保证总力一致
+    伪代码：初始间隙构建
+
+
+    for interface in interfaces:
+        cd = build_contact_domain(interface.nominal_surfaces)
+        assert area_weights_positive(cd.QA)
+        assert normals_consistent(cd.normals)
+        g0 = cd.g_nom + cd.G_i @ sms_pkg[i].delta + cd.G_j @ sms_pkg[j].delta + cd.G_pose @ pose_bias
+        gap = GapField(values_g=g0, nominal_component=cd.g_nom, sms_component=..., reference_state_id=...)
+        check_double_count_sources(gap, sms_pkg)
+
+
+通过条件：g0 可以构造，GapField 同时记录 nominal_component 和 sms_component；负 g0 只表示干
+涉趋势，不直接等于实际压缩。
+
+
+
+5 环节五：离线结构凝聚，得到在线可复用的 W_struct
+本环节把全阶结构模型中与接触/KCP 无直接关系的内部自由度凝聚掉，使在线阶段只求低维界面互补问题。
+    [K_II   K_IΓ; K_ΓI   K_ΓΓ] [u_I; u_Γ] = [F_I; F_Γ] - [0; B_Γ^T λ]
+
+    K_Γ = K_ΓΓ - K_ΓI K_II^{-1} K_IΓ
+
+    W_struct^(s) = B_Γ^(s) (K_Γ^(s))^{-1} B_Γ^(s)^T
+
+
+5.1 实验/仿真操作
+     建立各阶段名义结构 FE：材料、铺层、厚度、边界、连接激活状态。
+     分区自由度：内部 DOF、界面/输出相关 DOF、规定约束 DOF。
+     对每个阶段计算 KΓ、W_struct 和矩阵分解缓存。
+     用全阶 FE 对比凝聚模型的界面位移、柔度和 KCP 误差。
+
+
+5.2 多种处理方式
+    方式                             适用情况                           优点                             局限/触发回退
+    精确 Schur 凝聚                    线性小变形，保留全部界面 DOF               代数等价，解释清楚                      K/B/边界变化时缓存失效
+    Craig-Bampton / POD 二次降                                                                      训练域外误差增加，需扩基或回
+                                   界面 DOF 仍多、样本很多                 进一步加速
+    阶                                                                                            FE
+                                   超出适用域、强非线性、损
+    直接全阶 FE                                                       精度和物理最完整                       成本高，不适合大批量 MC
+                                   伤/塑性
+                                   不同阶段/载荷/连接模式明显不
+    分区算子库                                                         避免单一算子外推                       需要版本和适用域管理
+                                   同
+
+
+                                            SMS 数学模型实验操作与数据处理流程说明书
+    伪代码：结构凝聚建库
+
+
+    for stage in [LOCATE, CLAMP, JOIN, RELEASE]:
+        K, F, B = assemble_full_stage_model(stage)
+        partition = build_dof_partition(K, interface_dofs, internal_dofs)
+        K_Gamma = K_GG - K_GI @ inv(K_II) @ K_IG
+        W_struct = B_Gamma @ inv(K_Gamma) @ B_Gamma.T
+        cache_factorization(K_Gamma, dependency_hash=(mesh, material, boundary, joints))
+        verify_against_full_FE(stage, K_Gamma, W_struct)
+
+
+通过条件：KΓ 秩正确，W_struct 对称且半正定，单位为 mm/N，与全阶线性 FE 的界面柔度误差在允许范
+围内。
+
+
+
+6 环节六：局部界面参数识别，得到 Cn/Ct/μ/βr 与参数库
+W_struct 已包含零件基体和整体结构柔性；局部界面柔度 Cn/Ct 只能包含全局结构网格没有解析的局部附加
+响应，例如粗糙峰压缩、涂层/胶层/垫层、CFRP 表层压陷等。
+    W_total = W_struct + C_n
+
+    w_n = C_n λ_n,      d_t = C_t λ_t,      ||λ_t,k|| <= μ_k λ_n,k
+
+    C_hat_n = argmin_{C_n} { ||ΔW_n - C_n ΔΛ_n||^2_{R_w^{-1}} + λ_c ||L_c C_n||_F^2 }
+
+
+6.1 实验/仿真操作
+     局部样件试验：测载荷-压缩、剪切-滑移、卸载回弹。
+     局部高保真 FE：分解基体变形、接触压力、局部压陷。
+     CG-FFT/表面模型：估计粗糙接触尺度相关柔度。
+     过程实测：在夹持/连接阶段用于校准当前装配对象，但需先判断可辨识性。
+     夹具、传感器和基体柔度必须扣除或联合分层识别。
+
+
+6.2 参数来源和复杂度选择
+
+
+6.3 局部模型提取与离散接触计算实操（正文融合）
+本节对原操作流程进行补充。原流程已经能从 KCM/SMS、g0、I_red、LCP、界面凝聚和 KCP 预测走通；本
+次修订增加两个可执行接口：第一，如何从完整模型提取局部 FE 或设计局部样件来识别界面参数；第二，如
+何把离散 SMS 点、材料属性和外载共同转化为接触变形计算输入。
+
+6.3.1 是否必须更新原流程
+    原流程位置                          是否需要更新                         原因                       本节补充方式
+                                                                  原文说明了位移分解和参数识
+                                                                  别，但没有展开从完整模型到            新增局部模型提取操作、边界
+    环节六：局部界面参数识别                   需要
+                                                                  局部模型的提取、边界继承和            继承方式和响应分解。
+                                                                  样件试验难点。
+                                                                  原文已有公式，但没有把 SMS          新增离散点到 g0、材料到 K、
+    环节四/七：g0 与 LCP                 需要                             离散点、材料属性和外载的进            外载到 q、柔度到 W 的操作
+                                                                  入路径逐步拆开。                 链。
+    环节十：贡献台账                       轻微更新                           V2.3 增加了                 增加接触计算追溯字段和质量
+
+
+                                            SMS 数学模型实验操作与数据处理流程说明书
+                                                     ContactComputationTrace
+                                                                               门。
+                                                     等追溯对象。
+
+
+6.3.2 从完整模型提取局部 FE 子模型
+局部 FE 子模型合面、孔、搭接端部、力集中和 KCP 敏感区建立，不应只截取一个几何小块。推荐先用全局
+名义模型或代表性高保真模型确定局部域，再向外扩展边界缓冲区。
+
+Ω_local = Γ_a ⊕ r_margin
+
+    步骤 1：选择局部域。以 interface_id 为中心，覆盖候选接触点、孔边、搭接边缘、压力峰值区和 KCP
+     敏感测点。
+    步骤 2：继承几何和材料。局部模型保留名义几何、SMS 或局部形貌、CFRP 、金材料、厚度、
+     层/涂层/垫层和紧固件参数。
+    步骤 3：提取边界。切割边界 ∂Ω_cut 从完整模型继承位移、反力或阻抗。硕士阶段优先采用位移驱动子
+     模型，便于 Abaqus submodeling 实现。
+    步骤 4：施加载荷路径。局部模型应覆盖定位/夹持/连接/放中界面相的法向力、力、剪切
+     和卸载路径。
+    步骤 5：输出响应。至少输出 contact pressure、normal compression、tangential slip、rebound、
+     substrate displacement 和 quality flag。
+
+    边界方式                    输入数据                     适用条件                      质量检查
+                            全局模型切割边界位移               整荷路可信，局部只需                局部边界反力应与全局反力同
+    位移驱动
+                            u_cut^G                  要细化接触/孔边。                 量级。
+                                                     需要允许局部刚度影响边界位             检查刚体模态和边界位移是否
+    力驱动                     切割边界等效反力 F_cut^G
+                                                     移。                        异常。
+                            K_cut^imp、u_cut^G 或柔度                              检查边界能量、柔度和 KCP
+    阻抗边界                                             局部与整体耦合强。
+                            边界                                                 与全局模型一致。
+局部 FE 提取伪代码：
+
+local_region = select_local_region(interface_id, margin, kcp_sensitive_zone)
+submodel = extract_geometry_and_mesh(global_model, local_region)
+submodel.material = inherit_material_layup(global_model, local_region)
+boundary = inherit_boundary(global_result, cut_boundary,
+mode="DISPLACEMENT/FORCE/IMPEDANCE")
+for load_case in interface_load_cases:
+    result = run_local_FE(submodel, boundary, load_case)
+    response = extract_local_response(result, fields=["CPRESS", "U", "SLIP", "REBOUND"])
+    save(LocalResponseData(response, boundary_record, source_model_id))
+
+6.3.3 局部样件试验与响应分解
+样件试验建议采用与真实结构一致的 CFRP 铺层、金属材料、表面状态、连接方式和载荷范围。测得的总位移
+必须分解，不能直接作为界面柔度。
+
+u_meas = u_fixture + u_sensor + u_substrate + u_interface + ε
+
+u_interface = u_meas - u_fixture - u_sensor - u_substrate
+
+
+                                    SMS 数学模型实验操作与数据处理流程说明书
+    测量/标定对象                           操作                             输出
+    夹具柔度                              刚性块空载/加载标定或夹具 FE               u_fixture(F)、夹具柔度协方差。
+    传感器变形/零漂                          传感器校准、重复加载、温漂记录                u_sensor、bias、R_sensor。
+                                                                     u_substrate、
+    基体柔度                              无界面层参考样件或局部 FE 扣除
+                                                                     substrate_compliance_removed。
+    界面响应                              多载荷法向压缩、剪切滑移、卸载回弹              C_n、C_t、μ、β_r、Σ_θ、D_valid。
+界面参数识别伪代码：
+
+raw = load_interface_test(specimen_id)
+u_interface = raw.u_total - raw.u_fixture - raw.u_sensor - raw.u_substrate
+model_level = choose_parameter_level(data_amount, residual_pattern)
+theta = identify_parameters(u_interface, raw.force, constraints={"PSD", "bounds", "smoothness"})
+check_compliance_separation(W_struct_sources, theta.local_sources)
+ParameterLibrary.add(theta, covariance, D_valid, source_ids)
+
+6.3.4 离散 SMS 点、材料和外载进入接触计算的操作链
+在程序实现中，SMS 离散点不是直接给出接触压力，而是先通过投影和插值形成初始间隙 g0；材料和铺层进
+入阶段刚度 K；夹持力、预紧力和重力进入自由位移 u_F；界面参数进入总柔度 W；最后通过 LCP/NCP 求解
+接触力和变形。
+
+δ_k^SMS = interpolate(SMS_points, contact_point_k)
+g_k^0 = n_k^T[(x_j,k^0 + δ_j,k^SMS) - (x_i,k^0 + δ_i,k^SMS)]
+u_F^(s) = solve(K_Γ^(s), F_Γ^(s))
+q^(s) = g^0 - B_Γ u_F^(s)
+W^(s) = W_struct^(s) + C_n^(s)
+0 <= λ_n^(s) ⟂ g^(s) = q^(s) + W^(s) λ_n^(s) >= 0
+
+    输入源                      进入量                        算位置                  检查项
+                                                                             配准误差、接触区重构误差、
+    SMS 离散点/低维系数             δ_SMS、g0                   初始间隙构建
+                                                                             g0 合理范围。
+                                                                             材料版本、铺层方向、边界哈
+    材料/铺层/厚度                 K_r、K_Γ、W_struct           离线结构凝聚
+                                                                             希、W 半正定。
+                                                                             载荷单位、方向、实际值与命
+    夹持/预紧/重力                 F_Γ、u_F、q                  阶段预测
+                                                                             令值区分。
+                                                                             D_valid、PSD、与 W_struct
+    局部界面参数                   C_n/C_t/μ/β_r、W_total      互补求解与回弹
+                                                                             不重叠。
+                                                                             法向、面积权重、符号和点密
+    候选接触域                    B、Q_A、λ/p 转换               LCP/NCP 求解
+                                                                             度。
+
+
+6.3.5 接触计算追溯记录
+每次本接算建保存 ContactComputationTrace，用于答辩或程序审计时说明接触结果来自哪些输入。
+
+ContactComputationTrace = {
+    source_sms_package_ids, gap_field_id, material_operator_id,
+    load_vector_id, W_struct_id, Cn_local_id,
+    q_vector, W_total, lambda_n, gap_g, active_set,
+    residuals, quality_gate_id, double_count_check_id
+}
+
+                                     SMS 数学模型实验操作与数据处理流程说明书
+6.3.6 对原端到端伪代码的补充
+# 离线新增
+LocalSubmodelLibrary = build_local_submodels(global_FE, interfaces, KCP_sensitive_regions)
+LocalResponseData = run_local_FE_or_tests(LocalSubmodelLibrary, interface_specimens)
+ParameterLibrary = identify_interface_parameters(LocalResponseData,
+ComplianceSeparationReport)
+
+
+# 在线新增
+gap = build_gap_from_SMS_points_or_basis(sms_pkg, ContactDomain)
+pred = stage_predict(previous_pkg, I_stage[s], I_red[s], ParameterLibrary)
+trace = save_contact_computation_trace(gap, pred.q, pred.W, state.lambda, state.g, residuals)
+ledger.register(trace.source_ids, trace.increment_definition_id)
+
+ 来源/模型                          适用情况                           主要输出                       注意事项
+ 局部样件试验                         可做压缩/剪切/回弹试验                   Cn、Ct、βr、置信区间              夹具/传感器柔度需扣除
+ 局部高保真 FE                       真实试验难覆盖全场                      压力场、局部变形、不可测量              依赖材料和接触设定
+ CG-FFT/粗糙表面                    粗糙峰和微观接触主导                     尺度相关附加柔度                   需与宏观边界耦合校核
+ 过程实测校准                         实际夹持/预紧过程有传感器                  载荷、偏置、必要时参数修正              单阶段少测点不宜联合更新 Cn
+                                已有薄层或胶层材料参数，希望                                            不能与 Cn 重复；应转换为同一
+ 等效薄层/等效材料扩展                                                   等效 E、ν、厚度或薄层刚度
+                                用 FE 等效层表达                                                局部附加柔度口径
+ 复杂度                                      适用情况                                     升级依据
+ 统一标量                                     样本少、界面均匀、只验证主趋势                          残差随位置系统变化
+ 分区标量/对角矩阵                                区域差异明确，需兼顾可辨识性                           跨区耦合影响明显
+ 块矩阵                                      多分区、多载荷、多测点数据丰富                          存在稳定点间耦合
+ 全矩阵/非线性/滞回                               高质量多方向数据，KCP 对耦合/滞回敏感                    验证收益显著，否则过拟合
+ 伪代码：界面参数识别
+
+
+ raw = load_interface_test_or_local_FE()
+ u_interface = raw.u_total - raw.u_fixture - raw.u_sensor - raw.u_substrate
+ model_level = choose_complexity(data_amount, residual_pattern)
+ theta_hat = constrained_identification(u_interface, forces,
+                                         constraints={PSD, bounds, smoothness})
+ Sigma_theta = estimate_uncertainty(theta_hat, method="Hessian/Bootstrap/Bayes")
+ ParameterLibrary.add(theta_hat, Sigma_theta, D_valid, source_ids)
+ check_no_overlap(W_struct.included_physics, Cn.included_physics)
+
+
+通过条件：ComplianceDecomposition 证明 W_struct 与 Cn 的物理来源不重叠；参数库带 D_valid、Σθ
+和质量标志。
+
+
+
+7 环节七：单样本四阶段装配接触求解
+定位、夹持、连接、释放不能合并为一次静力求解，因为边界、载荷、连接锁定和接触模式都随阶段切换。每
+阶段保存预测状态、后验状态、阶段增量和参数快照。
+ u_{Γ,F}^{(s)} = (K_Γ^{(s)})^{-1} F_Γ^{(s)}
+
+ q^{(s)} = g^0 - B_Γ u_{Γ,F}^{(s)},         W^{(s)} = W_struct^{(s)} + C_n^{(s)}
+
+ 0 <= λ_n^{(s)} ⟂ g^{(s)} = q^{(s)} + W^{(s)} λ_n^{(s)} >= 0
+
+
+
+                                         SMS 数学模型实验操作与数据处理流程说明书
+S^{(s)} = {C, D, g, λ_n, p_n, u_Γ, w_n, d_t, Δr, χ, quality}
+
+
+7.1 四阶段实验操作与优先更新对象
+阶段                             实验操作                           优先更新                        禁止/注意
+                               定位基准、销/支承；测相对位                 e_pose、夹具零偏、支承反
+S1 LOCATE                                                                                 定位弹性变形不写回 SMS
+                               姿、定位点位移、初始局部间隙                 力、初始接触集
+                               施加夹持力/位移；测实际夹持                 F_clamp_actual、阶段状态
+S2 CLAMP                                                                                  不再次加入测量夹持补偿
+                               力、夹持头位移、间隙、应变                  S2；多载荷多位置时可更新 Cn
+                               施加预紧，激活连接锁定；测预                 F_preload、k_joint、锁定参考
+S3 JOIN                                                                                   夹持后几何不能重置为 SMS
+                               紧力、孔位、滑移、应变                    量、必要时 Ct/μ
+                               撤除夹持/部分定位，保留连                  最终状态、卸载量；校准数据可
+S4 RELEASE                                                                                验证数据只评价，不调参
+                               接；测最终间隙、阶差、回弹                  更新 βr/Rr
+
+
+7.2 接触求解层级
+层级                             模型                             适用情况                        升级触发
+                                                              间隙、贴合、回弹主导；切向影
+L1                             仅法向 LCP                                                    μ 或切向滑移明显影响 KCP
+                                                              响小
+                               法向 LCP + 等效切向柔度/滑移             希望保留主要切向影响但数据有
+L2                                                                                        出现稳定粘滑边界和路径滞回
+                               修正                             限
+                                                              复杂摩擦历史、大滑移、路径相
+L3                             法向-切向混合互补/NCP                                              需要丰富摩擦参数和强验证
+                                                              关强
+主动集伪代码：仅法向 LCP
+
+
+input q, W, eps
+C = {k | q[k] < 0}       # 初始主动接触集
+D = complement(C)
+while not converged:
+    lambda_C = - inv(W_CC) @ q_C
+    if any(lambda_C < -eps):
+        move most_negative_force_point from C to D
+        continue
+    lambda_D = 0
+    g = q + W @ lambda
+    if any(g[D] < -eps):
+        move most_negative_gap_point from D to C
+        continue
+    if min(lambda_C) >= -eps and min(g[D]) >= -eps and complementarity_ok(g, lambda):
+        return lambda, g, C, residuals
+
+
+
+
+7.3 阶段传递与增量记账
+
+
+7.4 N-2-1 / 多点过约束专项操作流程（正文融合）
+本节用于把 V2.4 技术说明书中的 N-2-1 / 多点过约束统一模型转化为可执行的实验操作和数据处理流程。它
+不是替代原有 1-17 章，而是在“单样本四阶段装配接触求解”前后增加一条过约束专项支线。
+
+7.4.1 更新对象与原流程关系
+原流程位置                                    是否更新                                      新增内容
+                                                                                   增加 locator/clamp/joint 等过约束对
+环节一：对象与阶段                                需要
+                                                                                   象编号和约束类型。
+环节四：接触域                                  需要                                        将零件-零件接触域扩展为 I_ext，纳入
+
+                                        SMS 数学模型实验操作与数据处理流程说明书
+                                                                                  定位器、卡板、夹持头和孔边连接。
+                                                                                  记录定位器/夹具/连接刚度如何进入
+ 环节五：结构凝聚                                    需要
+                                                                                  K、B、W_ext。
+                                                                                  采用扩展 LCP/NCP，记录主动集稳定和
+ 环节七：四阶段 LCP                                 重点更新
+                                                                                  力非唯一。
+                                                                                  增加刚体 3-2-1、柔性 4/5 点、连续卡板
+ 环节十二：验证                                     需要
+                                                                                  和释放回弹专项算例。
+
+
+7.4.2 实验操作：先记录真实过约束对象
+在实际装配或仿真建模前，必须把多余支承、卡板、夹持头和紧固件从“工艺说明文字”转化为可计算的约束对
+象。
+
+ 对象                                          必须记录                                 推荐测量/来源
+                                             locator_id、位置、方向、单边/双边、              工装图、定位器标定、反力传感器、激
+ 定位器/支承点
+                                             间隙、有限刚度、零偏                           光跟踪
+                                             支承线/面区域、离散点、法向、面积权                   CAD/工装模型、局部接触扫描、有限元
+ 连续卡板/型面支承
+                                             重、卡板刚度                               离散
+                                             夹持头位置、接触面积、命令力/位移、
+ 夹持头                                                                              力传感器、位移传感器、气/液压记录
+                                             力/位移、夹具柔度
+                                             孔位、预紧力、扭矩-轴力关系、连接刚                   工艺卡、预紧力垫片、扭矩记录、局部
+ 紧固件/孔边连接
+                                             度、孔壁承压区、锁定状态                         应变
+
+
+7.4.3 数据处理：构造扩展候选域 I_ext
+I_ext = I_part-part ∪ I_locator ∪ I_clamp ∪ I_joint
+
+g_ext^0 = [g_contact^0; g_locator^0; g_clamp^0; g_joint^0]
+
+操作上，先按原第 4 章生成零件-零件接触域，再把定位器、夹持头、连续卡板和连接孔边区域按同样的候选
+点/法向/面积权重规则离散。所有扩展候选点必须绑定 source_id、stage_id 和 constraint_type。
+
+   # 构造扩展候选域
+   contact_domain = build_contact_domain(part_interfaces)
+   locator_domain = discretize_locators(locator_table, locator_compliance)
+   clamp_domain = discretize_clamp_heads(clamp_table, clamp_head_area)
+   joint_domain = discretize_joint_or_hole_edges(joint_table, preload_state)
+   I_ext = merge_domains(contact_domain, locator_domain, clamp_domain, joint_domain)
+   check_units_normals_area_weights(I_ext)
+
+
+
+
+7.4.4 数据处理：构造 q_ext 与 W_ext
+q_ext^(s) = g_ext^0 - B_ext u_F^(s)
+
+W_ext^(s) = B_ext (K_Γ^(s))^{-1} B_ext^T + C_interface + C_locator + C_clamp + C_joint
+
+ 量                                           来源                                   检查
+                                             SMS、定位零偏、夹持头初始闭合、孔
+ g_ext^0                                                                          参考态一致，不把受载测量写入 SMS
+                                             边初始间隙
+                                             结构界面自由度到扩展候选点闭合量的
+ B_ext                                                                            自由度顺序、法向方向、节点插值一致
+                                             映射
+                                             阶段载荷在无扩展反力条件下造成的自
+ u_F                                                                              实际载荷/命令载荷区分，边界版本一致
+                                             由位移
+ C_locator/C_clamp/C_joint                   定位器、夹具和连接局部柔度                        不能与 K_Γ 中已包含的度重
+
+                                           SMS 数学模型实验操作与数据处理流程说明书
+7.4.5 求解：扩展主动集 LCP/NCP
+0 <= λ_ext^(s) ⟂ g_ext^(s) = q_ext^(s) + W_ext^(s) λ_ext^(s) >= 0
+
+   # 扩展主动集求解
+   C = initialize_active_set(q_ext, previous_mode, mode_library)
+   for it in range(max_iter):
+     lambda_C = solve(-W_ext[C,C], q_ext[C], regularization=eps)
+     lambda_ext = zeros_like(q_ext); lambda_ext[C] = lambda_C
+     g_ext = q_ext + W_ext @ lambda_ext
+     C_new = update_active_set(C, lambda_ext, g_ext, eps_force, eps_gap)
+     rho_chi = symmetric_difference_ratio(C_new, C)
+     if feasible(lambda_ext, g_ext) and complementarity_ok(lambda_ext, g_ext) and rho_chi < tol_mode:
+       break
+     C = C_new
+   if not converged:
+     fallback_to_QP_or_high_fidelity()
+
+
+
+
+7.4.6 过程实测更新：过约束相关测量优先更新对象
+ 实测量                                           优先更新对象                                        不直接更新
+                                               locator_zero_bias、
+ 定位器反力/位移                                                                                    SMS 形貌参数
+                                               locator_compliance、当前定位状态
+                                               active_locator_indices、
+ 卡板接触开闭状态                                                                                    界面柔度 Cn，除非多载荷充分
+                                               candidate_region_margin
+                                               actual_clamp_load、
+ 夹持头位移/力                                                                                     制造形貌
+                                               clamp_head_compliance、q_ext
+                                               joint_stiffness、preload_actual、
+ 孔边应变/力                                                                                      自由态 SMS
+                                               ConnectionLockHistory
+                                               ReleaseHistoryRecord、
+ 释放前后 KCP/KCM                                                                                VALIDATE 数据回流调参
+                                               Δu_release、最终 KCP 验证
+
+
+7.4.7 输出与质量门
+ 输出                                                                   必须包含
+                                                                      λ_ext、g_ext、active_ext_indices、force/gap/
+ ExtendedLCPSolution
+                                                                      complementarity residuals。
+ ActiveSetStabilityTrace                                              每次迭代主动集、ρ_χ、振荡标志、备用求解器触发原因。
+ ForceNonuniquenessReport                                             零空间维数、输出变化界、KCP 稳定性判定。
+ ConnectionLockHistory                                                JOIN 阶段锁定参考量、预紧、连接刚度、滑移历史。
+ ReleaseHistoryRecord                                                 释放边界撤除、Δu_release、回弹、最终状态来源。
+
+
+7.4.8 最小专项验证流程
+建议在原“两柔性薄壁板过约束连接”算例基础上增加四类对比：3 点支承、4/5 点支承、连续卡板离散、JOIN-
+RELEASE 释放。每类算例均输出接触集、总反力、峰压、KCP 和残差，并与高保真 FE 或手算简化结果对
+比。
+
+   for case in [rigid_321, flexible_321, flexible_421, flexible_521, continuous_locator, join_release]:
+     inputs = build_case_inputs(case)
+     result = run_extended_lcp(inputs)
+     verify_equilibrium_and_complementarity(result)
+     compare_kcp_with_baseline_or_FE(result)
+
+
+
+
+                                              SMS 数学模型实验操作与数据处理流程说明书
+    record_contact_discretization_study(case, result)
+
+
+
+ x_s^- = Φ_s(x_{s-1}^+, δ_SMS, c_s, θ_s^-)
+
+ (x_s^+, θ_s^+) = U_s(x_s^-, θ_s^-, z_s)
+
+ Δx^{(s)} = x_s^+ - T_{s-1->s} x_{s-1}^+
+
+ P_{s+1}^- = F_s P_s^+ F_s^T + Q_s
+
+通过条件：每个 StagePosteriorPackage 包含 x+、P+、θ+、StageIncrement、source_ledger 和
+quality；若 q/W/K/B 或模式改变，必须按 ReSolveRequirement 重求。
+
+
+
+8 环节八：过程实测更新与回代
+过程实测不能盲目“修正模型”。应先诊断残差来源，再按更新权限选择更新对象。单阶段少量测点通常只更
+新位姿、载荷、偏置或阶段状态；界面参数需要多载荷、多位置、多阶段数据支持。
+ z_meas^{(s)} = h^{(s)}(x^{(s)}, θ, e_proc) + v^{(s)},           v^{(s)} ~ N(0,R_s)
+
+ min_{x,θ} ||z-h(x,θ)||^2_{R^{-1}} + ||x-x^-||^2_{P^{-1}} + ||θ-θ^-||^2_{Σ_θ^{-1}}
+
+ s.t. equilibrium, compatibility, complementarity, bounds, PSD
+
+ 残差特征                            优先怀疑/更新                       需要证据                    回代动作
+ 所有测点近似刚体偏移                      位姿、基准或夹具零偏                    多点同向，差值保持               q 改变，重求当前及后续阶段
+ 力传感器与命令载荷不符                     实际夹持/预紧载荷                     直接力测量和加载记录              更新载荷增量，重求 LCP
+ 局部间隙随载荷斜率偏差                     Cn/Ct 或边界刚度                   多载荷、多位置数据               W 改变，失效模式分解并重求
+ 仅某阶段系统偏差                        阶段边界、连接激活、状态继承                阶段同步记录                  更新 StageTransitionRecord
+ 少数孤立异常                          测量异常、局部缺陷、基外模式                复测、邻域点、质量标志             不强行调参，标记或剔除
+ 伪代码：过程实测更新与重求
+
+
+ pred = stage_predict(previous_pkg, I_stage[s], I_red[s], theta_prior)
+ state = solve_complementarity(pred.q, pred.W, warm_start=previous_pkg.mode)
+ if z_meas_available(s):
+     residual = z_meas - h(state, theta_prior)
+     decision = diagnose_update_target(residual, update_permission, identifiability)
+     post = constrained_update(state, theta_prior, decision, z_meas)
+     req = judge_resolve_requirement(post.changes)
+     if req.level == RESOLVE_LCP:
+         post = solve_complementarity(post.q, post.W, warm_start=post.mode)
+     elif req.level == REBUILD_W:
+         post.W = rebuild_W(post.theta)
+         post = solve_complementarity(post.q, post.W)
+     elif req.level == REBUILD_IRED:
+         rebuild_condensed_operator()
+         post = solve_stage_again()
+     elif req.level == HIGH_FIDELITY:
+         mark_for_FE_fallback()
+
+
+通过条件：UpdateDecisionRecord、ReSolveRequirement、UpdateRollbackRecord 完整；
+VALIDATE 数据不允许触发参数更新。
+
+
+
+
+                                           SMS 数学模型实验操作与数据处理流程说明书
+9 环节九：界面等效凝聚，把高维接触状态变成 KCP 可调用量
+阶段接触求解会产生很多点级压力、间隙和压缩量。最终 KCP 只需要有限输出，因此采用输出导向凝聚：保
+留对间隙、阶差、孔位和回弹有影响的低维等效项，同时保留源、权重和不确定度。
+ A_c = Σ_{k∈C} A_k,        p_bar = (1/A_c) Σ_{k∈C} p_k A_k
+
+ w_RMS = [(1/A_c) Σ_{k∈C} w_k^2 A_k]^{1/2},           I_p = σ_p / max(p_bar, ε_p)
+
+ Δγ_{c,a}^{(s)} = R_{n,a} w_{n,a}^{(s)} + R_{t,a} d_{t,a}^{(s)} + R_{r,a} Δr_a^{(s)}
+
+ Σ_{Δγ} ≈ J_η Σ_η J_η^T
+ 等效量示意：从点级状态到低维界面项
+
+
+ C1 C2 C3 | C4 C5 C6 | C7 C8 C9
+  左端区          中部区          右端区
+
+
+ 可凝聚为：接触面积比例、平均/峰值压力、局部压缩 RMS、
+      中部残余间隙、左右端压缩差、释放回弹量。
+
+
+ 等效特征                           物理意义                           适用 KCP                         质量检查
+ 接触面积比例 Ac/A                    实际贴合覆盖程度                       贴合质量、压力分布                      候选域不能漏接触
+ 平均/峰值压力                        局部过载和压紧程度                      连接区压力阈值                        面积权重、单位转换正确
+ 压缩 RMS                         局部界面整体压缩强度                     间隙/阶差修正                        与 Cn 来源不重复
+ 滑移 RMS                         切向路径影响                         孔位/阶差/摩擦敏感 KCP                 只在切向模型启用时使用
+ 回弹项 Δr                         释放后弹性恢复                        释放回弹、最终间隙                      不能与释放绝对状态重复累加
+ 伪代码：输出导向凝聚
+
+
+ for stage_pkg in stage_packages:
+     S = read_contact_state(stage_pkg)
+     eta = area_weighted_statistics(S.pressure, S.gap, S.local_compression, QA)
+     dgamma = Rn @ S.local_compression + Rt @ S.tangential_slip + Rr @ S.rebound
+     item = EquivalentErrorItem(dgamma, reference_state, increment_definition, source_state_ids)
+     ledger.register(item.source_state_ids)
+
+
+通过条件：每个 EquivalentErrorItem 绑定 reference_state_id、increment_definition_id 和
+source_state_ids；凝聚误差过大时增加输出维度或保留高维状态。
+
+
+
+10 环节十：KCP 快速预测与防重复贡献台账
+KCP 预测是把装配前几何直接贡献、界面接触附加贡献和过程误差贡献放到同一参考态下求和。关键不是公
+式本身，而是防止同一变形源被重复消费。
+ Δy_KCP = J_SMS δ_SMS + Σ_s Σ_a J_a^{(s)} Δγ_{c,a}^{(s)} + J_proc e_proc
+
+ 固定接触模式 χ 下： Δy_KCP = H_χ ξ + b_χ
+
+ Source(SMS) ∩ Source(StageIncrement^{(s)}) = ∅
+
+ 同一 KCP 路径内，(source_id, increment_definition_id) 只能消费一次
+
+
+10.1 两种 KCP 汇总方式
+ 方式                             做法                             适用情况                           禁止混用点
+ 最终绝对状态直接提取                     从释放后绝对后验状态提取 KCP               程序已有完整释放状态，避免阶                 不要再把 JOIN/RELEASE 绝对
+
+                                         SMS 数学模型实验操作与数据处理流程说明书
+                                                                段求和误差                          状态叠加
+                                                                                               每个增量必须有同一参考态和唯
+ 各阶段增量求和                        xref + Σ Δx^(s)，再映射到 KCP        需要贡献分解、解释每阶段影响
+                                                                                               一 source_id
+ 检查规则                                        失败示例                                   处理
+                                             测量夹持变形既进入 SMS，又进入 CLAMP
+ SMS 与阶段增量不重叠                                                                       删去其中一条来源或改用状态差分
+                                             增量
+ 绝对/增量互斥                                     同时累加 JOIN 绝对态与 RELEASE 绝对态             选一种 aggregation_policy
+ 参考态一致                                       SMS 相对 FREE，阶段增量相对未知测量态                补充 reference_state 转换
+ 包含/排除源不重叠                                   同一 source_id 同时 included 和 excluded    质量门 FAIL，禁止输出 PASS
+ 伪代码：KCP 预测与防重复
+
+
+ ledger = DeformationContributionLedger(sample_id)
+ ledger.register_sms(sms_pkg.included_source_ids, excluded=sms_pkg.excluded_source_ids)
+ for item in equivalent_error_items:
+     ledger.register_stage_or_interface(item.source_state_ids, item.increment_definition_id)
+ check = run_double_count_check(ledger)
+ if check.FAIL:
+     return KCPPredictionResult(quality="FAIL", reason=check.required_action)
+
+
+ y = J_SMS @ delta_sms + sum(Ja @ dgamma_a_s) + J_proc @ e_proc
+ return KCPPredictionResult(y, contributions, tolerance_status, ledger, check)
+
+
+通过条件：DoubleCountCheckResult=PASS/WARN 且无致命冲突；若 FAIL，即使数值看起来满足容差，
+也不能把预测结果标记为通过。
+
+
+
+11 环节十一：Monte Carlo 统计预测与敏感性
+统计预测必须把完整单样本快速模型包在外循环内。不能先算一次 KCP，再给 KCP 加随机噪声，因为接触模
+式、主动集和回弹都可能随样本切换。
+ ξ^(m) ~ D_ξ,     m=1,...,N_MC
+
+ ξ^(m) -> g0^(m) -> {S^(s,m)} -> {Δγ_c^(s,m)} -> Δy_KCP^(m)
+
+ μ_y = (1/N)Σ_m y^(m),       Σ_y = (1/(N-1))Σ_m (y^(m)-μ_y)(y^(m)-μ_y)^T
+
+ P_f = (1/N)Σ_m 1[y^(m) ∉ [L,U]]
+
+
+11.1 随机输入建议
+ 随机源                            典型变量                            来源                             注意
+ SMS 后验                         α、Σα                            KCM 更新后验                       保留形貌模态相关性
+ 工艺误差                           定位偏置、夹持力、预紧力                    过程记录/设备能力                      同一工装多点可能相关
+ 界面参数                           Cn/Ct/μ/βr                      局部试验/FE/校准                     必须位于 D_valid 内
+ 测量/模型差异                        ε_meas、ε_model                  验证残差或 GUM 评估                   不要与已包含协方差重复
+
+
+11.2 统计方法选择
+ 方法                             适用情况                            输出                             限制
+ 普通 Monte Carlo                 样本量可承受，超差概率不极小                  均值、方差、分位数、Pf                   稀有事件效率低
+ 拉丁超立方/准 MC                     想减少均值/分位数波动                     更稳定的分布估计                       尾部仍需检查
+ 重要抽样/子集模拟                      Pf 很小但工程上重要                     尾部概率                           需要设计偏置分布或中间事件
+ 多保真 MC                         部分快模超域需高保真回算                    效率与可信度折中                       需建立快模-高保真误差模型
+ 局部灵敏度 Hχ                       模式固定、小扰动分析                      解析贡献排序                         跨模式时失效
+ Sobol/Shapley                  全局变量贡献分析                        方差贡献和交互                        相关输入应优先 Shapley 或条件
+
+
+                                         SMS 数学模型实验操作与数据处理流程说明书
+                                                                                           敏感性
+伪代码：Monte Carlo 外循环
+
+
+samples = draw_correlated_samples(Istat, Sigma_alpha, Sigma_theta, process_cov)
+for m, xi in enumerate(samples):
+    try:
+         pred_m = run_single_sample_fast_model(xi, reuse_cache=True, check_mode=True)
+    except OutOfDomain:
+         pred_m = high_fidelity_fallback_or_reject(xi)
+    collect(pred_m)
+stat = summarize(predictions, metrics=[mean, covariance, quantiles, Pf, mode_frequency])
+check_convergence(stat, by_sample_size=True, by_mode_frequency=True)
+sens = compute_sensitivity(predictions, samples, method="local/Sobol/Shapley")
+
+
+通过条件：样本量收敛、失败率和超域率可接受，P_f 给出置信区间，主要接触模式频率稳定。
+
+
+
+12 环节十二：独立验证、质量门与模型升级
+验证不是把验证数据拿来调参，而是判断当前版本能否发布。验证失败后应采集新的识别/校准数据，形成新
+版本，再保留新的独立验证集。
+MAE = (1/n)Σ_i |ŷ_i - y_i|,        RMSE = [(1/n)Σ_i (ŷ_i-y_i)^2]^{1/2}
+
+e_P = |P_{f,pred} - P_{f,ref}|,        r_val = y_val - y_pred
+
+验证层级                           参考对象                           主要指标                         目的
+代码验证                           解析算例、可手算 LCP                   互补/平衡残差、接触集一致                确认程序求对方程
+离散验证                           候选点/网格加密                       总力、面积、KCP 收敛                 确认离散足够
+降阶验证                           全阶线性 FE                        界面位移、W、KCP 误差                确认 Schur/POD 可信
+界面确认                           局部 FE、CG-FFT、样件试验              力-位移、压力趋势、回弹                 确认参数代表界面
+部件确认                           独立装配试验或代表高保真工况                 MAE、RMSE、最大误差、趋势             确认 KCP 可用
+统计确认                           批量试验/高保真抽样                     均值、方差、分位数、Pf                 确认概率预测可信
+
+
+12.1 升级触发
+触发                                       信号                                        动作
+几何超域                                     法向/点对应变化，接触迁移越界                           更新 G、B、n 或建立多域算子
+力学超域                                     大滑移、塑性、损伤、孔壁非线性                           回高保真非线性模型或扩展本构
+参数超域                                     载荷、温度、表面状态超出 D_valid                      扩充局部试验/参数库
+数值异常                                     W 非半正定、主动集振荡、不收敛                          检查符号、约束、缩放，换求解器
+验证异常                                     KCP 残差有系统偏置或随载荷增长                         诊断缺失物理，重新校准并出新版本
+统计异常                                     尾部 Pf 不稳定、失败率高                            重要抽样、多保真或扩大适用域
+伪代码：验证发布
+
+
+validation = compare(predictions_on_D_validate, measured_KCP)
+if validation.pass_fail == PASS and all_quality_gates_pass():
+    release_model_version(I, theta, cache, code, D_valid, validation_summary)
+else:
+    diagnose_failure(validation.residuals, modes, out_of_domain_flags)
+    collect_new_identify_or_calibrate_data()
+    build_new_version()
+    reserve_independent_validation_set()
+
+
+
+
+                                        SMS 数学模型实验操作与数据处理流程说明书
+13 最小实验算例：两个柔性薄壁板过约束连接
+建议先用简化算例走通程序，再迁移到垂尾翼盒或更复杂多零件结构。上传的示例报告给出了 CFRP 上板/金
+属下板搭接连接、9 个候选接触点、4 个阶段和 4 个 KCP 的完整示范。
+    简化物理示意：
+
+
+          CFRP 上板 P1：       ~~~~~~ 制造翘曲 / 柔性变形
+                             C1 C2 C3 C4 C5 C6 C7 C8 C9 候选接触点
+          金属下板 P2：          ______ 搭接基准板 / 参与接触变形
+
+
+    阶段：定位 -> 夹持 -> 连接 -> 释放
+    KCP：中部释放残余间隙、释放回弹量、峰值接触压力、左右端压缩差
+
+
+    算例对象                                     建议设置                                      用于检查的模型环节
+    两块薄壁板                                    上板 CFRP、下板金属，搭接结合面                        异质材料和柔性变形
+    9 个候选点                                   沿搭接长度布置 C1-C9                             初始间隙、主动集、面积权重
+    4 个阶段                                    LOCATE/CLAMP/JOIN/RELEASE                 状态继承、连接锁定、释放回弹
+    仅法向 LCP                                  暂不启用摩擦                                    先验证 W_total、主动集、互补残差
+    4 个 KCP                                  间隙、回弹、峰压、左右端压缩差                           输出导向凝聚和贡献台账
+                                             SMS 模态、夹持/预紧倍率、柔度倍率、定
+    MC 随机源                                                                             完整外循环和敏感性
+                                             位偏置
+
+
+13.1 小算例走通步骤
+     先固定名义间隙 g_nom 和 9 点法向、面积权重。
+     给定 3 个 SMS 模态和 5 个 KCM 点，完成 WLS 更新。
+     构造 g0，检查端部可能出现负间隙但不直接当作压缩。
+     设定 W_struct 对角/邻接耦合和 Cn 对角项，检查 W_total 半正定。
+     对四个阶段分别给 q^(s)，用主动集求 λ、g、主动接触点。
+     从 RELEASE 阶段提取中部间隙、峰压、端部压缩差；从 S3->S4 提取回弹。
+     建立 ContributionLedger，选择最终绝对状态或阶段增量求和之一。
+     抽样 100-3000 次做 MC，检查均值、分位数、Pf、模式频率和失败率。
+如果这个简化算例能稳定输出 KCP、贡献分解、统计结果和验证指标，说明程序链路和数据结构基本可走
+通；真实结构只是把单一结合面扩展为多结合面、多局部并联路径和更大候选域。
+
+
+
+14 端到端总伪代码：把所有环节串起来
+    # 0. 离线建库
+    I0      = build_nominal_model(parts, interfaces, materials, topology)
+    Ikey    = define_KCM_KCP(features, tolerances, directions)
+    Istage = build_stage_inputs(process_plan, boundaries, loads, joint_rules)
+    IGamma = build_contact_domains(I0, Ikey)
+    Ired    = condense_structure(I0, IGamma, Istage)           # Schur / POD / full FE fallback
+    L_eta   = identify_interface_parameters(D_identify, local_tests, local_FE)
+    Rules   = define_transition_and_propagation_rules()
+    QualityGate.run_offline(I0, Ikey, Istage, IGamma, Ired, L_eta)
+
+
+    # 1. 单个零件装配前：测量状态 -> 参考态 KCM -> SMS 后验
+    for part in parts_of_sample:
+        raw_meas = load_part_measurements(part)
+
+
+                                             SMS 数学模型实验操作与数据处理流程说明书
+   ms       = build_measurement_state_snapshot(raw_meas)
+   comp     = compensate_measurement_state(ms)
+   kcm_ref = build_reference_kcm(raw_meas, comp)
+   sms_post = update_SMS(kcm_ref, alpha0, Sigma0, N, Hm, R_ref, L, lambda_value)
+   sms_pkg = freeze_SMS_transfer_package(sms_post, comp.excluded_sources)
+
+
+# 2. 构造结合面初始间隙
+for interface in interfaces:
+    gap[interface] = build_gap_field(IGamma[interface], sms_pkg, pose_prior)
+
+
+# 3. 单样本四阶段装配预测
+previous_pkg = initialize_stage_package(gap, sms_pkg)
+ledger = DeformationContributionLedger(sample_id)
+for stage in [LOCATE, CLAMP, JOIN, RELEASE]:
+    pred = stage_predict(previous_pkg, Istage[stage], Ired[stage], L_eta)
+    state = solve_complementarity(pred.q, pred.W, warm_start=previous_pkg.mode)
+
+
+   if process_measurement_available(stage):
+       decision = diagnose_update_target(state, process_measurements[stage])
+       post     = constrained_update(state, decision, process_measurements[stage])
+       req      = judge_resolve_requirement(post)
+       post     = resolve_or_rebuild_if_needed(post, req)
+   else:
+       post = state
+
+
+   increment = build_stage_increment(previous_pkg, post)
+   ledger.register(increment.source_ids, increment.increment_definition_id)
+   previous_pkg = build_stage_posterior_package(post, increment)
+
+
+# 4. 界面凝聚与 KCP
+items = output_oriented_condensation(all_stage_packages)
+for item in items:
+    ledger.register(item.source_state_ids, item.increment_definition_id)
+check = double_count_check(ledger)
+if check.FAIL:
+    reject_prediction(check)
+else:
+    y = propagate_KCP(sms_pkg, items, e_proc, Ipred)
+    save_KCPPredictionResult(y, contributions, uncertainty, quality)
+
+
+# 5. Monte Carlo
+for xi in draw_random_samples(Istat):
+    pred_m = run_single_sample_fast_model(xi)
+    collect(pred_m)
+stat = summarize_statistics(predictions)
+validate_and_release(stat, D_validate)
+
+
+
+
+15 操作检查清单：每一轮实验和计算必须留下的交付物
+环节                                       交付物                                       最低质量门
+                                         输入包版本、数据角色、坐标/单位、质量状
+输入治理                                                                               坐标闭合、单位一致、用途标签完整
+                                         态
+                                         MeasurementStateSnapshot、
+测量补偿                                                                               参考态明确、补偿可辨识、排除源记录完整
+                                         CompensationResult
+
+
+                                        SMS 数学模型实验操作与数据处理流程说明书
+    SMS 更新                    α_hat、δ_SMS、Σα、残差、可观测性                H_m N 秩/条件数、残差、基外误差通过
+    接触域                       ContactDomain、GapField、QA、G、Bn        法向一致、面积闭合、候选域覆盖
+    结构凝聚                      KΓ、W_struct、因子缓存、验证报告                 半正定、单位、全阶-凝聚误差通过
+    界面参数                      Cn/Ct/μ/βr、Σθ、D_valid、柔度分解            防重复柔度、物理约束、适用域通过
+                              LCPSolution、StagePosteriorPackage、
+    阶段求解                                                            平衡、间隙、力、互补、模式稳定
+                              StageIncrement
+                              UpdateDecision、StateUpdate、
+    过程更新                                                            可辨识、权限、回退和重求记录完整
+                              ReSolveRequirement
+    界面凝聚                      EquivalentErrorItem、ΣΔγ、质量标志          权重、量纲、参考态一致
+                              KCPPredictionResult、
+    KCP 预测                                                          防重复、路径闭合、模式可行
+                              ContributionLedger、DoubleCountCheck
+                                                                    样本量、失败率、超域率、尾部置信区间通
+    统计预测                      均值、方差、分位数、Pf、敏感性、收敛
+                                                                    过
+                              ValidationResult、
+    验证发布                                                            D_validate 独立，指标满足用途
+                              ModelVersionRelease、RunLog
+
+
+
+
+16 最终结论：这套操作流程可以走通的关键原因
+    几何链闭合：KCM 经过测量状态补偿后更新 SMS，SMS 通过 G 映射成 g0。
+    力学链闭合：离线 W_struct 与局部 Cn 形成 W_total，阶段 LCP 求得接触力、间隙、压缩和模式。
+    状态链闭合：LOCATE、CLAMP、JOIN、RELEASE 保存绝对后验状态和阶段增量，按传递规则进入下一阶段。
+    预测链闭合：界面状态经输出导向凝聚为 Δγ_c，再由 JSS/J-T 传递到 KCP。
+    统计链闭合：每个 Monte Carlo 样本都重复完整快速链，而不是对最终 KCP 加噪声。
+    验证链闭合：D_identify、D_calibrate、D_validate 分离，验证失败触发新版本而非同集调参。
+    防重复链闭合：每个贡献都有 source_id、reference_state_id 和 increment_definition_id，同一变形源只能消费
+     一次。
+因此，在硕士论文中可把该流程写成“输入组织与测量补偿 - SMS 更新 - 初始间隙与结构凝聚 - 多阶段界面互
+补 - 过程实测状态/参数更新 - 输出导向凝聚 - KCP 快速预测 - Monte Carlo 与独立验证”的可执行数学模
+型，而不是停留在概念流程。
+
+
+
+
+                             SMS 数学模型实验操作与数据处理流程说明书
+
