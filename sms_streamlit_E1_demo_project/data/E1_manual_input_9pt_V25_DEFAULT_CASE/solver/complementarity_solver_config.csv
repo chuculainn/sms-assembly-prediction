@@ -1,1 +1,0 @@
-﻿solver_config_id,solver_type,active_set_initialization,gap_tolerance,force_tolerance,complementarity_tolerance,maximum_iterations,scaling_rule,line_search_or_regularization_optional,warm_start_enabled,fallback_solver_optional,metadata

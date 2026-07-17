@@ -1,2 +1,0 @@
-﻿loading_path_id,stage_equivalent,normal_load_sequence,tangential_load_sequence_optional,preload_sequence_optional,hold_time_sequence_optional,unloading_sequence_optional,rate_information_optional,metadata
-LOADPATH_DEFAULT,LOCAL_IDENTIFICATION,[0.0],[],[],[],[],,"{""note"":""默认占位值；请替换为真实工程数据。"",""schema_version"":""V2.5""}"

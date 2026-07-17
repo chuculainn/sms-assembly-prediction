@@ -1,2 +1,0 @@
-parameter_id,interface_id,parameter_type,value,unit,source_type,valid_load_min_N,valid_load_max_N,quality_flag,included_physics,excluded_physics
-Cn_local_manual_diag,G_RIB03_PANEL_L_MANUAL,C_n_local_diagonal,0.00016,mm/N,manual_synthetic_prior,0.0,150.0,PASS,roughness_layer_local_indent_only,global_bending_fixture_sensor

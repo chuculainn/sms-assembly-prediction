@@ -1,2 +1,0 @@
-﻿rule_id,target_cache_type,dependency_fields,invalidation_condition,required_action,severity
-RULE_MULTIPART_COUPLING,I_RED,"topology,vector_layout,mesh,material,boundary,joint,contact_mapping",any dependency hash changed,REBUILD_IRED,FAIL

@@ -1,2 +1,0 @@
-﻿area_weight_matrix_id,contact_domain_id,matrix_id,candidate_point_ids,area_values,unit,area_sum,quality_flag,metadata
-QA_DEFAULT,CD_G_PART_A_PART_B,QA_MATRIX_DEFAULT,CP_001,[1.0],mm^2,1.0,WARN,"{""note"":""默认占位值；请替换为真实工程数据。"",""schema_version"":""V2.5""}"

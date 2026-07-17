@@ -1,2 +1,0 @@
-﻿solver_config_id,solver_type,active_set_initialization,gap_tolerance,force_tolerance,complementarity_tolerance,maximum_iterations,scaling_rule,line_search_or_regularization_optional,warm_start_enabled,fallback_solver_optional,metadata
-SOLVER_CFG_DEFAULT,ACTIVE_SET,EMPTY,1e-8,1e-8,1e-8,100,NONE,,TRUE,QP,"{""note"":""默认占位值；请替换为真实工程数据。"",""schema_version"":""V2.5""}"

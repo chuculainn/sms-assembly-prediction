@@ -1,2 +1,0 @@
-﻿double_count_check_id,contribution_ledger_id,duplicate_source_ids,reference_state_conflicts,absolute_increment_conflicts,included_excluded_overlap,check_rules_version,pass_warn_fail,required_action,metadata
-DCC_E1_PASS,LEDGER_E1_manual_input_9pt,,,,,V2.5_E1_CONVERTED,PASS,NONE,"{""note"": ""converted package no duplicate source known"", ""source"": ""E1_TO_V25_CONVERTER"", ""schema_version"": ""V2.5"", ""generated_at"": ""2026-07-09T13:09:40""}"

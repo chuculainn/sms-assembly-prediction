@@ -1,5 +1,0 @@
-﻿boundary_id,boundary_type,target_object_id,target_dofs,direction,prescribed_value,stiffness_optional,stage_activation,uncertainty_optional,measured_value_id_optional,metadata
-BND_S_LOCATE_01,LOCATE_BOUNDARY,P_PANEL_L_001,[0],"[0,0,1]",0.0,0.0,S_LOCATE_01,,,"{""note"": ""converted boundary placeholder"", ""source"": ""E1_TO_V25_CONVERTER"", ""schema_version"": ""V2.5"", ""generated_at"": ""2026-07-09T13:09:38""}"
-BND_S_CLAMP_02,CLAMP_BOUNDARY,P_PANEL_L_001,[0],"[0,0,1]",0.0,0.0,S_CLAMP_02,,,"{""note"": ""converted boundary placeholder"", ""source"": ""E1_TO_V25_CONVERTER"", ""schema_version"": ""V2.5"", ""generated_at"": ""2026-07-09T13:09:38""}"
-BND_S_JOIN_03,JOIN_BOUNDARY,P_PANEL_L_001,[0],"[0,0,1]",0.0,0.0,S_JOIN_03,,,"{""note"": ""converted boundary placeholder"", ""source"": ""E1_TO_V25_CONVERTER"", ""schema_version"": ""V2.5"", ""generated_at"": ""2026-07-09T13:09:38""}"
-BND_S_RELEASE_04,RELEASE_BOUNDARY,P_PANEL_L_001,[0],"[0,0,1]",0.0,0.0,S_RELEASE_04,,,"{""note"": ""converted boundary placeholder"", ""source"": ""E1_TO_V25_CONVERTER"", ""schema_version"": ""V2.5"", ""generated_at"": ""2026-07-09T13:09:38""}"

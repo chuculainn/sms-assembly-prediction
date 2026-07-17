@@ -1,3 +1,0 @@
-﻿lock_id,stage_id,joint_id,locked_reference,preload_actual,joint_stiffness,slip_history,quality_flag
-LOCK_E1_JOIN_CENTER,S_JOIN_03,JNT_CENTER,after_join_gap_state,3200.0,85000.0,synthetic_no_macro_slip,PASS
-LOCK_E1_RELEASE_CENTER,S_RELEASE_04,JNT_CENTER,released_with_joint_retained,2800.0,85000.0,synthetic_small_slip,PASS

@@ -1,2 +1,0 @@
-﻿run_id,model_version,input_package_id,started_at,finished_at,operator_or_script,software_versions,object_ids_used,cache_ids_used,quality_gate_ids,warnings,errors,runtime_summary,output_object_ids,metadata
-RUN_DEFAULT,MODEL_V2_5_TEMPLATE,PACKAGE_DEFAULT,,,not_run,{},[],[],QG_DEFAULT,template_not_engineering_data,,{},[],"{""note"":""默认占位值；请替换为真实工程数据。"",""schema_version"":""V2.5""}"

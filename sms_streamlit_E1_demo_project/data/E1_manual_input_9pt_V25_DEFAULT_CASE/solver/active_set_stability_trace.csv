@@ -1,5 +1,0 @@
-﻿trace_id,solution_id,iteration_contact_sets,mode_switch_count,rho_chi_history,final_rho_chi,oscillation_flag,stabilization_action,quality_flag,metadata
-AST_S_LOCATE_01_00,LCP_SOL_S_LOCATE_01,,,,,False,,,"{""note"": ""active set trace from solver"", ""source"": ""E1_TO_V25_CONVERTER"", ""schema_version"": ""V2.5"", ""generated_at"": ""2026-07-09T13:09:39""}"
-AST_S_CLAMP_02_00,LCP_SOL_S_CLAMP_02,,,,,False,,,"{""note"": ""active set trace from solver"", ""source"": ""E1_TO_V25_CONVERTER"", ""schema_version"": ""V2.5"", ""generated_at"": ""2026-07-09T13:09:39""}"
-AST_S_JOIN_03_00,LCP_SOL_S_JOIN_03,,,,,False,,,"{""note"": ""active set trace from solver"", ""source"": ""E1_TO_V25_CONVERTER"", ""schema_version"": ""V2.5"", ""generated_at"": ""2026-07-09T13:09:39""}"
-AST_S_RELEASE_04_00,LCP_SOL_S_RELEASE_04,,,,,False,,,"{""note"": ""active set trace from solver"", ""source"": ""E1_TO_V25_CONVERTER"", ""schema_version"": ""V2.5"", ""generated_at"": ""2026-07-09T13:09:39""}"

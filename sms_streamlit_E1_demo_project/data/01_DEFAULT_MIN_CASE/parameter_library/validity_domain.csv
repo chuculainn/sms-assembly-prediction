@@ -1,2 +1,0 @@
-﻿validity_domain_id,material_range,layup_or_thickness_range,surface_state_range,normal_pressure_range,tangential_load_range_optional,preload_range_optional,temperature_range_optional,contact_mode_range,boundary_method_range,loading_path_range,geometry_scale_range,metadata
-VD_DEFAULT,DEFAULT,DEFAULT,DEFAULT,"[0,0]","[0,0]","[0,0]","[20,20]",MODE_DEFAULT,DISPLACEMENT,LOADPATH_DEFAULT,DEFAULT,"{""note"":""默认占位值；请替换为真实工程数据。"",""schema_version"":""V2.5""}"

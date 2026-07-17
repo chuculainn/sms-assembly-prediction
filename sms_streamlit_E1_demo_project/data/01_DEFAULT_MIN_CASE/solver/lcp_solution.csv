@@ -1,5 +1,0 @@
-﻿solution_id,lcp_model_id,sample_id,stage_id,lambda_n,pressure_p_n,gap_g,active_contact_indices,inactive_indices,equilibrium_residual,gap_violation,force_violation,complementarity_residual,iteration_count,convergence_status,warm_start_source_id_optional,metadata
-LCP_SOL_S_LOCATE_01,LCP_MODEL_S_LOCATE_01,SAMPLE_001,S_LOCATE_01,[0.0],[0.0],[0.1],[],[0],0.0,0.0,0.0,0.0,0,PLACEHOLDER,,"{""note"":""默认占位值；请替换为真实工程数据。"",""schema_version"":""V2.5""}"
-LCP_SOL_S_CLAMP_02,LCP_MODEL_S_CLAMP_02,SAMPLE_001,S_CLAMP_02,[0.0],[0.0],[0.1],[],[0],0.0,0.0,0.0,0.0,0,PLACEHOLDER,,"{""note"":""默认占位值；请替换为真实工程数据。"",""schema_version"":""V2.5""}"
-LCP_SOL_S_JOIN_03,LCP_MODEL_S_JOIN_03,SAMPLE_001,S_JOIN_03,[0.0],[0.0],[0.1],[],[0],0.0,0.0,0.0,0.0,0,PLACEHOLDER,,"{""note"":""默认占位值；请替换为真实工程数据。"",""schema_version"":""V2.5""}"
-LCP_SOL_S_RELEASE_04,LCP_MODEL_S_RELEASE_04,SAMPLE_001,S_RELEASE_04,[0.0],[0.0],[0.1],[],[0],0.0,0.0,0.0,0.0,0,PLACEHOLDER,,"{""note"":""默认占位值；请替换为真实工程数据。"",""schema_version"":""V2.5""}"

@@ -1,2 +1,0 @@
-﻿extended_domain_id,stage_id,part_contact_domain_ids,locator_domain_ids,clamp_domain_ids,joint_domain_ids,extended_contact_point_ids,extended_gap_mapping_id,extended_B_mapping_id,locator_group_ids,validity_region,quality_flag,metadata
-ECD_DEFAULT,S_LOCATE_01,CD_G_PART_A_PART_B,LOCGRP_DEFAULT,,,CP_001;LOC_001,G_EXT_DEFAULT,B_EXT_DEFAULT,LOCGRP_DEFAULT,ALL,WARN,"{""note"":""默认占位值；请替换为真实工程数据。"",""schema_version"":""V2.5""}"

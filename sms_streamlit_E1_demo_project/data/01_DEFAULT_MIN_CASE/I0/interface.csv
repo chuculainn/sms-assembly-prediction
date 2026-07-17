@@ -1,2 +1,0 @@
-﻿interface_id,interface_name,part_i,part_j,side_i_region_id,side_j_region_id,material_pair,nominal_gap,contact_candidate_flag,key_contact_flag,coordinate_system_id,metadata
-G_PART_A_PART_B,DEFAULT_INTERFACE,P_PART_A,P_PART_B,REG_A_DEFAULT,REG_B_DEFAULT,CFRP-Metal,0.100,TRUE,TRUE,CS_ASSEMBLY,"{""note"":""默认占位值；请替换为真实工程数据。"",""schema_version"":""V2.5""}"

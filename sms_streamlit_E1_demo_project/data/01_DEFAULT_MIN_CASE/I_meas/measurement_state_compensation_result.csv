@@ -1,2 +1,0 @@
-﻿compensation_result_id,measurement_state_id,raw_kcm_values,raw_covariance_R,pose_component,structural_component,local_contact_component_optional,bias_component,equivalent_reference_kcm,equivalent_covariance_R_ref,compensation_method,target_reference_state_id,excluded_deformation_source_ids,identifiability_metrics,quality_flag,metadata
-COMP_DEFAULT,MSTATE_DEFAULT,[0.0],COV_MEAS_DEFAULT,[0.0],[0.0],[0.0],[0.0],[0.0],COV_REF_DEFAULT,NONE_REJECT,REF_NOMINAL,GRAVITY_M;FIXTURE_M;LOCAL_CONTACT_M,"{""rank"":0}",WARN,"{""note"":""默认占位值；请替换为真实工程数据。"",""schema_version"":""V2.5""}"

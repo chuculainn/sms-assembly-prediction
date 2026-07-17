@@ -1,5 +1,0 @@
-﻿reduced_force_vector_id,stage_id,source_load_item_ids,gravity_component,clamp_component,preload_component,prescribed_displacement_equivalent_component_optional,force_covariance_optional,unit,metadata
-RFV_S_LOCATE_01,S_LOCATE_01,LOAD_S_LOCATE_01,[0.0],[0.0],[0.0],[0.0],,N,"{""note"":""默认占位值；请替换为真实工程数据。"",""schema_version"":""V2.5""}"
-RFV_S_CLAMP_02,S_CLAMP_02,LOAD_S_CLAMP_02,[0.0],[0.0],[0.0],[0.0],,N,"{""note"":""默认占位值；请替换为真实工程数据。"",""schema_version"":""V2.5""}"
-RFV_S_JOIN_03,S_JOIN_03,LOAD_S_JOIN_03,[0.0],[0.0],[0.0],[0.0],,N,"{""note"":""默认占位值；请替换为真实工程数据。"",""schema_version"":""V2.5""}"
-RFV_S_RELEASE_04,S_RELEASE_04,LOAD_S_RELEASE_04,[0.0],[0.0],[0.0],[0.0],,N,"{""note"":""默认占位值；请替换为真实工程数据。"",""schema_version"":""V2.5""}"

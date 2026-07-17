@@ -1,7 +1,0 @@
-﻿module_name,valid_stage_ids,valid_load_min_N,valid_load_max_N,included_physics,excluded_physics,quality_flag
-partition_cn,ALL,0,800,分区等效界面柔度,整体弯曲/夹具传感器柔度,PASS
-layer_stack,ALL,0,800,薄层/涂层/密封层压缩,CFRP/金属整体结构柔度,PASS
-rough_contact,ALL,10,800,粗糙峰压平等效附加柔度,宏观基体弯曲,PASS
-local_indent,ALL,10,800,CFRP表层/金属局部压陷,全局网格已解析的基体响应,PASS
-fixture_joint,S_LOCATE_01|S_CLAMP_02|S_JOIN_03|S_RELEASE_04,0,1200,定位/夹持/连接局部等效柔度,W_struct内已含整体柔性,PASS
-release_rebound,S_RELEASE_04,0,800,释放阶段局部回弹增量,装配前制造SMS,PASS

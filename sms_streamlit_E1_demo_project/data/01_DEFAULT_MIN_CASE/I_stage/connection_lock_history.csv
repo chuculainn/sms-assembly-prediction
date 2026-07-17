@@ -1,2 +1,0 @@
-﻿lock_history_id,sample_id,join_stage_id,joint_ids,locked_reference_dofs,locked_reference_values,preload_actual,joint_stiffness,locked_contact_mode_id,slip_history_ids_optional,source_ids,covariance_optional,metadata
-LOCK_HIST_DEFAULT,SAMPLE_001,S_JOIN_03,JNT_DEFAULT,[],[],0.0,0.0,MODE_S_JOIN_03,,SRC_JOINT_DEFAULT,,"{""note"":""默认占位值；请替换为真实工程数据。"",""schema_version"":""V2.5""}"
