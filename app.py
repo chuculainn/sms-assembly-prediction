@@ -7,12 +7,17 @@ import json
 import zipfile
 
 import altair as alt
+import networkx as nx
 import numpy as np
 import pandas as pd
+import plotly.graph_objects as go
 import streamlit as st
 
 from core.data_loader import load_package, detect_package_type
 from core.validation import validate_package
+from core.package_validator import data_truthfulness_statement, has_blocking_failures
+from core.reporting import build_runtime_report_zip, coupling_ablation_export, runtime_state_lineage
+from core.stage_state import stage_transition_runtime_table
 from core.stage_solver import run_all_stages, point_result_table, stage_summary_table, build_stage_vectors
 from core.kcp import extract_kcp, compare_validation
 from core.monte_carlo import distribution_defaults, run_monte_carlo, one_factor_sweep
@@ -34,10 +39,15 @@ from core.tangential_ncp import TangentialNCPSettings, tangential_summary_table
 from core.fallback import FallbackSettings, evaluate_validity_and_fallback, remaining_limitations_table
 from core.physical_consistency import physical_consistency_report
 from core.multi_part import (
+    assembly_graph,
+    assembly_path_summary,
     contribution_ledger_summary,
+    coupling_ablation_comparison,
     coupling_block_summary,
     interface_stage_summary,
+    interface_stage_state_table,
     is_multi_part_package,
+    kcp_contribution_path,
     state_lineage_summary,
     topology_summary,
     vector_layout,
@@ -66,8 +76,20 @@ COLUMN_ZH: dict[str, str] = {
     'block_order': '分块顺序', 'object_id': '对象ID', 'start_index': '起始索引', 'end_index': '结束索引',
     'interface_i': '接口i', 'interface_j': '接口j', 'block_shape': '分块维度',
     'frobenius_norm': 'Frobenius范数', 'cross_interface': '是否跨接口', 'coupled_flag': '耦合非零',
+    'relative_coupling_strength': '相对耦合强度', 'max_absolute_value': '最大绝对值',
+    'signed_sum': '块元素和', 'coupling_sign': '耦合符号类型', 'zero_block': '是否零块',
+    'contact_structural_response_norm_mm': '接触结构柔性响应范数(mm)',
+    'contact_structural_response_increment_norm_mm': '接触结构柔性响应增量范数(mm)',
+    'response_type': '响应类型',
     'contact_point_count': '接触点数', 'part_state_count': '零件状态数', 'interface_state_count': '接口状态数',
     'stage_state_snapshot_id': '阶段状态快照ID', 'parent_stage_state_id': '父阶段状态ID',
+    'file': '文件', 'field': '字段', 'object_id': '对象ID', 'suggestion': '修改建议', 'blocking': '是否阻断求解',
+    'path_type': '路径类型', 'endpoint_i': '端点i', 'endpoint_j': '端点j', 'path_rank': '路径序号',
+    'part_ids': '零件路径', 'interface_ids': '接口路径', 'edge_count': '接口数', 'edge_state': '边状态',
+    'parent_interface_state_id': '父接口状态ID', 'joint_lock_history_id': '连接锁定历史ID',
+    'state_source': '状态来源', 'stage_state_id': '运行时阶段状态ID', 'stage_type': '阶段语义',
+    'parent_stage_id': '父阶段ID', 'data_source': '数据来源', 'fallback_flag': '兼容回退标记',
+    'result_role': '结果角色', 'warning_flag': '是否超过警告阈值', 'warning_threshold': '警告阈值',
 
     # 质量门
     'check_item': '检查项', 'status': '状态', 'detail': '说明',
@@ -246,6 +268,141 @@ def stage_format(pkg, stage_id: str) -> str:
     return f"{stage_id} - {row['operation_type'].iloc[0]}"
 
 
+EDGE_STATE_STYLE = {
+    'NOT_ACTIVATED': ('#9ca3af', 'dot'),
+    'ACTIVE_NO_CONTACT': ('#f59e0b', 'dash'),
+    'ACTIVE_CONTACT': ('#16a34a', 'solid'),
+    'SEPARATED': ('#dc2626', 'dot'),
+    'JOIN_LOCKED': ('#7c3aed', 'solid'),
+    'RETAINED_AFTER_RELEASE': ('#2563eb', 'solid'),
+}
+
+
+def interface_plot_geometry(graph: nx.MultiGraph, pos: dict) -> list[tuple[str, str, str, dict, list[float], list[float], tuple[float, float]]]:
+    """Give parallel interfaces distinct visible midpoints without changing topology."""
+    seen: dict[tuple[str, str], int] = {}
+    rows = []
+    for a, b, key, data in graph.edges(keys=True, data=True):
+        pair = tuple(sorted((str(a), str(b))))
+        index = seen.get(pair, 0)
+        seen[pair] = index + 1
+        count = graph.number_of_edges(a, b)
+        x0, y0 = pos[a]
+        x1, y1 = pos[b]
+        dx, dy = x1 - x0, y1 - y0
+        length = max(float(np.hypot(dx, dy)), 1e-12)
+        offset = (index - (count - 1) / 2.0) * 0.12
+        mid_x = (x0 + x1) / 2.0 - dy / length * offset
+        mid_y = (y0 + y1) / 2.0 + dx / length * offset
+        rows.append((a, b, str(key), data, [x0, mid_x, x1], [y0, mid_y, y1], (mid_x, mid_y)))
+    return rows
+
+
+def topology_plot(pkg, result: dict[str, dict], stage_id: str, highlighted: dict[str, set[str]] | None = None) -> go.Figure:
+    graph = assembly_graph(pkg)
+    highlighted = highlighted or {'parts': set(), 'interfaces': set(), 'stages': set()}
+    pos = nx.spring_layout(graph, seed=20260718, weight=None) if graph.number_of_nodes() else {}
+    state = interface_stage_state_table(pkg, result, stage_id)
+    state_by_interface = state.set_index('interface_id').to_dict('index') if not state.empty else {}
+    fig = go.Figure()
+    midpoint_x, midpoint_y, midpoint_text, midpoint_custom = [], [], [], []
+    shown_states: set[str] = set()
+    for a, b, _, data, edge_x, edge_y, midpoint in interface_plot_geometry(graph, pos):
+        interface_id = str(data.get('interface_id', ''))
+        row = state_by_interface.get(interface_id, {})
+        edge_state = str(row.get('edge_state', 'NOT_ACTIVATED'))
+        color, dash = EDGE_STATE_STYLE.get(edge_state, ('#64748b', 'solid'))
+        width = 7 if interface_id in highlighted.get('interfaces', set()) else 3
+        hover = (
+            f"接口: {interface_id}<br>接触域: {data.get('contact_domain_id', '')}<br>"
+            f"连接: {data.get('joint_id', '')}<br>阶段状态: {edge_state}<br>"
+            f"接触点: {row.get('contact_point_count', 0)}<br>活动点: {row.get('active_count', 0)}<br>"
+            f"总接触力: {row.get('lambda_sum_N', 0):.6g} N<br>最大压力: {row.get('pressure_max_MPa', 0):.6g} MPa<br>"
+            f"最小间隙: {row.get('gap_min_mm', float('nan')):.6g} mm"
+        )
+        fig.add_trace(go.Scatter(
+            x=edge_x, y=edge_y, mode='lines', line={'color': color, 'width': width, 'dash': dash, 'shape': 'spline'},
+            hoverinfo='text', text=[hover, hover], name=edge_state,
+            showlegend=edge_state not in shown_states,
+        ))
+        shown_states.add(edge_state)
+        midpoint_x.append(midpoint[0])
+        midpoint_y.append(midpoint[1])
+        midpoint_text.append(hover + '<br>点击该标记查看接口详情')
+        midpoint_custom.append(interface_id)
+    if midpoint_x:
+        fig.add_trace(go.Scatter(
+            x=midpoint_x, y=midpoint_y, mode='markers+text',
+            marker={'size': 16, 'color': '#ffffff', 'line': {'color': '#111827', 'width': 2}},
+            text=midpoint_custom, textposition='top center', customdata=midpoint_custom,
+            hovertext=midpoint_text, hoverinfo='text', name='接口（可点击）',
+        ))
+    node_x, node_y, node_text, node_labels, node_colors, node_sizes = [], [], [], [], [], []
+    for node, data in graph.nodes(data=True):
+        x, y = pos[node]
+        node_x.append(x)
+        node_y.append(y)
+        node_labels.append(node)
+        node_text.append(
+            f"零件: {node}<br>名称: {data.get('part_name', '')}<br>材料: {data.get('material_type', '')}<br>"
+            f"刚柔/角色: {data.get('rigid_flexible_flag', data.get('role_in_assembly', ''))}<br>接口度: {graph.degree[node]}"
+        )
+        is_highlighted = node in highlighted.get('parts', set())
+        node_colors.append('#f97316' if is_highlighted else ('#0ea5e9' if graph.degree[node] >= 2 else '#475569'))
+        node_sizes.append(42 if is_highlighted else 32)
+    fig.add_trace(go.Scatter(
+        x=node_x, y=node_y, mode='markers+text', text=node_labels, textposition='bottom center',
+        hovertext=node_text, hoverinfo='text', name='零件',
+        marker={'size': node_sizes, 'color': node_colors, 'line': {'color': 'white', 'width': 2}},
+    ))
+    fig.update_layout(
+        height=590, margin={'l': 20, 'r': 20, 't': 35, 'b': 20}, hovermode='closest',
+        xaxis={'visible': False}, yaxis={'visible': False}, legend={'orientation': 'h'},
+        title=f'数据驱动装配拓扑 | {stage_format(pkg, stage_id)}',
+    )
+    return fig
+
+
+def coupling_network_plot(pkg, stage_id: str) -> go.Figure:
+    graph = assembly_graph(pkg)
+    pos = nx.spring_layout(graph, seed=20260718, weight=None) if graph.number_of_nodes() else {}
+    interface_pos: dict[str, tuple[float, float]] = {}
+    for _, _, _, data, _, _, midpoint in interface_plot_geometry(graph, pos):
+        interface_pos[str(data.get('interface_id', ''))] = midpoint
+    blocks = coupling_block_summary(pkg, stage_id)
+    fig = go.Figure()
+    cross = blocks[blocks['cross_interface']] if not blocks.empty else pd.DataFrame()
+    max_strength = float(cross['relative_coupling_strength'].replace([np.inf, -np.inf], np.nan).max()) if not cross.empty else 1.0
+    max_strength = max(max_strength if np.isfinite(max_strength) else 1.0, 1e-12)
+    for _, row in cross.iterrows():
+        left, right = str(row['interface_i']), str(row['interface_j'])
+        if left not in interface_pos or right not in interface_pos:
+            continue
+        x0, y0 = interface_pos[left]
+        x1, y1 = interface_pos[right]
+        strength = float(row['relative_coupling_strength']) if np.isfinite(row['relative_coupling_strength']) else 0.0
+        color = '#dc2626' if row['coupling_sign'] == 'NEGATIVE' else ('#16a34a' if row['coupling_sign'] == 'POSITIVE' else '#64748b')
+        fig.add_trace(go.Scatter(
+            x=[x0, x1], y=[y0, y1], mode='lines',
+            line={'width': 1.0 + 8.0 * strength / max_strength, 'color': color, 'dash': 'dot'},
+            hovertext=[f"{left} ↔ {right}<br>相对耦合={strength:.3e}<br>F范数={row['frobenius_norm']:.3e}"] * 2,
+            hoverinfo='text', showlegend=False,
+        ))
+    if interface_pos:
+        ids = list(interface_pos)
+        fig.add_trace(go.Scatter(
+            x=[interface_pos[i][0] for i in ids], y=[interface_pos[i][1] for i in ids], mode='markers+text',
+            text=ids, textposition='bottom center', hoverinfo='text', hovertext=ids, name='接口',
+            marker={'size': 24, 'color': '#2563eb', 'symbol': 'diamond', 'line': {'color': 'white', 'width': 2}},
+        ))
+    fig.update_layout(
+        height=480, margin={'l': 20, 'r': 20, 't': 35, 'b': 20},
+        xaxis={'visible': False}, yaxis={'visible': False},
+        title='接口耦合网络（绿/红表示块元素和的正/负，线宽表示相对强度）',
+    )
+    return fig
+
+
 def make_runtime_traces(
     pkg,
     result: dict[str, dict],
@@ -408,6 +565,25 @@ overconstraint_settings = OverConstraintSettings(enabled=oc_enabled, coupling_ra
 tangential_settings = TangentialNCPSettings(enabled=tangent_enabled, shear_scale=tangent_scale)
 fallback_settings = FallbackSettings(enabled=fallback_enabled)
 
+# The package quality gate runs before any formal solve.  Detailed FAIL rows
+# marked blocking identify broken primary/foreign keys, layouts, matrix/LCP
+# contracts or truthfulness declarations that make a solve unsafe.
+package_validation = validate_package(pkg)
+if has_blocking_failures(package_validation):
+    st.error('数据包存在阻断性严重错误，正式求解已停止。请先修复下表所列对象。')
+    blocking_mask = package_validation.get(
+        'blocking', pd.Series(False, index=package_validation.index, dtype='boolean')
+    ).astype('boolean').fillna(False)
+    blocking_rows = package_validation[
+        blocking_mask & package_validation['status'].astype(str).eq('FAIL')
+    ]
+    st.dataframe(zh_df(blocking_rows), width='stretch', hide_index=True)
+    st.stop()
+
+truth_statement = data_truthfulness_statement(pkg)
+if '不代表真实工程预测结果' in truth_statement:
+    st.warning('仅用于数值一致性与软件联调，不代表真实工程预测结果。')
+
 # Runtime calculation. The app is small enough to run on every interaction.
 result = run_all_stages(pkg, sms_scale=sms_scale, closure_scale=closure_scale, cn_scale=cn_scale, eps=eps, substitution_settings=substitution_settings, sms_mapping_settings=sms_mapping_settings, overconstraint_settings=overconstraint_settings, tangential_settings=tangential_settings)
 stage_summary = stage_summary_table(result)
@@ -475,6 +651,8 @@ TABS = [
     '⑩ KCP预测与贡献',
     '⑪ Monte Carlo与敏感性',
     '⑫ 验证、报告与追溯',
+    '⑬ 装配拓扑、阶段路径与状态传递',
+    '⑭ 接口耦合诊断与对照试算',
 ]
 active_page = st.sidebar.radio(
     '功能环节',
@@ -490,11 +668,11 @@ if active_page == TABS[0]:
     with st.expander('数据包说明 / Manifest', expanded=False):
         st.json(pkg.manifest)
 
-    checks = validate_package(pkg)
+    checks = package_validation
     c1, c2 = st.columns([1, 1])
     with c1:
         st.markdown('**质量门检查**')
-        st.dataframe(zh_df(checks), use_container_width=True, hide_index=True)
+        st.dataframe(zh_df(checks), width='stretch', hide_index=True)
     with c2:
         st.markdown('**输入包文件完整性**')
         if pkg.package_type.startswith('V25'):
@@ -528,20 +706,20 @@ if active_page == TABS[0]:
             '状态': 'PASS' if (pkg.root / f).exists() else 'MISSING',
             '路径': str(pkg.root / f),
         } for f in required_files])
-        st.dataframe(file_df, use_container_width=True, hide_index=True)
+        st.dataframe(file_df, width='stretch', hide_index=True)
 
     st.markdown('**核心对象预览**')
     left, right = st.columns(2)
     with left:
         st.caption('Part / 零件表')
-        st.dataframe(zh_df(pkg.parts), use_container_width=True, hide_index=True)
+        st.dataframe(zh_df(pkg.parts), width='stretch', hide_index=True)
         st.caption('Interface / 结合面表')
-        st.dataframe(zh_df(pkg.interfaces), use_container_width=True, hide_index=True)
+        st.dataframe(zh_df(pkg.interfaces), width='stretch', hide_index=True)
     with right:
         st.caption('StageInput / 阶段输入')
-        st.dataframe(zh_df(pkg.stage_plan), use_container_width=True, hide_index=True)
+        st.dataframe(zh_df(pkg.stage_plan), width='stretch', hide_index=True)
         st.caption('KCP/KCM定义')
-        st.dataframe(zh_df(pkg.kcp_kcm), use_container_width=True, hide_index=True)
+        st.dataframe(zh_df(pkg.kcp_kcm), width='stretch', hide_index=True)
 
     if is_multi_part_package(pkg):
         st.markdown('**多零件拓扑与状态继承**')
@@ -557,10 +735,10 @@ if active_page == TABS[0]:
         topo_left, topo_right = st.columns([1.15, 1])
         with topo_left:
             st.caption('装配拓扑步骤（零件为节点、接口/连接为边）')
-            st.dataframe(zh_df(topology_table), use_container_width=True, hide_index=True)
+            st.dataframe(zh_df(topology_table), width='stretch', hide_index=True)
         with topo_right:
             st.caption('聚合状态父链与逐对象状态数量')
-            st.dataframe(zh_df(state_table), use_container_width=True, hide_index=True)
+            st.dataframe(zh_df(state_table), width='stretch', hide_index=True)
 
 
 if active_page == TABS[1]:
@@ -576,7 +754,7 @@ if active_page == TABS[1]:
         kind_filter = st.multiselect('文件类型筛选', sorted(pkg.data_overview['kind'].dropna().unique().tolist()), default=sorted(pkg.data_overview['kind'].dropna().unique().tolist()))
         status_filter = st.multiselect('读取状态筛选', sorted(pkg.data_overview['status'].dropna().unique().tolist()), default=sorted(pkg.data_overview['status'].dropna().unique().tolist()))
         overview_df = pkg.data_overview[pkg.data_overview['kind'].isin(kind_filter) & pkg.data_overview['status'].isin(status_filter)].copy()
-        st.dataframe(overview_df, use_container_width=True, hide_index=True)
+        st.dataframe(overview_df, width='stretch', hide_index=True)
     else:
         st.warning('未生成数据总览。')
 
@@ -593,7 +771,7 @@ if active_page == TABS[1]:
             'W_total_shape': str((pkg.matrices.get(f'W_struct__{sid}', np.zeros((0, 0))) + pkg.matrices.get('Cn_local', np.zeros((0, 0)))).shape) if f'W_struct__{sid}' in pkg.matrices and 'Cn_local' in pkg.matrices else 'MISSING',
             'QA_shape': str(pkg.matrices.get('QA', np.array([])).shape),
         })
-    st.dataframe(pd.DataFrame(min_rows), use_container_width=True, hide_index=True)
+    st.dataframe(pd.DataFrame(min_rows), width='stretch', hide_index=True)
 
     with st.expander('矩阵 key / shape / 数值范围', expanded=True):
         mat_summary = []
@@ -605,21 +783,21 @@ if active_page == TABS[1]:
                 'min': float(np.nanmin(a)) if a.size and np.issubdtype(a.dtype, np.number) else np.nan,
                 'max': float(np.nanmax(a)) if a.size and np.issubdtype(a.dtype, np.number) else np.nan,
             })
-        st.dataframe(pd.DataFrame(mat_summary), use_container_width=True, hide_index=True)
+        st.dataframe(pd.DataFrame(mat_summary), width='stretch', hide_index=True)
 
     if is_multi_part_package(pkg):
         st.markdown('**全局向量布局与跨接口耦合块**')
-        st.dataframe(zh_df(vector_layout(pkg)), use_container_width=True, hide_index=True)
+        st.dataframe(zh_df(vector_layout(pkg)), width='stretch', hide_index=True)
         coupling_stage = st.selectbox('检查阶段 W_struct 分块', pkg.stage_plan['stage_id'].tolist(), format_func=lambda s: stage_format(pkg, s), key='coupling_stage')
         coupling_df = coupling_block_summary(pkg, coupling_stage)
-        st.dataframe(zh_df(coupling_df), use_container_width=True, hide_index=True)
+        st.dataframe(zh_df(coupling_df), width='stretch', hide_index=True)
         st.caption('非对角块的范数非零表示共享零件与装配闭环引起的跨接口影响；本软件直接求解完整全局矩阵，不会把各接口分别求解后拼接。')
 
     with st.expander('V2.5 源表快速查看', expanded=False):
         if getattr(pkg, 'raw_tables', None):
             table_names = sorted(pkg.raw_tables.keys())
             selected_table = st.selectbox('选择源表', table_names)
-            st.dataframe(pkg.raw_tables[selected_table], use_container_width=True, hide_index=True)
+            st.dataframe(pkg.raw_tables[selected_table], width='stretch', hide_index=True)
         else:
             st.info('旧 E1 包已按标准化表读取，无额外 raw_tables。')
 
@@ -630,7 +808,7 @@ if active_page == TABS[2]:
         manual_df = read_manual_input(pkg.root)
         manual_zh = zh_df(manual_df)
         disabled_cols = [c for c in ['初始间隙g0/mm', '局部序号', '候选点ID'] if c in manual_zh.columns]
-        edited_zh = st.data_editor(manual_zh, use_container_width=True, hide_index=True, num_rows='fixed', disabled=disabled_cols)
+        edited_zh = st.data_editor(manual_zh, width='stretch', hide_index=True, num_rows='fixed', disabled=disabled_cols)
         col_a, col_b = st.columns([1, 3])
         with col_a:
             if st.button('保存并重建矩阵包', type='primary'):
@@ -645,24 +823,24 @@ if active_page == TABS[2]:
         st.info('当前数据包没有 manual_input_table.csv。若要手动录入，建议基于 E1_manual_input_9pt 复制一份再修改。')
 
     st.markdown('**过程实测记录 / process_record.csv**')
-    st.dataframe(zh_df(pkg.process_record), use_container_width=True, hide_index=True)
+    st.dataframe(zh_df(pkg.process_record), width='stretch', hide_index=True)
 
 if active_page == TABS[3]:
     st.subheader('SMS形貌与初始间隙构建')
     sms_file = safe_read_csv(pkg.root / 'I_meas' / 'sms_point_or_node.csv')
     if sms_file is not None:
         st.markdown('**SMS点/节点偏差记录**')
-        st.dataframe(zh_df(sms_file.head(200)), use_container_width=True, hide_index=True)
+        st.dataframe(zh_df(sms_file.head(200)), width='stretch', hide_index=True)
     elif pkg.package_type.startswith('V25'):
         v25_meas = safe_read_csv(pkg.root / 'I_meas' / 'measurement_record.csv')
         v25_field = safe_read_csv(pkg.root / 'sms_update' / 'sms_field.csv')
         if v25_meas is not None and not v25_meas.empty:
             sms_rows = v25_meas[v25_meas.get('update_target', pd.Series('', index=v25_meas.index)).astype(str).str.upper().eq('SMS')]
             st.markdown('**V2.5 MeasurementRecord中的SMS更新记录**')
-            st.dataframe(zh_df(sms_rows.head(200)), use_container_width=True, hide_index=True)
+            st.dataframe(zh_df(sms_rows.head(200)), width='stretch', hide_index=True)
         if v25_field is not None:
             st.markdown('**V2.5冻结SMSField**')
-            st.dataframe(zh_df(v25_field.head(200)), use_container_width=True, hide_index=True)
+            st.dataframe(zh_df(v25_field.head(200)), width='stretch', hide_index=True)
 
     if sms_mapping_settings.enabled:
         rebuilt_sms = rebuild_gap_from_sms(pkg, sms_mapping_settings)
@@ -671,11 +849,11 @@ if active_page == TABS[3]:
         elif rebuilt_sms.get('mapping_mode') == 'LIVE_REBUILD_PARTIAL_LEGACY':
             st.info('旧E1兼容模式：使用现有SMS点实时重建，未提供的一侧按旧算例约定视为名义侧。')
         st.markdown('**S03：WLS/MAP SMS更新结果**')
-        st.dataframe(zh_df(rebuilt_sms['fit_summary']), use_container_width=True, hide_index=True)
+        st.dataframe(zh_df(rebuilt_sms['fit_summary']), width='stretch', hide_index=True)
         st.markdown('**S04：SMS → 接触点 G 映射 / 重建 g0**')
-        st.dataframe(zh_df(rebuilt_sms['gap_table']), use_container_width=True, hide_index=True)
+        st.dataframe(zh_df(rebuilt_sms['gap_table']), width='stretch', hide_index=True)
         st.markdown('**SMS映射质量门**')
-        st.dataframe(zh_df(rebuilt_sms['quality']), use_container_width=True, hide_index=True)
+        st.dataframe(zh_df(rebuilt_sms['quality']), width='stretch', hide_index=True)
         gap_df = rebuilt_sms['gap_table'].rename(columns={'g0_rebuilt_mm': 'g0_scaled_runtime', 'nominal_component_mm': 'nominal_component', 'sms_component_rebuilt_mm': 'sms_component'}).copy()
         gap_df['g0_scaled_runtime'] = rebuilt_sms['nominal_gap'] + sms_scale * rebuilt_sms['sms_component'] + rebuilt_sms['pose_component']
         gap_df = gap_df.merge(pkg.contact_points[['candidate_id', 'area_weight']], on='candidate_id', how='left')
@@ -685,7 +863,7 @@ if active_page == TABS[3]:
         gap_df['g0_scaled_runtime'] = pkg.matrices['nominal_gap'] + sms_scale * pkg.matrices['sms_component'] + pkg.matrices.get('pose_component', 0.0)
         gap_display_cols = ['candidate_id', 'x_i0', 'y_i0', 'nominal_component', 'sms_component', 'values_g', 'g0_scaled_runtime', 'area_weight']
     st.markdown('**GapField：名义项 + SMS项 → 初始间隙 g0**')
-    st.dataframe(zh_df(gap_df[gap_display_cols]), use_container_width=True, hide_index=True)
+    st.dataframe(zh_df(gap_df[gap_display_cols]), width='stretch', hide_index=True)
 
     chart = alt.Chart(gap_df).mark_circle(size=170).encode(
         x=alt.X('x_i0:Q', title='x / mm'),
@@ -693,13 +871,13 @@ if active_page == TABS[3]:
         color=alt.Color('g0_scaled_runtime:Q', title='运行g0 / mm'),
         tooltip=[c for c in ['candidate_id', 'x_i0', 'y_i0', 'nominal_component', 'sms_component', 'values_g', 'g0_package_mm', 'g0_scaled_runtime'] if c in gap_df.columns]
     ).properties(height=430)
-    st.altair_chart(chart, use_container_width=True)
+    st.altair_chart(chart, width='stretch')
     st.warning('负 g0 只表示未平衡前的几何干涉趋势，不等于真实压缩量；真实压力和压缩由 LCP 求解。')
 
 if active_page == TABS[4]:
     st.subheader('接触域、候选点、面积权重与映射检查')
     cp = pkg.contact_points.copy()
-    st.dataframe(zh_df(cp), use_container_width=True, hide_index=True)
+    st.dataframe(zh_df(cp), width='stretch', hide_index=True)
 
     c1, c2, c3, c4 = st.columns(4)
     c1.metric('候选点数', len(cp))
@@ -713,14 +891,14 @@ if active_page == TABS[4]:
             arr = pkg.matrices[key]
             mat_rows.append({'matrix': key, 'shape': str(arr.shape), 'min': float(np.min(arr)), 'max': float(np.max(arr))})
     st.markdown('**矩阵维度与数值范围**')
-    st.dataframe(pd.DataFrame(mat_rows), use_container_width=True, hide_index=True)
+    st.dataframe(pd.DataFrame(mat_rows), width='stretch', hide_index=True)
 
     chart = alt.Chart(cp).mark_circle(size=150).encode(
         x=alt.X('x_i0:Q', title='x / mm'), y=alt.Y('y_i0:Q', title='y / mm'),
         color=alt.Color('area_weight:Q', title='面积权重'),
         tooltip=['candidate_id', 'x_i0', 'y_i0', 'area_weight', 'edge_or_interior_flag']
     ).properties(height=420)
-    st.altair_chart(chart, use_container_width=True)
+    st.altair_chart(chart, width='stretch')
 
 if active_page == TABS[5]:
     st.subheader('界面参数库与数值替代模块')
@@ -742,16 +920,16 @@ if active_page == TABS[5]:
     sub_tabs = st.tabs(['参数源表', '模块计算结果', '柔度组成与质量门', '响应分解小工具'])
     with sub_tabs[0]:
         st.markdown('**原始界面参数库 / interface_parameter.csv**')
-        st.dataframe(zh_df(pkg.interface_parameters), use_container_width=True, hide_index=True)
+        st.dataframe(zh_df(pkg.interface_parameters), width='stretch', hide_index=True)
         st.markdown('**I_red / CondensedOperator：结构柔度来源**')
-        st.dataframe(zh_df(pkg.condensed_operator), use_container_width=True, hide_index=True)
+        st.dataframe(zh_df(pkg.condensed_operator), width='stretch', hide_index=True)
         tables = load_substitution_config(pkg)
         st.markdown('**I_substitution 数值替代输入表**')
         for name in ['partition_cn', 'layer_stack', 'rough_contact', 'local_indent', 'fixture_joint', 'release_rebound', 'validity']:
             df_src = tables[name]
             with st.expander(f'{name}.csv', expanded=(name in ['partition_cn', 'validity'])):
                 if isinstance(df_src, pd.DataFrame) and not df_src.empty:
-                    st.dataframe(zh_df(df_src), use_container_width=True, hide_index=True)
+                    st.dataframe(zh_df(df_src), width='stretch', hide_index=True)
                 else:
                     st.warning(f'当前数据包未提供 {name}.csv，程序将按零贡献处理。')
 
@@ -764,7 +942,7 @@ if active_page == TABS[5]:
             'Cn_substitution_mm_per_N', 'Cn_runtime_mm_per_N', 'Ct_equiv_mm_per_N', 'mu_eff', 'beta_r',
             'release_rebound_increment_mm', 'quality_flag'
         ]
-        st.dataframe(zh_df(comp_df[display_cols]), use_container_width=True, hide_index=True)
+        st.dataframe(zh_df(comp_df[display_cols]), width='stretch', hide_index=True)
         chart_comp = alt.Chart(comp_df).transform_fold(
             ['C_partition_mm_per_N', 'C_layer_mm_per_N', 'C_rough_mm_per_N', 'C_indent_mm_per_N', 'C_locator_mm_per_N', 'C_clamp_mm_per_N', 'C_joint_mm_per_N'],
             as_=['component', 'value']
@@ -774,11 +952,11 @@ if active_page == TABS[5]:
             color=alt.Color('component:N', title='模块'),
             tooltip=['candidate_id:N', 'zone_id:N', 'component:N', 'value:Q']
         ).properties(height=360)
-        st.altair_chart(chart_comp, use_container_width=True)
+        st.altair_chart(chart_comp, width='stretch')
 
     with sub_tabs[2]:
         st.markdown('**模块分量汇总**')
-        st.dataframe(zh_df(summary_df), use_container_width=True, hide_index=True)
+        st.dataframe(zh_df(summary_df), width='stretch', hide_index=True)
         st.markdown('**柔度组成检查**')
         diag_df = pd.DataFrame({
             'candidate_id': pkg.contact_points['candidate_id'],
@@ -786,9 +964,9 @@ if active_page == TABS[5]:
             'Cn_diag_mm_per_N': np.diag(Cn),
             'W_total_diag_mm_per_N': np.diag(W_total),
         })
-        st.dataframe(zh_df(diag_df), use_container_width=True, hide_index=True)
+        st.dataframe(zh_df(diag_df), width='stretch', hide_index=True)
         st.markdown('**数值替代质量门 / 防重复柔度提示**')
-        st.dataframe(zh_df(qg_df), use_container_width=True, hide_index=True)
+        st.dataframe(zh_df(qg_df), width='stretch', hide_index=True)
         st.caption('若使用“原始Cn + 数值替代附加项”，必须确认原始Cn没有已经包含粗糙、薄层、局部压陷等同一物理来源；否则应改用“数值替代替换”。')
 
     with sub_tabs[3]:
@@ -806,7 +984,7 @@ if active_page == TABS[5]:
 
 if active_page == TABS[6]:
     st.subheader('LOCATE → CLAMP → JOIN → RELEASE 四阶段 LCP 求解')
-    st.dataframe(zh_df(stage_summary), use_container_width=True, hide_index=True)
+    st.dataframe(zh_df(stage_summary), width='stretch', hide_index=True)
     final_row = stage_summary[stage_summary['stage_id'] == 'S_RELEASE_04'].iloc[0]
     metric_cols = st.columns(4)
     metric_cols[0].metric('RELEASE主动接触点', int(final_row['active_count']))
@@ -818,7 +996,7 @@ if active_page == TABS[6]:
     df_stage = point_results[point_results['stage_id'] == selected_stage]
     c1, c2 = st.columns([1.15, 1])
     with c1:
-        st.dataframe(zh_df(df_stage), use_container_width=True, hide_index=True)
+        st.dataframe(zh_df(df_stage), width='stretch', hide_index=True)
     with c2:
         chart2 = alt.Chart(df_stage).mark_circle(size=170).encode(
             x=alt.X('x_i0:Q', title='x / mm'),
@@ -826,24 +1004,24 @@ if active_page == TABS[6]:
             color=alt.Color('pressure_p_n_MPa:Q', title='pressure / MPa'),
             tooltip=['candidate_id', 'q_free_gap_mm', 'gap_g_mm', 'lambda_n_N', 'pressure_p_n_MPa', 'active_flag']
         ).properties(height=430)
-        st.altair_chart(chart2, use_container_width=True)
+        st.altair_chart(chart2, width='stretch')
 
     if is_multi_part_package(pkg) and not interface_results.empty:
         st.markdown('**逐接口阶段状态（由同一次全局耦合解分块汇总）**')
         interface_stage_df = interface_results[interface_results['stage_id'] == selected_stage]
-        st.dataframe(zh_df(interface_stage_df), use_container_width=True, hide_index=True)
+        st.dataframe(zh_df(interface_stage_df), width='stretch', hide_index=True)
         interface_chart = alt.Chart(interface_stage_df).mark_bar().encode(
             x=alt.X('interface_id:N', title='接口'),
             y=alt.Y('lambda_sum_N:Q', title='接触力合计 / N'),
             color=alt.Color('active_count:Q', title='主动点数'),
             tooltip=['interface_id', 'contact_point_count', 'active_count', 'lambda_sum_N', 'pressure_max_MPa', 'gap_min_mm'],
         ).properties(height=300)
-        st.altair_chart(interface_chart, use_container_width=True)
+        st.altair_chart(interface_chart, width='stretch')
 
     trace_list = result[selected_stage]['solution'].active_set_trace
     st.markdown('**主动集迭代轨迹**')
     if trace_list:
-        st.dataframe(pd.DataFrame(trace_list), use_container_width=True, hide_index=True)
+        st.dataframe(pd.DataFrame(trace_list), width='stretch', hide_index=True)
     else:
         st.caption('该阶段初始主动集已满足互补条件或无需迭代调整。')
 
@@ -852,9 +1030,9 @@ if active_page == TABS[6]:
         st.markdown('**S17 法向-切向 NCP / Ct-μ 摩擦投影结果**')
         t_left, t_right = st.columns([1.2, 1])
         with t_left:
-            st.dataframe(zh_df(tangential_df), use_container_width=True, hide_index=True)
+            st.dataframe(zh_df(tangential_df), width='stretch', hide_index=True)
         with t_right:
-            st.dataframe(zh_df(tangential_summary_table(tangential_df)), use_container_width=True, hide_index=True)
+            st.dataframe(zh_df(tangential_summary_table(tangential_df)), width='stretch', hide_index=True)
             tchart = alt.Chart(tangential_df).mark_circle(size=150).encode(
                 x=alt.X('x_i0:Q', title='x / mm'),
                 y=alt.Y('y_i0:Q', title='y / mm'),
@@ -862,7 +1040,7 @@ if active_page == TABS[6]:
                 size=alt.Size('lambda_t_norm_N:Q', title='|λt|/N'),
                 tooltip=['candidate_id', 'lambda_t_norm_N', 'friction_limit_N', 'stick_slip_state', 'cone_residual']
             ).properties(height=320)
-            st.altair_chart(tchart, use_container_width=True)
+            st.altair_chart(tchart, width='stretch')
 
 
 if active_page == TABS[7]:
@@ -909,7 +1087,7 @@ if active_page == TABS[7]:
     overview_tab, attention_tab, kcp_tab, method_tab = st.tabs(['阶段总览', '需要关注', 'KCP检查', '阈值与公式'])
 
     with overview_tab:
-        st.dataframe(zh_df(phys_stage), use_container_width=True, hide_index=True)
+        st.dataframe(zh_df(phys_stage), width='stretch', hide_index=True)
         st.caption('接触形态：NO_CONTACT=全部开放；ALL_CONTACT=全部接触；MIXED_CONTACT=接触区与开放区并存。前两者是解释性WARN，不自动等同于物理FAIL。')
         if not phys_stage.empty:
             long_phys = phys_stage[['stage_id', 'gap_violation_mm', 'force_violation_N', 'complementarity_residual_Nmm', 'equilibrium_residual_mm']].melt('stage_id', var_name='metric', value_name='value')
@@ -919,22 +1097,22 @@ if active_page == TABS[7]:
                 color=alt.Color('metric:N', title='指标'),
                 tooltip=['stage_id', 'metric', alt.Tooltip('value:Q', format='.3e')]
             ).properties(height=300)
-            st.altair_chart(chart, use_container_width=True)
+            st.altair_chart(chart, width='stretch')
 
     with attention_tab:
         attention = phys_checks[phys_checks['status'].isin(['WARN', 'FAIL'])]
         if attention.empty:
             st.success('阶段物理检查与接触形态均无WARN/FAIL。')
         else:
-            st.dataframe(zh_df(attention), use_container_width=True, hide_index=True)
+            st.dataframe(zh_df(attention), width='stretch', hide_index=True)
         with st.expander('查看全部检查项', expanded=False):
-            st.dataframe(zh_df(phys_checks), use_container_width=True, hide_index=True)
+            st.dataframe(zh_df(phys_checks), width='stretch', hide_index=True)
 
     with kcp_tab:
         if validation_status == 'REFERENCE_ONLY':
             st.info('下表“产品容差状态”仍有效；“验证偏差状态”仅展示参考差异，不参与本次综合判定。')
         kcp_cols = [c for c in ['kcp_id', 'feature_type', 'stage_id', 'predicted_value', 'unit', 'lower_tol', 'upper_tol', 'tolerance_status', 'validation_status', 'validation_sigma', 'tolerance_detail', 'validation_detail'] if c in kcp_anomaly.columns]
-        st.dataframe(zh_df(kcp_anomaly[kcp_cols]), use_container_width=True, hide_index=True)
+        st.dataframe(zh_df(kcp_anomaly[kcp_cols]), width='stretch', hide_index=True)
 
     with method_tab:
         settings = physical_report['settings']
@@ -944,7 +1122,7 @@ if active_page == TABS[7]:
             {'检查项': '互补性', '公式/要求': '|g·λ| ≈ 0', '阈值': settings.complementarity_tolerance_Nmm, '单位': 'N·mm'},
             {'检查项': '平衡重构', '公式/要求': 'g = q + Wλ', '阈值': settings.equilibrium_tolerance_mm, '单位': 'mm'},
         ])
-        st.dataframe(threshold_df, use_container_width=True, hide_index=True)
+        st.dataframe(threshold_df, width='stretch', hide_index=True)
         st.markdown('''
 - **LCP物理可行性**只判断求解结果是否满足基本数学与物理约束。
 - **接触形态提示**用于解释0个主动点或全部主动点，不单独证明结果错误。
@@ -975,7 +1153,7 @@ if active_page == TABS[8]:
             'tangential_free_slip.csv': pkg.root / 'I_stage' / 'tangential_free_slip.csv',
         }
     d12_df = pd.DataFrame([{'D12对象': k, '状态': 'FOUND' if v.exists() else 'MISSING', '路径': str(v)} for k, v in d12_files.items()])
-    st.dataframe(d12_df, use_container_width=True, hide_index=True)
+    st.dataframe(d12_df, width='stretch', hide_index=True)
 
     selected_stage_ext = st.selectbox('选择扩展LCP阶段', stage_summary['stage_id'].tolist(), format_func=lambda s: stage_format(pkg, s), key='n21_stage')
     ext = result[selected_stage_ext].get('extended_lcp')
@@ -986,9 +1164,9 @@ if active_page == TABS[8]:
         e3.metric('扩展约束反力合计/N', f"{float(np.sum(ext.get('extra_lambda', []))):.4f}")
         e4.metric('扩展LCP维度', ext['W_ext'].shape[0])
         st.markdown('**扩展约束元素求解结果**')
-        st.dataframe(zh_df(extended_solution_table(selected_stage_ext, ext)), use_container_width=True, hide_index=True)
+        st.dataframe(zh_df(extended_solution_table(selected_stage_ext, ext)), width='stretch', hide_index=True)
         st.markdown('**主动集稳定性 ρ_chi 与振荡检查**')
-        st.dataframe(zh_df(active_set_stability_trace(ext['solution'])), use_container_width=True, hide_index=True)
+        st.dataframe(zh_df(active_set_stability_trace(ext['solution'])), width='stretch', hide_index=True)
         if result[selected_stage_ext].get('force_nonuniqueness'):
             st.markdown('**接触力非唯一性初步检查**')
             st.json(result[selected_stage_ext]['force_nonuniqueness'])
@@ -1000,7 +1178,7 @@ if active_page == TABS[8]:
             for name, path in d12_files.items():
                 if path.exists() and path.suffix == '.csv':
                     st.markdown(f'**{name}**')
-                    st.dataframe(zh_df(pd.read_csv(path)), use_container_width=True, hide_index=True)
+                    st.dataframe(zh_df(pd.read_csv(path)), width='stretch', hide_index=True)
                 elif path.exists() and path.suffix == '.json':
                     st.markdown(f'**{name}**')
                     st.json(json.loads(path.read_text(encoding='utf-8')))
@@ -1082,7 +1260,7 @@ if active_page == TABS[9]:
                 with st.expander('查看该样本完整四阶段结果', expanded=False):
                     sample_stage_summary = stage_summary_table(display_result)
                     sample_point_results = point_result_table(pkg, display_result)
-                    st.dataframe(zh_df(sample_stage_summary), use_container_width=True, hide_index=True)
+                    st.dataframe(zh_df(sample_stage_summary), width='stretch', hide_index=True)
                     sample_stage_id = st.selectbox(
                         '查看该样本的阶段接触点结果',
                         sample_stage_summary['stage_id'].tolist(),
@@ -1091,13 +1269,13 @@ if active_page == TABS[9]:
                     )
                     st.dataframe(
                         zh_df(sample_point_results[sample_point_results['stage_id'] == sample_stage_id]),
-                        use_container_width=True,
+                        width='stretch',
                         hide_index=True,
                     )
     if not has_mc_samples:
         st.info('尚无Monte Carlo样本。请先在“⑪ Monte Carlo与敏感性”页面运行一次Monte Carlo，之后即可在此切换样本。')
 
-    st.dataframe(zh_df(display_kcp), use_container_width=True, hide_index=True)
+    st.dataframe(zh_df(display_kcp), width='stretch', hide_index=True)
     if is_multi_part_package(pkg):
         ledger = contribution_ledger_summary(pkg)
         ledger_cols = st.columns(4)
@@ -1109,11 +1287,15 @@ if active_page == TABS[9]:
             contribution_records = pkg.raw_tables.get('prediction/contribution_record.csv', pd.DataFrame())
             double_count = pkg.raw_tables.get('prediction/double_count_check_result.csv', pd.DataFrame())
             st.caption('每个零件SMS登记一次；每个接口的阶段增量登记一次。')
-            st.dataframe(zh_df(contribution_records), use_container_width=True, hide_index=True)
-            st.dataframe(zh_df(double_count), use_container_width=True, hide_index=True)
+            group_results = ledger.get('group_results', pd.DataFrame())
+            if isinstance(group_results, pd.DataFrame) and not group_results.empty:
+                st.caption('按 sample_id、prediction_id 和 target_kcp_id 独立重构。')
+                st.dataframe(zh_df(group_results), width='stretch', hide_index=True)
+            st.dataframe(zh_df(contribution_records), width='stretch', hide_index=True)
+            st.dataframe(zh_df(double_count), width='stretch', hide_index=True)
     st.markdown('**与验证数据对比**')
     display_validation = compare_validation(display_kcp, pkg.validation_kcp)
-    st.dataframe(zh_df(display_validation), use_container_width=True, hide_index=True)
+    st.dataframe(zh_df(display_validation), width='stretch', hide_index=True)
 
     c1, c2, c3, c4 = st.columns(4)
     mae = display_validation['abs_error'].mean()
@@ -1133,7 +1315,7 @@ if active_page == TABS[9]:
         xOffset='kind:N',
         tooltip=['kcp_id', 'kind', 'value']
     ).properties(height=360)
-    st.altair_chart(chart, use_container_width=True)
+    st.altair_chart(chart, width='stretch')
 
     st.markdown('**简化贡献说明**')
     contrib = pd.DataFrame([
@@ -1143,7 +1325,7 @@ if active_page == TABS[9]:
         {'贡献项': '界面参数项', '本版来源': 'Cn_local / cn_scale', '是否已计算': '是'},
         {'贡献项': 'N-2-1扩展约束项', '本版来源': 'D12 / 扩展LCP', '是否已计算': '是' if overconstraint_settings.enabled else '未启用'},
     ])
-    st.dataframe(contrib, use_container_width=True, hide_index=True)
+    st.dataframe(contrib, width='stretch', hide_index=True)
 
 if active_page == TABS[10]:
     st.subheader('Monte Carlo统计预测与单因素敏感性')
@@ -1171,7 +1353,7 @@ if active_page == TABS[10]:
         samples, stats = st.session_state['mc_samples'], st.session_state['mc_stats']
 
     st.markdown('**统计结果**')
-    st.dataframe(zh_df(stats), use_container_width=True, hide_index=True)
+    st.dataframe(zh_df(stats), width='stretch', hide_index=True)
     kcp_cols = [c for c in samples.columns if c.startswith('KCP_')]
     selected_kcp = st.selectbox('查看KCP分布', kcp_cols, key='mc_kcp') if kcp_cols else None
     if selected_kcp:
@@ -1180,10 +1362,10 @@ if active_page == TABS[10]:
             y=alt.Y('count()', title='样本数'),
             tooltip=[alt.Tooltip('count()', title='样本数')]
         ).properties(height=320)
-        st.altair_chart(hist, use_container_width=True)
+        st.altair_chart(hist, width='stretch')
 
     with st.expander('查看 Monte Carlo 样本明细', expanded=False):
-        st.dataframe(zh_df(samples), use_container_width=True, hide_index=True)
+        st.dataframe(zh_df(samples), width='stretch', hide_index=True)
         st.download_button(
             '下载逐次Monte Carlo KCP预测CSV',
             zh_df(samples).to_csv(index=False).encode('utf-8-sig'),
@@ -1198,7 +1380,7 @@ if active_page == TABS[10]:
     v_max = s3.number_input('最大值', value=1.30, step=0.05, format='%.2f')
     values = np.linspace(float(v_min), float(v_max), 9).round(4).tolist()
     sweep = one_factor_sweep(pkg, var, values, {'sms_scale': sms_scale, 'closure_scale': closure_scale, 'cn_scale': cn_scale}, eps=eps, substitution_settings=substitution_settings, sms_mapping_settings=sms_mapping_settings, overconstraint_settings=overconstraint_settings, tangential_settings=tangential_settings)
-    st.dataframe(zh_df(sweep), use_container_width=True, hide_index=True)
+    st.dataframe(zh_df(sweep), width='stretch', hide_index=True)
     if kcp_cols:
         kcp_for_sweep = st.selectbox('敏感性曲线KCP', kcp_cols, key='sweep_kcp')
         line = alt.Chart(sweep).mark_line(point=True).encode(
@@ -1206,18 +1388,18 @@ if active_page == TABS[10]:
             y=alt.Y(f'{kcp_for_sweep}:Q', title=kcp_for_sweep),
             tooltip=['variable', 'value', kcp_for_sweep]
         ).properties(height=320)
-        st.altair_chart(line, use_container_width=True)
+        st.altair_chart(line, width='stretch')
 
 if active_page == TABS[11]:
     st.subheader('验证、报告导出与计算追溯')
     st.markdown('**ValidationResult**')
-    st.dataframe(zh_df(validation), use_container_width=True, hide_index=True)
+    st.dataframe(zh_df(validation), width='stretch', hide_index=True)
     bar = alt.Chart(validation).mark_bar().encode(
         x=alt.X('kcp_id:N', title='KCP'),
         y=alt.Y('abs_error:Q', title='绝对误差'),
         tooltip=['kcp_id', 'predicted_value', 'measured_value', 'abs_error', 'unit']
     ).properties(height=340)
-    st.altair_chart(bar, use_container_width=True)
+    st.altair_chart(bar, width='stretch')
 
     if fallback_settings.enabled:
         sms_quality_for_fallback = None
@@ -1228,10 +1410,10 @@ if active_page == TABS[11]:
                 sms_quality_for_fallback = pd.DataFrame([{'check_item': 'SMS映射', 'status': 'FAIL', 'detail': 'SMS映射执行失败'}])
         fallback_table = evaluate_validity_and_fallback(pkg, result, fallback_settings, sms_quality_for_fallback)
         st.markdown('**S28 适用域与替代-回退判断**')
-        st.dataframe(zh_df(fallback_table), use_container_width=True, hide_index=True)
+        st.dataframe(zh_df(fallback_table), width='stretch', hide_index=True)
 
     st.markdown('**剩余不足与需要补充的数据/接口**')
-    st.dataframe(zh_df(remaining_limitations_table()), use_container_width=True, hide_index=True)
+    st.dataframe(zh_df(remaining_limitations_table()), width='stretch', hide_index=True)
 
     st.markdown('**V2.5 / 数据包内追溯对象读取展示**')
     source_trace_tabs = st.tabs(['ContactComputationTrace', 'LCPSolution', 'KCPPredictionResult'])
@@ -1240,19 +1422,19 @@ if active_page == TABS[11]:
         if src is None:
             src = pkg.raw_tables.get('validation/contact_computation_trace.csv') if getattr(pkg, 'raw_tables', None) else None
         if src is not None and not src.empty:
-            st.dataframe(zh_df(src), use_container_width=True, hide_index=True)
+            st.dataframe(zh_df(src), width='stretch', hide_index=True)
         else:
             st.info('当前数据包未提供可直接读取的 ContactComputationTrace 源表。')
     with source_trace_tabs[1]:
         src = pkg.raw_tables.get('solver/lcp_solution.csv') if getattr(pkg, 'raw_tables', None) else None
         if src is not None and not src.empty:
-            st.dataframe(zh_df(src), use_container_width=True, hide_index=True)
+            st.dataframe(zh_df(src), width='stretch', hide_index=True)
         else:
             st.info('当前数据包未提供 solver/lcp_solution.csv。')
     with source_trace_tabs[2]:
         src = pkg.raw_tables.get('prediction/kcp_prediction_result.csv') if getattr(pkg, 'raw_tables', None) else None
         if src is not None and not src.empty:
-            st.dataframe(zh_df(src), use_container_width=True, hide_index=True)
+            st.dataframe(zh_df(src), width='stretch', hide_index=True)
         else:
             st.info('当前数据包未提供 prediction/kcp_prediction_result.csv。')
 
@@ -1265,9 +1447,10 @@ if active_page == TABS[11]:
         [coupling_block_summary(pkg, sid) for sid in pkg.stage_plan['stage_id'].astype(str)],
         ignore_index=True,
     ) if is_multi_part_package(pkg) else pd.DataFrame()
-    report_zip = make_report_zip(
-        stage_summary, point_results, validation, traces, mc_stats_for_zip, mc_samples_for_zip,
-        physical_report=physical_report, interface_summary=interface_results, coupling_summary=coupling_export,
+    report_zip = build_runtime_report_zip(
+        pkg, result, validation, traces,
+        mc_stats=mc_stats_for_zip, mc_samples=mc_samples_for_zip,
+        physical_report=physical_report,
     )
     d1, d2, d3 = st.columns(3)
     d1.download_button('下载KCP验证CSV（中文表头）', zh_df(validation).to_csv(index=False).encode('utf-8-sig'),
@@ -1292,9 +1475,149 @@ if active_page == TABS[11]:
             interface_results.to_csv(run_dir / 'interface_stage_summary.csv', index=False, encoding='utf-8-sig')
         if not coupling_export.empty:
             coupling_export.to_csv(run_dir / 'cross_interface_coupling_blocks.csv', index=False, encoding='utf-8-sig')
+        pd.DataFrame([topology_summary(pkg)]).to_csv(run_dir / 'topology_summary.csv', index=False, encoding='utf-8-sig')
+        assembly_path_summary(pkg).to_csv(run_dir / 'assembly_path_summary.csv', index=False, encoding='utf-8-sig')
+        stage_transition_runtime_table(result).to_csv(run_dir / 'stage_transition_runtime.csv', index=False, encoding='utf-8-sig')
+        coupling_ablation_export(pkg, result).to_csv(run_dir / 'coupling_ablation_comparison.csv', index=False, encoding='utf-8-sig')
+        runtime_state_lineage(result).to_csv(run_dir / 'state_lineage.csv', index=False, encoding='utf-8-sig')
+        package_validation.to_csv(run_dir / 'validation_summary.csv', index=False, encoding='utf-8-sig')
+        (run_dir / 'data_truthfulness_statement.txt').write_text(truth_statement, encoding='utf-8')
         (run_dir / 'physical_consistency_overall.json').write_text(json.dumps(physical_report.get('overall', {}), ensure_ascii=False, indent=2), encoding='utf-8')
         for name in ['stage_summary', 'check_details', 'kcp_anomalies']:
             df = physical_report.get(name)
             if isinstance(df, pd.DataFrame) and not df.empty:
                 df.to_csv(run_dir / f'physical_consistency_{name}.csv', index=False, encoding='utf-8-sig')
         st.success(f'已保存到：{run_dir}')
+
+
+if active_page == TABS[12]:
+    st.subheader('装配拓扑、阶段路径与状态传递')
+    st.caption('二维装配关系来自 I0/part.csv、interface.csv、joint_definition.csv 与接触域表；不维护手工拓扑，不表示三维CAD或机器人轨迹。')
+    topo = topology_summary(pkg)
+    t1, t2, t3, t4, t5 = st.columns(5)
+    t1.metric('连通分量', int(topo['connected_components']))
+    t2.metric('串联路径', '有' if topo['has_serial_path'] else '无')
+    t3.metric('并联/闭环', f"{'有' if topo['has_closed_or_parallel_path'] else '无'} / 秩{topo['cycle_rank']}")
+    t4.metric('共享零件', int(topo['shared_part_count']))
+    t5.metric('共享柔性零件', int(topo['shared_flexible_part_count']))
+
+    top_left, top_right = st.columns([1, 1])
+    topology_stage = top_left.selectbox(
+        '阶段选择', list(result), format_func=lambda value: stage_format(pkg, value), key='topology_stage'
+    )
+    kcp_options = ['（不高亮KCP）'] + kcp['kcp_id'].astype(str).tolist()
+    selected_kcp_path = top_right.selectbox('KCP贡献路径高亮', kcp_options, key='topology_kcp')
+    highlight = {'parts': set(), 'interfaces': set(), 'stages': set()}
+    if selected_kcp_path != '（不高亮KCP）':
+        highlight = kcp_contribution_path(pkg, selected_kcp_path)
+        st.caption(
+            f"高亮零件：{'; '.join(sorted(highlight['parts'])) or '无显式来源'}；"
+            f"接口：{'; '.join(sorted(highlight['interfaces'])) or '无显式来源'}；"
+            f"阶段：{'; '.join(sorted(highlight['stages'])) or '未声明'}"
+        )
+    selection = st.plotly_chart(
+        topology_plot(pkg, result, topology_stage, highlight),
+        width='stretch',
+        key='topology_plot_selection',
+        on_select='rerun',
+        selection_mode='points',
+    )
+    interface_ids = pkg.interfaces.get('interface_id', pd.Series(dtype=str)).astype(str).tolist()
+    clicked_interface = None
+    try:
+        selected_points = selection.selection.points
+        if selected_points and selected_points[0].get('customdata') in interface_ids:
+            clicked_interface = selected_points[0].get('customdata')
+    except (AttributeError, KeyError, TypeError):
+        clicked_interface = None
+    if clicked_interface:
+        st.session_state['topology_interface_detail'] = clicked_interface
+    default_interface = st.session_state.get('topology_interface_detail', interface_ids[0] if interface_ids else '')
+    if default_interface not in interface_ids and interface_ids:
+        default_interface = interface_ids[0]
+    selected_interface = st.selectbox(
+        '接口详情（可点击图中接口白色标记，也可在此选择）', interface_ids,
+        index=interface_ids.index(default_interface) if default_interface in interface_ids else 0,
+        key='topology_interface_selector',
+    ) if interface_ids else None
+    if selected_interface:
+        detail = interface_stage_state_table(pkg, result, topology_stage)
+        detail = detail[detail['interface_id'].astype(str).eq(str(selected_interface))]
+        st.markdown('**接口阶段详情**')
+        st.dataframe(zh_df(detail), width='stretch', hide_index=True)
+
+    path_table = assembly_path_summary(pkg)
+    path_tab, transition_tab, lineage_tab = st.tabs(['装配路径识别', '阶段前后状态变化', '运行时父状态链'])
+    with path_tab:
+        if path_table.empty:
+            st.info('当前拓扑未识别到长度≥2的串联路径、并联替代路径或闭环。')
+        else:
+            st.dataframe(zh_df(path_table), width='stretch', hide_index=True)
+    with transition_tab:
+        runtime_transition = stage_transition_runtime_table(result)
+        st.dataframe(zh_df(runtime_transition), width='stretch', hide_index=True)
+        stage_order = list(result)
+        pos = stage_order.index(topology_stage)
+        current_if = interface_stage_state_table(pkg, result, topology_stage)
+        if pos > 0:
+            previous_if = interface_stage_state_table(pkg, result, stage_order[pos - 1])
+            before_after = previous_if.merge(current_if, on='interface_id', suffixes=('_before', '_after'))
+            for metric in ('active_count', 'lambda_sum_N', 'pressure_max_MPa', 'gap_min_mm'):
+                before_after[f'{metric}_change'] = before_after[f'{metric}_after'] - before_after[f'{metric}_before']
+            st.markdown(f'**{stage_order[pos - 1]} → {topology_stage} 接口状态变化**')
+            st.dataframe(zh_df(before_after), width='stretch', hide_index=True)
+        else:
+            st.info('首阶段相对于初始聚合参考态建立运行时状态。')
+    with lineage_tab:
+        st.dataframe(zh_df(runtime_state_lineage(result)), width='stretch', hide_index=True)
+        st.info('fallback_flag=true 表示 q/U_FREE/W_struct 仍使用包内预计算输入；接触解、接口汇总、阶段增量和父状态引用由本次运行生成。')
+
+
+if active_page == TABS[13]:
+    st.subheader('接口耦合诊断与可视化')
+    st.success('正式计算模式：所有阶段均使用完整 W_total = W_struct + Cn 的全局统一 LCP；跨接口块保持不变。')
+    st.warning('“跨接口块置零”仅是诊断对照，永远不标记为正式工程结果。')
+    coupling_stage = st.selectbox(
+        '查看阶段 W_struct', list(result), format_func=lambda value: stage_format(pkg, value), key='coupling_page_stage'
+    )
+    layout = vector_layout(pkg)
+    W_view = np.asarray(result[coupling_stage]['W_struct'], dtype=float)
+    heatmap = go.Figure(go.Heatmap(
+        z=W_view, colorscale='RdBu', zmid=0.0,
+        colorbar={'title': 'W_struct / mm·N⁻¹'},
+        hovertemplate='row=%{y}<br>col=%{x}<br>W=%{z:.4e}<extra></extra>',
+    ))
+    for _, block in layout.iterrows():
+        boundary = int(block['end_index']) + 0.5
+        heatmap.add_vline(x=boundary, line_width=2, line_color='black')
+        heatmap.add_hline(y=boundary, line_width=2, line_color='black')
+    heatmap.update_layout(height=620, title=f'W_struct 全局热力图 | {stage_format(pkg, coupling_stage)}', xaxis_title='全局列索引', yaxis_title='全局行索引')
+    st.plotly_chart(heatmap, width='stretch')
+    coupling_blocks = coupling_block_summary(pkg, coupling_stage)
+    st.markdown('**VectorLayout接口块诊断**')
+    st.dataframe(zh_df(coupling_blocks), width='stretch', hide_index=True)
+    st.plotly_chart(coupling_network_plot(pkg, coupling_stage), width='stretch')
+
+    st.markdown('**耦合影响对照试算**')
+    threshold_percent = st.number_input('明显变化警告阈值/%', min_value=0.0, max_value=1000.0, value=5.0, step=1.0, key='coupling_warning_threshold')
+    run_ablation = st.button('运行诊断：将跨接口 W_struct 块置零', type='secondary', key='run_coupling_ablation')
+    ablation_key = f"{pkg.root}|{coupling_stage}|{threshold_percent}"
+    if run_ablation:
+        st.session_state['coupling_ablation_key'] = ablation_key
+        st.session_state['coupling_ablation_result'] = coupling_ablation_comparison(
+            pkg, result, coupling_stage, float(threshold_percent) / 100.0
+        )
+    if st.session_state.get('coupling_ablation_key') == ablation_key:
+        ablation = st.session_state.get('coupling_ablation_result')
+        if isinstance(ablation, dict):
+            summary_ablation = ablation['summary']
+            if bool(summary_ablation.iloc[0]['warning_flag']):
+                st.error('去除跨接口耦合后结果变化超过阈值或活动集发生变化；正式结果对接口耦合敏感。')
+            else:
+                st.info('该阶段诊断变化未超过当前阈值；正式结果仍继续使用完整耦合矩阵。')
+            st.dataframe(zh_df(summary_ablation), width='stretch', hide_index=True)
+            compare_tabs = st.tabs(['lambda/g/活动集', '最大压力与KCP'])
+            with compare_tabs[0]:
+                st.dataframe(zh_df(ablation['point_comparison']), width='stretch', hide_index=True)
+            with compare_tabs[1]:
+                st.dataframe(zh_df(ablation['kcp_comparison']), width='stretch', hide_index=True)

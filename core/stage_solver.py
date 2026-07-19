@@ -9,6 +9,7 @@ from .numerical_substitution import NumericalSubstitutionSettings, assemble_Cn_m
 from .sms_mapping import SMSMappingSettings, rebuild_gap_from_sms
 from .overconstraint import OverConstraintSettings, solve_extended_lcp, force_nonuniqueness_report
 from .tangential_ncp import TangentialNCPSettings, tangential_result_table
+from .stage_state import build_runtime_stage_state
 
 
 def _runtime_gap_components(
@@ -143,8 +144,10 @@ def run_all_stages(
     overconstraint_settings: OverConstraintSettings | dict | None = None,
     tangential_settings: TangentialNCPSettings | dict | None = None,
 ) -> dict[str, dict]:
-    return {
-        sid: run_stage(
+    result: dict[str, dict] = {}
+    parent_state = None
+    for sid in get_stage_ids(pkg):
+        stage = run_stage(
             pkg, sid,
             sms_scale=sms_scale,
             closure_scale=closure_scale,
@@ -154,8 +157,12 @@ def run_all_stages(
             sms_mapping_settings=sms_mapping_settings,
             overconstraint_settings=overconstraint_settings,
             tangential_settings=tangential_settings,
-        ) for sid in get_stage_ids(pkg)
-    }
+        )
+        stage_state = build_runtime_stage_state(pkg, stage, parent_state)
+        stage['stage_state'] = stage_state
+        result[sid] = stage
+        parent_state = stage_state
+    return result
 
 
 def point_result_table(pkg: SMSPackage, result: dict[str, dict]) -> pd.DataFrame:

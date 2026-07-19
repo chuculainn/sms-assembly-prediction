@@ -1,9 +1,9 @@
 运行方式：
 1. 解压本软件包
-2. 打开 Anaconda Prompt 或终端
-3. cd 到 sms_streamlit_E1_demo_project 目录
-4. pip install -r requirements.txt
-5. streamlit run app.py
+2. 打开 Python 3.11 终端
+3. cd 到解压后的当前项目根目录（应直接包含 app.py、core、data、tests，不要再创建 sms_streamlit_E1_demo_project 重复目录）
+4. python -m pip install -r requirements.txt
+5. python -m streamlit run app.py
 
 推荐先测试：
 python scripts/cli_check.py data/E1_min_closed_loop
@@ -11,7 +11,7 @@ python scripts/cli_check.py data/01_DEFAULT_MIN_CASE
 python scripts/cli_check.py data/01_DEFAULT_MIN_CASE_4_PART
 python scripts/cli_check.py data/E1_min_closed_loop_V25_DEFAULT_CASE
 
-v5.4.2 当前版本：
+多零件串并联集成版：
 - 物理一致性检查面板
 - 互补残差、最小间隙、最小接触力、主动接触点数量
 - KCP 异常提示
@@ -21,6 +21,10 @@ v5.4.2 当前版本：
 - replace缺少替代柔度时保留包内Cn_local并告警
 - 物理一致性页面分开显示LCP物理状态、接触形态、产品容差和验证基准
 - 高级组合没有同配置验证批次时显示REFERENCE_ONLY，不再混同为求解器FAIL
+- 通用PASS/WARN/FAIL数据校验器；阻断错误不会进入正式求解
+- 装配拓扑、阶段路径与状态传递页面
+- W_struct热力图、接口耦合网络与跨接口块置零诊断对照
+- 运行时StageState父链和JOIN锁定历史在RELEASE继承
 
 自动测试：
 python scripts/run_automated_tests.py
@@ -32,3 +36,5 @@ python scripts/run_automated_tests.py
 - 数据总览应显示4个向量分块和每阶段6个非零跨接口块
 - 四阶段求解页可查看逐接口接触状态
 - KCP页应显示SMS贡献、接触贡献与贡献账本PASS
+- 在“装配拓扑、阶段路径与状态传递”页查看串联、并联、闭环、接口详情和父状态链
+- 在“接口耦合诊断与对照试算”页查看热力图并执行非正式耦合消融

@@ -103,7 +103,7 @@ def _multi_part_checks(pkg: SMSPackage) -> list[dict[str, str]]:
         coupling = coupling_block_summary(pkg, sid)
         cross = coupling[coupling['cross_interface']] if not coupling.empty else pd.DataFrame()
         coupled = bool(not cross.empty and cross['coupled_flag'].all())
-        rows.append(_row(f'cross-interface W blocks:{sid}', 'PASS' if coupled else 'FAIL', f'cross_blocks={len(cross)}, nonzero={int(cross.get("coupled_flag", pd.Series(dtype=bool)).sum())}'))
+        rows.append(_row(f'cross-interface W blocks:{sid}', 'PASS' if coupled else 'WARN', f'cross_blocks={len(cross)}, nonzero={int(cross.get("coupled_flag", pd.Series(dtype=bool)).sum())}; zero blocks require topology/physics review but are not universally invalid'))
         W_total = pkg.matrices.get(f'W_total__{sid}')
         W_struct = pkg.matrices.get(f'W_struct__{sid}')
         relation = W_total is not None and W_struct is not None and np.allclose(W_total, W_struct + pkg.matrices['Cn_local'], atol=1e-12)
@@ -214,4 +214,7 @@ def validate_package(pkg: SMSPackage) -> pd.DataFrame:
         ok = set(pkg.validation_kcp['data_role'].dropna().unique()) <= {'VALIDATE'}
         checks.append(_row('validation data role', 'PASS' if ok else 'FAIL', f"roles={sorted(pkg.validation_kcp['data_role'].dropna().unique())}"))
 
-    return pd.DataFrame(checks)
+    base = pd.DataFrame(checks)
+    from .package_validator import validate_package_detailed
+    detailed = validate_package_detailed(pkg)
+    return pd.concat([base, detailed], ignore_index=True, sort=False)

@@ -301,16 +301,26 @@ class PackageAndPipelineTests(unittest.TestCase):
         self.assertIsNotNone(tab_block)
         tab_count = len(re.findall(r"^\s*['\"]", tab_block.group(1), re.M))
         guard_count = len(re.findall(r"^if active_page == TABS\[\d+\]:", source, re.M))
-        self.assertEqual(tab_count, 12)
+        self.assertEqual(tab_count, 14)
         self.assertEqual(guard_count, tab_count)
 
 
 class V6MVPAcceptanceTests(unittest.TestCase):
     """Executable acceptance-test placeholders for gaps confirmed by the V5.4 audit."""
 
-    @unittest.skip("V6-MVP: implement true state recursion and connection-lock inheritance")
     def test_stage_state_is_inherited_between_locate_clamp_join_release(self) -> None:
-        pass
+        pkg = load_package(DATA / "01_DEFAULT_MIN_CASE_4_PART")
+        result = run_all_stages(pkg)
+        states = [stage["stage_state"] for stage in result.values()]
+        self.assertIsNone(states[0].parent_stage_state_id)
+        for previous, current in zip(states, states[1:]):
+            self.assertEqual(current.parent_stage_state_id, previous.stage_state_id)
+            self.assertEqual(current.parent_stage_id, previous.stage_id)
+        join = next(state for state in states if state.stage_type == "JOIN")
+        release = next(state for state in states if state.stage_type == "RELEASE")
+        self.assertTrue(join.joint_lock_state)
+        self.assertEqual(release.joint_lock_state["lock_history_id"], join.joint_lock_state["lock_history_id"])
+        self.assertEqual(release.joint_lock_state["inherited_from_stage_state_id"], join.stage_state_id)
 
     @unittest.skip("V6-MVP: generate W_struct from full-order K and DOF partitions")
     def test_schur_condensation_matches_direct_static_solution(self) -> None:
