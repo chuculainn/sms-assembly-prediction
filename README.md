@@ -5,10 +5,12 @@
 ## 运行
 
 ```bash
-cd sms_streamlit_E1_demo_project
-pip install -r requirements.txt
-streamlit run app.py
+# 在当前仓库根目录（包含 app.py）执行，不需要额外嵌套目录
+python -m pip install -r requirements.txt
+python -m streamlit run app.py
 ```
+
+推荐 Python 3.11；当前依赖包含 Streamlit、Pandas、NumPy、Altair、NetworkX 与 Plotly。
 
 ## 数据包
 
@@ -24,13 +26,27 @@ streamlit run app.py
 ## 关键功能
 
 - `core/schema_adapter.py`：V2.5 数据结构到当前求解器最小输入的适配层。
-- `core/data_loader.py`：自动识别 `E1_LEGACY` / `V25_DEFAULT_MIN_CASE`。
+- `core/data_loader.py`：自动识别 `E1_LEGACY` / `V25_DEFAULT_MIN_CASE` / `V25_MULTI_PART`。
 - `core/multi_part.py`：拓扑、向量分块、跨接口耦合、逐接口状态和贡献账本检查。
+- `core/package_validator.py`：通用多零件主外键、布局、矩阵/LCP、状态父链、账本和真实性三级校验；阻断性 FAIL 会在正式求解前停止运行。
+- `core/stage_state.py`：运行时 `StageState` 与 `LOCATE -> CLAMP -> JOIN -> RELEASE` 父状态链；明确区分包内预计算输入和运行时重算量。
+- `core/reporting.py`：统一生成拓扑、路径、阶段递推、耦合诊断、状态链、校验和真实性报告。
 - 多零件包按 `matrices/vector_layout.csv` 解释全局向量，完整求解含非零交叉块的全局 `W_struct`，不会把接口分别求解后拼接。
 - 数据总览页：显示 CSV/JSON/NPZ 读取状态、行数、字段和矩阵 key。
 - 质量检查：必要目录/文件、CSV 表头、NPZ key、g0/q/W/Cn/QA 维度检查。
 - 物理一致性检查：显示互补残差、最小间隙、最小接触力、主动接触点数量和 KCP 异常提示。
 - 追溯展示：读取并展示 `ContactComputationTrace`、`LCPSolution`、`KCPPredictionResult`，同时保留运行时动态追溯 JSON。
+- “装配拓扑、阶段路径与状态传递”页面：用 NetworkX 从 CSV 构图、Plotly 显示阶段边状态，可点击接口标记查看接触统计，并可按 KCP 高亮贡献路径。
+- “接口耦合诊断与对照试算”页面：显示 `W_struct` 热力图、VectorLayout 分块指标、接口耦合网络，并提供跨接口块置零的非正式诊断试算。
+
+## 四零件包与新页面使用
+
+1. 启动后在侧边栏“标准输入包目录”选择 `01_DEFAULT_MIN_CASE_4_PART`；软件应显示类型 `V25_MULTI_PART`。
+2. 进入“⑬ 装配拓扑、阶段路径与状态传递”，选择任意数据定义阶段；图中白色接口标记可点击，表格显示接触点数、活动点、总接触力、最大压力、最小间隙、父接口状态和锁定历史。
+3. 选择 KCP 后，相关零件、接口和阶段来源会高亮；下方可查看串联、并联、闭环路径及运行时父状态链。
+4. 进入“⑭ 接口耦合诊断与对照试算”切换阶段，查看完整 `W_struct` 热力图和每个接口块的范数、相对强度、最大绝对值与零块标记。
+5. 正式结果始终使用完整耦合矩阵。点击“运行诊断：将跨接口 W_struct 块置零”只生成 `DIAGNOSTIC_NOT_FORMAL_ENGINEERING_RESULT`，超过阈值时显示红色警告。
+6. 在“⑫ 验证、报告与追溯”下载完整运行报告 ZIP；其中包含 `topology_summary.csv`、`assembly_path_summary.csv`、`stage_transition_runtime.csv`、`interface_stage_summary.csv`、`cross_interface_coupling_blocks.csv`、`coupling_ablation_comparison.csv`、`state_lineage.csv`、`validation_summary.csv` 和 `data_truthfulness_statement.txt`。
 
 ## 命令行检查
 
@@ -44,7 +60,7 @@ python scripts/cli_check.py data/E1_manual_input_9pt_V25_DEFAULT_CASE
 
 `01_DEFAULT_MIN_CASE` 是占位连通性测试包，不用于论文数值结论。物理一致性检查是一级质量门，用于判断本次 LCP 解是否满足基本可行性；它不替代真实 FE 验证、样件验证或完整 D_valid 适用域判定。
 
-`01_DEFAULT_MIN_CASE_4_PART` 同样是合成数值一致性数据，只证明数据结构、统一耦合求解、状态对象读取和贡献账本接口可联通，不能作为真实结构的精度或工程结论。
+`01_DEFAULT_MIN_CASE_4_PART` 同样是合成数值一致性数据，只证明数据结构、统一耦合求解、状态对象读取和贡献账本接口可联通，不能作为真实结构的精度或工程结论。界面持续显示：“仅用于数值一致性与软件联调，不代表真实工程预测结果。”
 
 详细升级范围与剩余边界见 `MULTI_PART_UPGRADE.md`。
 

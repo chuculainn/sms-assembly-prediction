@@ -1,9 +1,9 @@
 {
-  "generated_at_utc": "2026-07-16T10:00:57.440974+00:00",
-  "tests_run": 39,
-  "passed": 32,
+  "generated_at_utc": "2026-07-19T05:23:38.613514+00:00",
+  "tests_run": 62,
+  "passed": 56,
   "failed": 0,
-  "skipped_v6_acceptance": 7,
+  "skipped_v6_acceptance": 6,
   "successful": true,
   "records": [
     {
@@ -193,13 +193,128 @@
     },
     {
       "test": "tests.test_core_contracts.V6MVPAcceptanceTests.test_stage_state_is_inherited_between_locate_clamp_join_release",
-      "status": "SKIP",
-      "detail": "V6-MVP: implement true state recursion and connection-lock inheritance"
+      "status": "PASS",
+      "detail": ""
     },
     {
       "test": "tests.test_core_contracts.V6MVPAcceptanceTests.test_validation_metrics_match_reference_calculation",
       "status": "SKIP",
       "detail": "V6-MVP: compute MAE/RMSE/max error from independent validation sets"
+    },
+    {
+      "test": "tests.test_multi_part_upgrade_round2.MultiPartRound2Tests.test_all_six_four_part_cross_blocks_are_retained_with_metrics",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "tests.test_multi_part_upgrade_round2.MultiPartRound2Tests.test_arbitrary_n_m_topology_is_data_driven",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "tests.test_multi_part_upgrade_round2.MultiPartRound2Tests.test_blocking_mask_has_no_fillna_downcasting_warning",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "tests.test_multi_part_upgrade_round2.MultiPartRound2Tests.test_contribution_ledger_reconstructs_each_sample_independently",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "tests.test_multi_part_upgrade_round2.MultiPartRound2Tests.test_coupling_ablation_changes_solution_and_is_diagnostic",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "tests.test_multi_part_upgrade_round2.MultiPartRound2Tests.test_detailed_validator_passes_bundled_multi_part_case",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "tests.test_multi_part_upgrade_round2.MultiPartRound2Tests.test_detailed_validator_preserves_all_bundled_package_families",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "tests.test_multi_part_upgrade_round2.MultiPartRound2Tests.test_duplicate_contribution_key_is_rejected",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "tests.test_multi_part_upgrade_round2.MultiPartRound2Tests.test_invalid_interface_foreign_key_blocks_solve",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "tests.test_multi_part_upgrade_round2.MultiPartRound2Tests.test_kcp_contribution_path_filters_other_kcp_sources",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "tests.test_multi_part_upgrade_round2.MultiPartRound2Tests.test_layout_overlap_is_blocking",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "tests.test_multi_part_upgrade_round2.MultiPartRound2Tests.test_locate_runtime_state_records_initial_boundaries_and_loads",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "tests.test_multi_part_upgrade_round2.MultiPartRound2Tests.test_new_streamlit_pages_and_isolation_guards_exist",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "tests.test_multi_part_upgrade_round2.MultiPartRound2Tests.test_parallel_interfaces_between_same_parts_are_lossless",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "tests.test_multi_part_upgrade_round2.MultiPartRound2Tests.test_release_inherits_join_lock_history",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "tests.test_multi_part_upgrade_round2.MultiPartRound2Tests.test_report_zip_contains_all_new_contract_files",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "tests.test_multi_part_upgrade_round2.MultiPartRound2Tests.test_runtime_stage_parent_chain_is_continuous",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "tests.test_multi_part_upgrade_round2.MultiPartRound2Tests.test_serial_parallel_and_cycle_paths_are_reported",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "tests.test_multi_part_upgrade_round2.MultiPartRound2Tests.test_stage_state_names_contact_response_without_changing_values",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "tests.test_multi_part_upgrade_round2.MultiPartRound2Tests.test_synthetic_truthfulness_statement_disallows_engineering_claim",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "tests.test_multi_part_upgrade_round2.MultiPartRound2Tests.test_validator_reports_file_field_object_and_suggestion",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "tests.test_multi_part_upgrade_round2.MultiPartRound2Tests.test_vector_layout_covers_all_points_without_overlap",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "tests.test_multi_part_upgrade_round2.StreamlitSmokeTests.test_app_and_new_pages_render_without_exception",
+      "status": "PASS",
+      "detail": ""
     }
   ]
 }
