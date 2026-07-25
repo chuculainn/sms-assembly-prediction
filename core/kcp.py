@@ -11,8 +11,14 @@ def _stage_or_default(result: dict[str, dict], requested: object | None, default
     sid = str(requested) if requested is not None and pd.notna(requested) else default
     if sid in result:
         return sid
+    matching = [key for key, value in result.items() if str(value.get('stage_id', '')) == sid]
+    if matching:
+        return matching[-1]
     if default in result:
         return default
+    default_matching = [key for key, value in result.items() if str(value.get('stage_id', '')) == default]
+    if default_matching:
+        return default_matching[-1]
     return list(result.keys())[-1]
 
 
@@ -75,7 +81,7 @@ def _predict_generic_kcp(pkg: SMSPackage, result: dict[str, dict]) -> pd.DataFra
             value = float(len(result[sid]['solution'].active_indices) / len(gap)) if len(gap) else np.nan
             unit = '1'
         elif ftype in {'springback', 'release_rebound'}:
-            join_sid = 'S_JOIN_03' if 'S_JOIN_03' in result else list(result.keys())[0]
+            join_sid = _stage_or_default(result, 'S_JOIN_03', default=list(result.keys())[0])
             join_gap = np.asarray(result[join_sid]['solution'].gap_g, dtype=float)
             if target_idx is not None and gap.size and join_gap.size:
                 value = float(gap[target_idx] - join_gap[target_idx])

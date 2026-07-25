@@ -69,9 +69,53 @@ def evaluate_validity_and_fallback(
             'required_data': '每个模块的D_valid：材料组合、压力/载荷范围、温度、表面状态、验证误差',
         })
 
-    # Solver residual gates.
+    # Solver residual gates. NOT_REQUIRED is a valid state event, not a failed
+    # or skipped LCP.
+    result_by_step = {
+        str(res.get("topology_step_id", key)): res for key, res in result.items()
+    }
     for sid, res in result.items():
         sol = res['solution']
+        solve_status = str(res.get("solve_status", sol.convergence_status)).upper()
+        if solve_status == "NOT_REQUIRED":
+            state = res.get("stage_state")
+            action = str(
+                getattr(state, "mechanical_state_action", "")
+                or res.get("mechanical_state_action", "")
+            )
+            reason = str(
+                getattr(state, "not_required_reason", "")
+                or res.get("not_required_reason", "")
+            )
+            parent_step_id = str(getattr(state, "parent_topology_step_id", "") or "")
+            inherited_ok = True
+            if action == "INHERIT_PARENT_UNCHANGED":
+                parent_result = result_by_step.get(parent_step_id)
+                inherited_ok = parent_result is not None and all(
+                    np.allclose(
+                        np.asarray(res[name], dtype=float),
+                        np.asarray(parent_result[name], dtype=float),
+                        equal_nan=True,
+                    )
+                    for name in ("lambda_full", "gap_full", "pressure", "local_compression")
+                )
+            valid_action = action in {"INITIALIZE_EMPTY", "INHERIT_PARENT_UNCHANGED"}
+            status = "PASS" if valid_action and inherited_ok else "FAIL"
+            rows.append({
+                "check_item": f"机械状态:{sid}",
+                "status": status,
+                "detail": (
+                    f"solve_status=NOT_REQUIRED; reason={reason}; "
+                    f"mechanical_state_action={action}; inherited_unchanged={inherited_ok}"
+                ),
+                "fallback_action": (
+                    "无需LCP；保留状态链和机械状态语义"
+                    if status == "PASS" else
+                    "修复NOT_REQUIRED父机械状态继承"
+                ),
+                "required_data": "parent_state_id、active_index_mask、父机械响应",
+            })
+            continue
         gap_v = sol.residuals.get('gap_violation', 0.0)
         comp = sol.residuals.get('complementarity_residual', 0.0)
         it = sol.iteration_count

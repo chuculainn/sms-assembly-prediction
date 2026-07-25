@@ -17,6 +17,17 @@ from core.data_loader import load_package, detect_package_type
 from core.validation import validate_package
 from core.package_validator import data_truthfulness_statement, has_blocking_failures
 from core.reporting import build_runtime_report_zip, coupling_ablation_export, runtime_state_lineage
+from core.topology_step import (
+    connection_lock_history_table,
+    release_history_table,
+    topology_step_contact_summary_table,
+    topology_step_execution_table,
+    topology_step_operator_usage_table,
+    topology_step_state_lineage_table,
+    topology_step_table,
+    uses_precomputed_topology_operators,
+    validate_topology_steps,
+)
 from core.stage_state import stage_transition_runtime_table
 from core.stage_solver import run_all_stages, point_result_table, stage_summary_table, build_stage_vectors
 from core.kcp import extract_kcp, compare_validation
@@ -236,9 +247,22 @@ def sync_widget_value(source_key: str, target_key: str) -> None:
     st.session_state[target_key] = st.session_state[source_key]
 
 
-def slider_with_number(label: str, min_value: float, max_value: float, default: float, step: float, *, key: str, fmt: str = '%.2f') -> float:
+def slider_with_number(
+    label: str,
+    min_value: float,
+    max_value: float,
+    default: float,
+    step: float,
+    *,
+    key: str,
+    fmt: str = '%.2f',
+    disabled: bool = False,
+) -> float:
     slider_key = f'{key}_slider'
     number_key = f'{key}_number'
+    if disabled:
+        st.session_state[slider_key] = default
+        st.session_state[number_key] = default
     if slider_key not in st.session_state:
         st.session_state[slider_key] = default
     if number_key not in st.session_state:
@@ -247,12 +271,13 @@ def slider_with_number(label: str, min_value: float, max_value: float, default: 
     left, right = st.columns([3, 1])
     with left:
         st.slider(label, min_value=min_value, max_value=max_value, step=step, key=slider_key,
-                  on_change=sync_widget_value, args=(slider_key, number_key))
+                  on_change=sync_widget_value, args=(slider_key, number_key), disabled=disabled)
     with right:
         st.number_input('数值', min_value=min_value, max_value=max_value, step=step, format=fmt,
                         key=number_key, label_visibility='collapsed',
-                        on_change=sync_widget_value, args=(number_key, slider_key))
-    return float(st.session_state[number_key])
+                        on_change=sync_widget_value, args=(number_key, slider_key),
+                        disabled=disabled)
+    return default if disabled else float(st.session_state[number_key])
 
 
 def safe_read_csv(path: Path) -> pd.DataFrame | None:
@@ -262,6 +287,12 @@ def safe_read_csv(path: Path) -> pd.DataFrame | None:
 
 
 def stage_format(pkg, stage_id: str) -> str:
+    route = topology_step_table(pkg)
+    if not route.empty and 'topology_step_id' in route.columns:
+        step = route.loc[route['topology_step_id'].astype(str) == str(stage_id)]
+        if not step.empty:
+            row = step.iloc[0]
+            return f"{stage_id} - {row['operation_type']} / {row.get('assembly_cycle_id', '')}"
     row = pkg.stage_plan.loc[pkg.stage_plan['stage_id'] == stage_id]
     if row.empty:
         return stage_id
@@ -499,38 +530,60 @@ with st.sidebar:
         data_dir = st.text_input('手动目录路径', data_dir)
         st.caption(f'自动识别类型：{detect_package_type(data_dir)}')
 
+    try:
+        pkg = load_package(data_dir)
+    except Exception as exc:
+        st.error(f'数据包加载失败：{exc}')
+        st.stop()
+    precomputed_topology_mode = uses_precomputed_topology_operators(pkg)
+
     st.divider()
-    sms_scale = slider_with_number('SMS 形貌倍率', 0.10, 2.50, 1.00, 0.01, key='sms_scale')
-    closure_scale = slider_with_number('阶段闭合/载荷倍率', 0.10, 2.50, 1.00, 0.01, key='closure_scale')
-    cn_scale = slider_with_number('局部界面柔度 Cn 倍率', 0.10, 4.00, 1.00, 0.01, key='cn_scale')
+    if precomputed_topology_mode:
+        st.info(
+            '当前为预计算 topology_step 算子模式，本倍率不会重构 q/W/Cn，因此已禁用。'
+        )
+    sms_scale = slider_with_number(
+        'SMS 形貌倍率', 0.10, 2.50, 1.00, 0.01, key='sms_scale',
+        disabled=precomputed_topology_mode,
+    )
+    closure_scale = slider_with_number(
+        '阶段闭合/载荷倍率', 0.10, 2.50, 1.00, 0.01, key='closure_scale',
+        disabled=precomputed_topology_mode,
+    )
+    cn_scale = slider_with_number(
+        '局部界面柔度 Cn 倍率', 0.10, 4.00, 1.00, 0.01, key='cn_scale',
+        disabled=precomputed_topology_mode,
+    )
     eps = st.number_input('互补容差 eps', value=1e-9, format='%.1e')
     st.button('重新运行', type='primary')
 
-try:
-    pkg = load_package(data_dir)
-except Exception as exc:
-    st.error(f'数据包加载失败：{exc}')
-    st.stop()
-
 with st.sidebar.expander('数值替代模块', expanded=False):
-    sub_enabled = st.checkbox('启用数值替代模块参与求解', value=False)
-    sub_mode_label = st.selectbox('Cn装配方式', ['使用原始Cn', '用数值替代Cn替换', '原始Cn + 数值替代附加项'])
+    sub_enabled = st.checkbox(
+        '启用数值替代模块参与求解', value=False,
+        disabled=precomputed_topology_mode,
+    )
+    sub_mode_label = st.selectbox(
+        'Cn装配方式', ['使用原始Cn', '用数值替代Cn替换', '原始Cn + 数值替代附加项'],
+        disabled=precomputed_topology_mode,
+    )
     sub_mode = {'使用原始Cn': 'base_only', '用数值替代Cn替换': 'replace', '原始Cn + 数值替代附加项': 'add'}[sub_mode_label]
     st.caption('建议先用“替换”检查数值模块本身，再用“叠加”验证是否存在重复柔度。')
-    use_partition = st.checkbox('分区等效 Cn', value=True)
-    use_layer = st.checkbox('薄层/涂层柔度', value=True)
-    use_rough = st.checkbox('粗糙接触柔度', value=True)
-    use_indent = st.checkbox('局部压陷柔度', value=True)
-    use_locator = st.checkbox('定位器等效柔度', value=True)
-    use_clamp = st.checkbox('夹持头等效柔度', value=True)
-    use_joint = st.checkbox('连接区等效柔度', value=True)
-    use_release = st.checkbox('释放回弹增量', value=True)
-    scale_partition = st.number_input('分区Cn倍率', value=1.0, step=0.05, format='%.2f')
-    scale_layer = st.number_input('薄层倍率', value=1.0, step=0.05, format='%.2f')
-    scale_rough = st.number_input('粗糙接触倍率', value=1.0, step=0.05, format='%.2f')
-    scale_indent = st.number_input('局部压陷倍率', value=1.0, step=0.05, format='%.2f')
-    scale_fixture = st.number_input('定位/夹持/连接倍率', value=1.0, step=0.05, format='%.2f')
-    scale_release = st.number_input('释放回弹倍率', value=1.0, step=0.05, format='%.2f')
+    use_partition = st.checkbox('分区等效 Cn', value=True, disabled=precomputed_topology_mode)
+    use_layer = st.checkbox('薄层/涂层柔度', value=True, disabled=precomputed_topology_mode)
+    use_rough = st.checkbox('粗糙接触柔度', value=True, disabled=precomputed_topology_mode)
+    use_indent = st.checkbox('局部压陷柔度', value=True, disabled=precomputed_topology_mode)
+    use_locator = st.checkbox('定位器等效柔度', value=True, disabled=precomputed_topology_mode)
+    use_clamp = st.checkbox('夹持头等效柔度', value=True, disabled=precomputed_topology_mode)
+    use_joint = st.checkbox('连接区等效柔度', value=True, disabled=precomputed_topology_mode)
+    use_release = st.checkbox('释放回弹增量', value=True, disabled=precomputed_topology_mode)
+    scale_partition = st.number_input('分区Cn倍率', value=1.0, step=0.05, format='%.2f', disabled=precomputed_topology_mode)
+    scale_layer = st.number_input('薄层倍率', value=1.0, step=0.05, format='%.2f', disabled=precomputed_topology_mode)
+    scale_rough = st.number_input('粗糙接触倍率', value=1.0, step=0.05, format='%.2f', disabled=precomputed_topology_mode)
+    scale_indent = st.number_input('局部压陷倍率', value=1.0, step=0.05, format='%.2f', disabled=precomputed_topology_mode)
+    scale_fixture = st.number_input('定位/夹持/连接倍率', value=1.0, step=0.05, format='%.2f', disabled=precomputed_topology_mode)
+    scale_release = st.number_input('释放回弹倍率', value=1.0, step=0.05, format='%.2f', disabled=precomputed_topology_mode)
+    if precomputed_topology_mode:
+        sub_enabled = False
 
 substitution_settings = NumericalSubstitutionSettings(
     enabled=sub_enabled, mode=sub_mode,
@@ -543,22 +596,27 @@ substitution_settings = NumericalSubstitutionSettings(
 
 with st.sidebar.expander('v5 高级模块', expanded=False):
     st.markdown('**S03/S04 SMS更新与G映射**')
-    sms_map_enabled = st.checkbox('用 SMS 点/KCM 实时重建 g0', value=False)
-    sms_map_method_label = st.selectbox('SMS映射方法', ['WLS/MAP低阶基', 'IDW散点插值'])
+    sms_map_enabled = st.checkbox('用 SMS 点/KCM 实时重建 g0', value=False, disabled=precomputed_topology_mode)
+    sms_map_method_label = st.selectbox('SMS映射方法', ['WLS/MAP低阶基', 'IDW散点插值'], disabled=precomputed_topology_mode)
     sms_map_method = {'WLS/MAP低阶基': 'wls_basis', 'IDW散点插值': 'idw'}[sms_map_method_label]
-    sms_ridge = st.number_input('WLS/MAP正则λ', value=1e-6, format='%.1e')
+    sms_ridge = st.number_input('WLS/MAP正则λ', value=1e-6, format='%.1e', disabled=precomputed_topology_mode)
 
     st.markdown('**S17 法向-切向NCP**')
-    tangent_enabled = st.checkbox('启用Ct/μ切向摩擦投影', value=False)
-    tangent_scale = st.number_input('切向自由滑移倍率', value=1.0, min_value=0.0, max_value=10.0, step=0.05, format='%.2f')
+    tangent_enabled = st.checkbox('启用Ct/μ切向摩擦投影', value=False, disabled=precomputed_topology_mode)
+    tangent_scale = st.number_input('切向自由滑移倍率', value=1.0, min_value=0.0, max_value=10.0, step=0.05, format='%.2f', disabled=precomputed_topology_mode)
 
     st.markdown('**S20 N-2-1扩展LCP**')
-    oc_enabled = st.checkbox('启用扩展LCP参与阶段求解', value=False)
-    oc_coupling = st.number_input('扩展约束-接触耦合系数', value=0.05, min_value=0.0, max_value=0.5, step=0.01, format='%.2f')
-    oc_scale_gap = st.number_input('扩展约束闭合倍率', value=1.0, min_value=0.0, max_value=5.0, step=0.05, format='%.2f')
+    oc_enabled = st.checkbox('启用扩展LCP参与阶段求解', value=False, disabled=precomputed_topology_mode)
+    oc_coupling = st.number_input('扩展约束-接触耦合系数', value=0.05, min_value=0.0, max_value=0.5, step=0.01, format='%.2f', disabled=precomputed_topology_mode)
+    oc_scale_gap = st.number_input('扩展约束闭合倍率', value=1.0, min_value=0.0, max_value=5.0, step=0.05, format='%.2f', disabled=precomputed_topology_mode)
 
     st.markdown('**S28 适用域与回退判断**')
     fallback_enabled = st.checkbox('启用适用域/回退质量门', value=True)
+
+if precomputed_topology_mode:
+    sms_map_enabled = False
+    tangent_enabled = False
+    oc_enabled = False
 
 sms_mapping_settings = SMSMappingSettings(enabled=sms_map_enabled, method=sms_map_method, ridge_lambda=sms_ridge)
 overconstraint_settings = OverConstraintSettings(enabled=oc_enabled, coupling_ratio=oc_coupling, scale_gap_effect=oc_scale_gap)
@@ -645,7 +703,7 @@ TABS = [
     '④ SMS与初始间隙',
     '⑤ 接触域与候选点',
     '⑥ 界面参数库/数值替代',
-    '⑦ 四阶段接触求解',
+    '⑦ topology_step / 四阶段兼容接触求解',
     '⑧ 物理一致性检查',
     '⑨ N-2-1扩展检查',
     '⑩ KCP预测与贡献',
@@ -983,17 +1041,20 @@ if active_page == TABS[5]:
         st.info('试算后可把结果写入 I_substitution/partition_cn.csv、local_indent.csv，或写入 interface_parameter.csv。')
 
 if active_page == TABS[6]:
-    st.subheader('LOCATE → CLAMP → JOIN → RELEASE 四阶段 LCP 求解')
+    st.subheader('确定性 topology_step / 兼容四阶段 LCP 求解')
     st.dataframe(zh_df(stage_summary), width='stretch', hide_index=True)
-    final_row = stage_summary[stage_summary['stage_id'] == 'S_RELEASE_04'].iloc[0]
+    release_rows = stage_summary[stage_summary['stage_name'].astype(str).str.upper().eq('RELEASE')]
+    join_rows = stage_summary[stage_summary['stage_name'].astype(str).str.upper().eq('JOIN')]
+    final_row = release_rows.iloc[-1] if not release_rows.empty else stage_summary.iloc[-1]
+    final_join = join_rows.iloc[-1] if not join_rows.empty else stage_summary.iloc[-1]
     metric_cols = st.columns(4)
-    metric_cols[0].metric('RELEASE主动接触点', int(final_row['active_count']))
-    metric_cols[1].metric('RELEASE最小间隙/mm', f"{final_row['gap_min_mm']:.5f}")
-    metric_cols[2].metric('JOIN最大压力/MPa', f"{stage_summary.loc[stage_summary.stage_id=='S_JOIN_03','pressure_max_MPa'].iloc[0]:.5f}")
+    metric_cols[0].metric('最终RELEASE主动接触点', int(final_row['active_count']))
+    metric_cols[1].metric('最终RELEASE最小间隙/mm', f"{final_row['gap_min_mm']:.5f}")
+    metric_cols[2].metric('最终JOIN最大压力/MPa', f"{final_join['pressure_max_MPa']:.5f}")
     metric_cols[3].metric('最大互补残差', f"{stage_summary['complementarity_residual'].max():.2e}")
 
-    selected_stage = st.selectbox('查看阶段接触点结果', stage_summary['stage_id'].tolist(), format_func=lambda s: stage_format(pkg, s), key='solve_stage')
-    df_stage = point_results[point_results['stage_id'] == selected_stage]
+    selected_stage = st.selectbox('查看 topology_step 接触点结果', list(result), format_func=lambda s: stage_format(pkg, s), key='solve_stage')
+    df_stage = point_results[point_results['topology_step_id'].astype(str).eq(str(result[selected_stage].get('topology_step_id', selected_stage)))]
     c1, c2 = st.columns([1.15, 1])
     with c1:
         st.dataframe(zh_df(df_stage), width='stretch', hide_index=True)
@@ -1008,7 +1069,7 @@ if active_page == TABS[6]:
 
     if is_multi_part_package(pkg) and not interface_results.empty:
         st.markdown('**逐接口阶段状态（由同一次全局耦合解分块汇总）**')
-        interface_stage_df = interface_results[interface_results['stage_id'] == selected_stage]
+        interface_stage_df = interface_stage_state_table(pkg, result, selected_stage)
         st.dataframe(zh_df(interface_stage_df), width='stretch', hide_index=True)
         interface_chart = alt.Chart(interface_stage_df).mark_bar().encode(
             x=alt.X('interface_id:N', title='接口'),
@@ -1155,7 +1216,7 @@ if active_page == TABS[8]:
     d12_df = pd.DataFrame([{'D12对象': k, '状态': 'FOUND' if v.exists() else 'MISSING', '路径': str(v)} for k, v in d12_files.items()])
     st.dataframe(d12_df, width='stretch', hide_index=True)
 
-    selected_stage_ext = st.selectbox('选择扩展LCP阶段', stage_summary['stage_id'].tolist(), format_func=lambda s: stage_format(pkg, s), key='n21_stage')
+    selected_stage_ext = st.selectbox('选择扩展LCP topology_step', list(result), format_func=lambda s: stage_format(pkg, s), key='n21_stage')
     ext = result[selected_stage_ext].get('extended_lcp')
     if ext is not None and ext.get('enabled', False):
         e1, e2, e3, e4 = st.columns(4)
@@ -1329,66 +1390,79 @@ if active_page == TABS[9]:
 
 if active_page == TABS[10]:
     st.subheader('Monte Carlo统计预测与单因素敏感性')
-    defaults = distribution_defaults(pkg)
-    st.markdown('**分布参数**')
-    col1, col2, col3, col4 = st.columns(4)
-    n_mc = col1.number_input('样本数 N_MC', min_value=10, max_value=2000, value=100, step=10)
-    seed = col2.number_input('随机种子', min_value=0, value=20260708, step=1)
-    mc_sms_std = col3.number_input('SMS倍率标准差', min_value=0.0, value=float(defaults['sms_scale'][1]), step=0.01, format='%.3f')
-    mc_closure_std = col4.number_input('闭合倍率标准差', min_value=0.0, value=float(defaults['closure_scale'][1]), step=0.01, format='%.3f')
-    col5, col6 = st.columns(2)
-    mc_cn_std = col5.number_input('Cn倍率标准差', min_value=0.0, value=float(defaults['cn_scale'][1]), step=0.01, format='%.3f')
-    run_mc = col6.button('运行 Monte Carlo', type='primary')
-
-    if run_mc or 'mc_samples' not in st.session_state:
-        means_stds = {
-            'sms_scale': (sms_scale, mc_sms_std),
-            'closure_scale': (closure_scale, mc_closure_std),
-            'cn_scale': (cn_scale, mc_cn_std),
-        }
-        samples, stats = run_monte_carlo(pkg, int(n_mc), int(seed), means_stds, eps=eps, substitution_settings=substitution_settings, sms_mapping_settings=sms_mapping_settings, overconstraint_settings=overconstraint_settings, tangential_settings=tangential_settings)
-        st.session_state['mc_samples'] = samples
-        st.session_state['mc_stats'] = stats
-    else:
-        samples, stats = st.session_state['mc_samples'], st.session_state['mc_stats']
-
-    st.markdown('**统计结果**')
-    st.dataframe(zh_df(stats), width='stretch', hide_index=True)
-    kcp_cols = [c for c in samples.columns if c.startswith('KCP_')]
-    selected_kcp = st.selectbox('查看KCP分布', kcp_cols, key='mc_kcp') if kcp_cols else None
-    if selected_kcp:
-        hist = alt.Chart(samples).mark_bar().encode(
-            x=alt.X(f'{selected_kcp}:Q', bin=alt.Bin(maxbins=24), title=selected_kcp),
-            y=alt.Y('count()', title='样本数'),
-            tooltip=[alt.Tooltip('count()', title='样本数')]
-        ).properties(height=320)
-        st.altair_chart(hist, width='stretch')
-
-    with st.expander('查看 Monte Carlo 样本明细', expanded=False):
-        st.dataframe(zh_df(samples), width='stretch', hide_index=True)
-        st.download_button(
-            '下载逐次Monte Carlo KCP预测CSV',
-            zh_df(samples).to_csv(index=False).encode('utf-8-sig'),
-            file_name='monte_carlo_samples_zh.csv',
-            mime='text/csv',
+    if precomputed_topology_mode:
+        st.info(
+            '当前为预计算 topology_step 算子模式，本倍率不会重构 q/W/Cn，因此已禁用。'
+            '本轮不对该模式执行基于这些倍率的 Monte Carlo 或单因素敏感性扫描。'
         )
+        st.dataframe(
+            topology_step_execution_table(result)[
+                ['topology_step_id', 'operator_source', 'parameter_effective', 'parameter_mode']
+            ],
+            width='stretch',
+            hide_index=True,
+        )
+    else:
+        defaults = distribution_defaults(pkg)
+        st.markdown('**分布参数**')
+        col1, col2, col3, col4 = st.columns(4)
+        n_mc = col1.number_input('样本数 N_MC', min_value=10, max_value=2000, value=100, step=10)
+        seed = col2.number_input('随机种子', min_value=0, value=20260708, step=1)
+        mc_sms_std = col3.number_input('SMS倍率标准差', min_value=0.0, value=float(defaults['sms_scale'][1]), step=0.01, format='%.3f')
+        mc_closure_std = col4.number_input('闭合倍率标准差', min_value=0.0, value=float(defaults['closure_scale'][1]), step=0.01, format='%.3f')
+        col5, col6 = st.columns(2)
+        mc_cn_std = col5.number_input('Cn倍率标准差', min_value=0.0, value=float(defaults['cn_scale'][1]), step=0.01, format='%.3f')
+        run_mc = col6.button('运行 Monte Carlo', type='primary')
 
-    st.markdown('**单因素敏感性扫描**')
-    s1, s2, s3 = st.columns(3)
-    var = s1.selectbox('扫描变量', ['sms_scale', 'closure_scale', 'cn_scale'], format_func=lambda v: {'sms_scale': 'SMS倍率', 'closure_scale': '闭合/载荷倍率', 'cn_scale': 'Cn倍率'}[v])
-    v_min = s2.number_input('最小值', value=0.70, step=0.05, format='%.2f')
-    v_max = s3.number_input('最大值', value=1.30, step=0.05, format='%.2f')
-    values = np.linspace(float(v_min), float(v_max), 9).round(4).tolist()
-    sweep = one_factor_sweep(pkg, var, values, {'sms_scale': sms_scale, 'closure_scale': closure_scale, 'cn_scale': cn_scale}, eps=eps, substitution_settings=substitution_settings, sms_mapping_settings=sms_mapping_settings, overconstraint_settings=overconstraint_settings, tangential_settings=tangential_settings)
-    st.dataframe(zh_df(sweep), width='stretch', hide_index=True)
-    if kcp_cols:
-        kcp_for_sweep = st.selectbox('敏感性曲线KCP', kcp_cols, key='sweep_kcp')
-        line = alt.Chart(sweep).mark_line(point=True).encode(
-            x=alt.X('value:Q', title='变量值'),
-            y=alt.Y(f'{kcp_for_sweep}:Q', title=kcp_for_sweep),
-            tooltip=['variable', 'value', kcp_for_sweep]
-        ).properties(height=320)
-        st.altair_chart(line, width='stretch')
+        if run_mc or 'mc_samples' not in st.session_state:
+            means_stds = {
+                'sms_scale': (sms_scale, mc_sms_std),
+                'closure_scale': (closure_scale, mc_closure_std),
+                'cn_scale': (cn_scale, mc_cn_std),
+            }
+            samples, stats = run_monte_carlo(pkg, int(n_mc), int(seed), means_stds, eps=eps, substitution_settings=substitution_settings, sms_mapping_settings=sms_mapping_settings, overconstraint_settings=overconstraint_settings, tangential_settings=tangential_settings)
+            st.session_state['mc_samples'] = samples
+            st.session_state['mc_stats'] = stats
+        else:
+            samples, stats = st.session_state['mc_samples'], st.session_state['mc_stats']
+
+        st.markdown('**统计结果**')
+        st.dataframe(zh_df(stats), width='stretch', hide_index=True)
+        kcp_cols = [c for c in samples.columns if c.startswith('KCP_')]
+        selected_kcp = st.selectbox('查看KCP分布', kcp_cols, key='mc_kcp') if kcp_cols else None
+        if selected_kcp:
+            hist = alt.Chart(samples).mark_bar().encode(
+                x=alt.X(f'{selected_kcp}:Q', bin=alt.Bin(maxbins=24), title=selected_kcp),
+                y=alt.Y('count()', title='样本数'),
+                tooltip=[alt.Tooltip('count()', title='样本数')]
+            ).properties(height=320)
+            st.altair_chart(hist, width='stretch')
+
+        with st.expander('查看 Monte Carlo 样本明细', expanded=False):
+            st.dataframe(zh_df(samples), width='stretch', hide_index=True)
+            st.download_button(
+                '下载逐次Monte Carlo KCP预测CSV',
+                zh_df(samples).to_csv(index=False).encode('utf-8-sig'),
+                file_name='monte_carlo_samples_zh.csv',
+                mime='text/csv',
+            )
+
+        st.markdown('**单因素敏感性扫描**')
+        s1, s2, s3 = st.columns(3)
+        var = s1.selectbox('扫描变量', ['sms_scale', 'closure_scale', 'cn_scale'], format_func=lambda v: {'sms_scale': 'SMS倍率', 'closure_scale': '闭合/载荷倍率', 'cn_scale': 'Cn倍率'}[v])
+        v_min = s2.number_input('最小值', value=0.70, step=0.05, format='%.2f')
+        v_max = s3.number_input('最大值', value=1.30, step=0.05, format='%.2f')
+        values = np.linspace(float(v_min), float(v_max), 9).round(4).tolist()
+        sweep = one_factor_sweep(pkg, var, values, {'sms_scale': sms_scale, 'closure_scale': closure_scale, 'cn_scale': cn_scale}, eps=eps, substitution_settings=substitution_settings, sms_mapping_settings=sms_mapping_settings, overconstraint_settings=overconstraint_settings, tangential_settings=tangential_settings)
+        st.dataframe(zh_df(sweep), width='stretch', hide_index=True)
+        if kcp_cols:
+            kcp_for_sweep = st.selectbox('敏感性曲线KCP', kcp_cols, key='sweep_kcp')
+            line = alt.Chart(sweep).mark_line(point=True).encode(
+                x=alt.X('value:Q', title='变量值'),
+                y=alt.Y(f'{kcp_for_sweep}:Q', title=kcp_for_sweep),
+                tooltip=['variable', 'value', kcp_for_sweep]
+            ).properties(height=320)
+            st.altair_chart(line, width='stretch')
 
 if active_page == TABS[11]:
     st.subheader('验证、报告导出与计算追溯')
@@ -1444,7 +1518,7 @@ if active_page == TABS[11]:
     mc_stats_for_zip = st.session_state.get('mc_stats') if isinstance(st.session_state.get('mc_stats'), pd.DataFrame) else None
     mc_samples_for_zip = st.session_state.get('mc_samples') if isinstance(st.session_state.get('mc_samples'), pd.DataFrame) else None
     coupling_export = pd.concat(
-        [coupling_block_summary(pkg, sid) for sid in pkg.stage_plan['stage_id'].astype(str)],
+        [coupling_block_summary(pkg, sid) for sid in result],
         ignore_index=True,
     ) if is_multi_part_package(pkg) else pd.DataFrame()
     report_zip = build_runtime_report_zip(
@@ -1481,6 +1555,17 @@ if active_page == TABS[11]:
         coupling_ablation_export(pkg, result).to_csv(run_dir / 'coupling_ablation_comparison.csv', index=False, encoding='utf-8-sig')
         runtime_state_lineage(result).to_csv(run_dir / 'state_lineage.csv', index=False, encoding='utf-8-sig')
         package_validation.to_csv(run_dir / 'validation_summary.csv', index=False, encoding='utf-8-sig')
+        topology_step_execution_table(result).to_csv(run_dir / 'topology_step_execution.csv', index=False, encoding='utf-8-sig')
+        validate_topology_steps(pkg).to_csv(run_dir / 'topology_step_validation.csv', index=False, encoding='utf-8-sig')
+        topology_step_execution_table(result)[[
+            'sample_id', 'topology_id', 'topology_step_id', 'step_order', 'result_subassembly_id',
+            'active_part_ids', 'active_interface_ids', 'active_joint_ids', 'active_boundary_ids', 'active_load_ids',
+        ]].to_csv(run_dir / 'active_subassembly_history.csv', index=False, encoding='utf-8-sig')
+        topology_step_state_lineage_table(result).to_csv(run_dir / 'topology_step_state_lineage.csv', index=False, encoding='utf-8-sig')
+        topology_step_operator_usage_table(result).to_csv(run_dir / 'topology_step_operator_usage.csv', index=False, encoding='utf-8-sig')
+        topology_step_contact_summary_table(result).to_csv(run_dir / 'topology_step_contact_summary.csv', index=False, encoding='utf-8-sig')
+        connection_lock_history_table(result).to_csv(run_dir / 'connection_lock_history.csv', index=False, encoding='utf-8-sig')
+        release_history_table(result).to_csv(run_dir / 'release_history.csv', index=False, encoding='utf-8-sig')
         (run_dir / 'data_truthfulness_statement.txt').write_text(truth_statement, encoding='utf-8')
         (run_dir / 'physical_consistency_overall.json').write_text(json.dumps(physical_report.get('overall', {}), ensure_ascii=False, indent=2), encoding='utf-8')
         for name in ['stage_summary', 'check_details', 'kcp_anomalies']:
@@ -1501,9 +1586,21 @@ if active_page == TABS[12]:
     t4.metric('共享零件', int(topo['shared_part_count']))
     t5.metric('共享柔性零件', int(topo['shared_flexible_part_count']))
 
+    route_table = topology_step_table(pkg)
+    st.markdown('**topology_step 工艺路线表**')
+    st.dataframe(zh_df(route_table), width='stretch', hide_index=True)
+    if not route_table.empty:
+        timeline = alt.Chart(route_table).mark_circle(size=180).encode(
+            x=alt.X('step_order:Q', title='step_order'),
+            y=alt.Y('assembly_cycle_id:N', title='assembly_cycle'),
+            color=alt.Color('operation_type:N', title='operation_type'),
+            tooltip=['topology_step_id', 'step_order', 'assembly_cycle_id', 'operation_type', 'result_subassembly_id'],
+        ).properties(height=220, title='确定性工艺路线时间轴')
+        st.altair_chart(timeline, width='stretch')
+
     top_left, top_right = st.columns([1, 1])
     topology_stage = top_left.selectbox(
-        '阶段选择', list(result), format_func=lambda value: stage_format(pkg, value), key='topology_stage'
+        'topology_step 选择', list(result), format_func=lambda value: stage_format(pkg, value), key='topology_stage'
     )
     kcp_options = ['（不高亮KCP）'] + kcp['kcp_id'].astype(str).tolist()
     selected_kcp_path = top_right.selectbox('KCP贡献路径高亮', kcp_options, key='topology_kcp')
@@ -1545,6 +1642,44 @@ if active_page == TABS[12]:
         detail = detail[detail['interface_id'].astype(str).eq(str(selected_interface))]
         st.markdown('**接口阶段详情**')
         st.dataframe(zh_df(detail), width='stretch', hide_index=True)
+
+    selected_result = result[topology_stage]
+    selected_spec = selected_result['topology_step_spec']
+    selected_state = selected_result['stage_state']
+    st.markdown('**步骤执行与追溯详情**')
+    detail_columns = st.columns(4)
+    detail_columns[0].metric('assembly_cycle', selected_state.assembly_cycle_id or '未声明')
+    detail_columns[1].metric('operation_type', selected_state.operation_type)
+    detail_columns[2].metric('solve_status', selected_result['solve_status'])
+    detail_columns[3].metric('LCP 调用次数', selected_result['lcp_call_count'])
+    st.dataframe(pd.DataFrame([{
+        'topology_step_id': topology_stage,
+        'parent_topology_step_id': selected_state.parent_topology_step_id or '',
+        'parent_state_id': selected_state.parent_stage_state_id or '',
+        'input_subassembly_id': selected_spec.input_subassembly_id or '',
+        'result_subassembly_id': selected_state.current_subassembly_id,
+        'added_part_ids': ';'.join(selected_spec.added_part_ids),
+        'activated_interface_ids': ';'.join(selected_spec.activated_interface_ids),
+        'deactivated_interface_ids': ';'.join(selected_spec.deactivated_interface_ids),
+        'activated_boundary_ids': ';'.join(selected_spec.activated_boundary_ids),
+        'deactivated_boundary_ids': ';'.join(selected_spec.deactivated_boundary_ids),
+        'activated_load_ids': ';'.join(selected_spec.activated_load_ids),
+        'removed_load_ids': ';'.join(selected_spec.removed_load_ids),
+        'activated_joint_ids': ';'.join(selected_spec.activated_joint_ids),
+        'active_interface_ids': ';'.join(selected_state.active_interface_ids),
+        'operator_set_id': selected_state.operator_set_id,
+        'operator_source': selected_state.operator_source,
+        'complementarity_residual': selected_result['solution'].residuals.get('complementarity_residual', 0.0),
+    }]), width='stretch', hide_index=True)
+    history_left, history_right = st.columns(2)
+    with history_left:
+        st.markdown('**JOIN 锁定历史**')
+        locks = connection_lock_history_table(result)
+        st.dataframe(zh_df(locks), width='stretch', hide_index=True) if not locks.empty else st.caption('当前步骤链尚无锁定记录。')
+    with history_right:
+        st.markdown('**RELEASE 继承记录**')
+        releases = release_history_table(result)
+        st.dataframe(zh_df(releases), width='stretch', hide_index=True) if not releases.empty else st.caption('当前步骤链尚无释放记录。')
 
     path_table = assembly_path_summary(pkg)
     path_tab, transition_tab, lineage_tab = st.tabs(['装配路径识别', '阶段前后状态变化', '运行时父状态链'])

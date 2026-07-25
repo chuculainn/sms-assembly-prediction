@@ -100,17 +100,80 @@ def stage_physical_consistency(
     settings = settings or PhysicalConsistencySettings()
     stage_rows: list[dict] = []
     detail_rows: list[dict] = []
+    result_by_step = {
+        str(res.get("topology_step_id", key)): res for key, res in result.items()
+    }
 
     for sid, res in result.items():
         sol = res["solution"]
-        lam = np.asarray(sol.lambda_n, dtype=float).reshape(-1)
-        gap = np.asarray(sol.gap_g, dtype=float).reshape(-1)
-        q = np.asarray(res.get("q", np.zeros_like(gap)), dtype=float).reshape(-1)
-        W = np.asarray(res.get("W_total", np.eye(gap.size)), dtype=float)
-        pressure = np.asarray(res.get("pressure", np.zeros_like(gap)), dtype=float).reshape(-1)
+        if str(res.get("solve_status", "")).upper() == "NOT_REQUIRED":
+            state = res.get("stage_state")
+            action = str(
+                getattr(state, "mechanical_state_action", "")
+                or res.get("mechanical_state_action", "")
+            )
+            reason = str(
+                getattr(state, "not_required_reason", "")
+                or res.get("not_required_reason", "")
+            )
+            parent_step_id = str(getattr(state, "parent_topology_step_id", "") or "")
+            inherited_ok = True
+            if action == "INHERIT_PARENT_UNCHANGED":
+                parent_result = result_by_step.get(parent_step_id)
+                inherited_ok = parent_result is not None and all(
+                    np.allclose(
+                        np.asarray(res[name], dtype=float),
+                        np.asarray(parent_result[name], dtype=float),
+                        equal_nan=True,
+                    )
+                    for name in ("lambda_full", "gap_full", "pressure", "local_compression")
+                )
+            status = (
+                "PASS"
+                if action in {"INITIALIZE_EMPTY", "INHERIT_PARENT_UNCHANGED"} and inherited_ok
+                else "FAIL"
+            )
+            detail_rows.append(_row(
+                sid, "mechanical_solve", "NOT_REQUIRED", "NOT_REQUIRED", status,
+                f"solve_status=NOT_REQUIRED; reason={reason}; mechanical_state_action={action}; "
+                f"inherited_unchanged={inherited_ok}",
+            ))
+            mask = np.asarray(res.get("active_index_mask", []), dtype=bool)
+            lam = np.asarray(res.get("lambda_full", sol.lambda_n), dtype=float)
+            active_count = len(getattr(state, "active_set", sol.active_indices))
+            stage_rows.append({
+                "stage_id": sid, "overall_status": status, "physics_status": status,
+                "contact_state": "NOT_REQUIRED", "contact_state_status": status,
+                "convergence_status": "NOT_REQUIRED", "active_count": active_count,
+                "active_ratio": active_count / int(mask.sum()) if mask.any() else 0.0,
+                "gap_min_mm": np.nan, "gap_violation_mm": 0.0, "lambda_min_N": 0.0,
+                "force_violation_N": 0.0, "lambda_sum_N": float(np.nansum(lam)),
+                "lambda_max_N": float(np.nanmax(lam)) if lam.size else 0.0,
+                "pressure_max_MPa": float(np.nanmax(res.get("pressure", [0.0])))
+                if np.isfinite(np.asarray(res.get("pressure", [0.0]), dtype=float)).any() else 0.0,
+                "complementarity_residual_Nmm": 0.0,
+                "equilibrium_residual_mm": 0.0,
+                "mechanical_state_action": action,
+                "not_required_reason": reason,
+            })
+            continue
+        if "lambda_active" in res and "gap_active" in res:
+            lam = np.asarray(res["lambda_active"], dtype=float).reshape(-1)
+            gap = np.asarray(res["gap_active"], dtype=float).reshape(-1)
+            q = np.asarray(res.get("q_active", np.zeros_like(gap)), dtype=float).reshape(-1)
+            W = np.asarray(res.get("W_active", np.eye(gap.size)), dtype=float)
+            full_pressure = np.asarray(res.get("pressure", np.zeros_like(sol.gap_g)), dtype=float).reshape(-1)
+            mask = np.asarray(res.get("active_index_mask", np.ones(full_pressure.size, dtype=bool)), dtype=bool)
+            pressure = full_pressure[mask]
+        else:
+            lam = np.asarray(sol.lambda_n, dtype=float).reshape(-1)
+            gap = np.asarray(sol.gap_g, dtype=float).reshape(-1)
+            q = np.asarray(res.get("q", np.zeros_like(gap)), dtype=float).reshape(-1)
+            W = np.asarray(res.get("W_total", np.eye(gap.size)), dtype=float)
+            pressure = np.asarray(res.get("pressure", np.zeros_like(gap)), dtype=float).reshape(-1)
 
         n = int(gap.size)
-        active_indices = _stage_indices_from_solution(sol, n)
+        active_indices = [int(i) for i in np.where(lam > 0.0)[0]]
         active_count = len(active_indices)
         active_ratio = active_count / n if n else np.nan
 

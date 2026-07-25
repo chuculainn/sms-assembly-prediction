@@ -1,0 +1,2 @@
+double_count_check_id,contribution_ledger_id,duplicate_source_ids,reference_state_conflicts,absolute_increment_conflicts,included_excluded_overlap,check_rules_version,pass_warn_fail,required_action,metadata
+DCC_MULTIPART,LEDGER_MULTIPART,,,,,V2.5_MULTIPART,PASS,NONE,"{""data_nature"":""SYNTHETIC_NUMERICAL_CONSISTENCY_CASE"",""engineering_claim_allowed"":false,""schema_version"":""V2.5"",""schema_revision"":""MULTI_PART_SERIAL_PARALLEL_2026-07""}"
