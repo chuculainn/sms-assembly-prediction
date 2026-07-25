@@ -144,25 +144,28 @@ def run_all_stages(
     overconstraint_settings: OverConstraintSettings | dict | None = None,
     tangential_settings: TangentialNCPSettings | dict | None = None,
 ) -> dict[str, dict]:
-    result: dict[str, dict] = {}
-    parent_state = None
-    for sid in get_stage_ids(pkg):
-        stage = run_stage(
-            pkg, sid,
-            sms_scale=sms_scale,
-            closure_scale=closure_scale,
-            cn_scale=cn_scale,
-            eps=eps,
-            substitution_settings=substitution_settings,
-            sms_mapping_settings=sms_mapping_settings,
-            overconstraint_settings=overconstraint_settings,
-            tangential_settings=tangential_settings,
-        )
-        stage_state = build_runtime_stage_state(pkg, stage, parent_state)
-        stage['stage_state'] = stage_state
-        result[sid] = stage
-        parent_state = stage_state
-    return result
+    """Compatibility entry point backed by the topology-step executor.
+
+    Legacy packages are returned with their historic ``stage_id`` keys so all
+    existing callers and numeric baselines remain stable.  A real route table
+    may repeat the same stage type and is therefore keyed by topology_step_id.
+    """
+    from .topology_step import run_topology_steps
+
+    step_result = run_topology_steps(
+        pkg,
+        sms_scale=sms_scale,
+        closure_scale=closure_scale,
+        cn_scale=cn_scale,
+        eps=eps,
+        substitution_settings=substitution_settings,
+        sms_mapping_settings=sms_mapping_settings,
+        overconstraint_settings=overconstraint_settings,
+        tangential_settings=tangential_settings,
+    )
+    if step_result and all(bool(item.get("fallback_flag")) for item in step_result.values()):
+        return {str(item["stage_id"]): item for item in step_result.values()}
+    return step_result
 
 
 def point_result_table(pkg: SMSPackage, result: dict[str, dict]) -> pd.DataFrame:
@@ -172,10 +175,11 @@ def point_result_table(pkg: SMSPackage, result: dict[str, dict]) -> pd.DataFrame
     ]
     base = pkg.contact_points[base_cols].copy()
     rows = []
-    for sid, res in result.items():
+    for result_key, res in result.items():
         sol: LCPSolution = res['solution']
         df = base.copy()
-        df['stage_id'] = sid
+        df['topology_step_id'] = res.get('topology_step_id', result_key)
+        df['stage_id'] = res.get('stage_id', result_key)
         df['stage_name'] = res['stage_name']
         df['q_free_gap_mm'] = res['q']
         df['gap_g_mm'] = sol.gap_g
@@ -192,26 +196,37 @@ def point_result_table(pkg: SMSPackage, result: dict[str, dict]) -> pd.DataFrame
 
 def stage_summary_table(result: dict[str, dict]) -> pd.DataFrame:
     rows = []
-    for sid, res in result.items():
+    for result_key, res in result.items():
         sol: LCPSolution = res['solution']
         pressure = res['pressure']
         gap = sol.gap_g
         comp = res['local_compression']
         ext = res.get('extended_lcp')
         tang = res.get('tangential_ncp')
+        active_mask = np.asarray(res.get('active_index_mask', np.ones(len(gap), dtype=bool)), dtype=bool)
+        denominator = int(active_mask.sum())
+        finite_pressure = pressure[np.isfinite(pressure)]
+        finite_gap = gap[np.isfinite(gap)]
+        finite_comp = comp[np.isfinite(comp)]
         rows.append({
-            'stage_id': sid,
+            'topology_step_id': res.get('topology_step_id', result_key),
+            'stage_id': res.get('stage_id', result_key),
             'stage_name': res['stage_name'],
             'active_count': len(sol.active_indices),
-            'active_ratio': len(sol.active_indices) / len(gap),
+            'active_ratio': len(sol.active_indices) / denominator if denominator else 0.0,
+            'active_index_count': denominator,
+            'active_interface_count': len(res.get('active_interface_ids', [])),
             'lambda_sum_N': float(sol.lambda_n.sum()),
             'lambda_max_N': float(np.max(sol.lambda_n)) if sol.lambda_n.size else 0.0,
-            'pressure_max_MPa': float(np.max(pressure)) if pressure.size else 0.0,
-            'gap_min_mm': float(np.min(gap)) if gap.size else np.nan,
-            'gap_mean_mm': float(np.mean(gap)) if gap.size else np.nan,
-            'compression_mean_mm': float(np.mean(comp)) if comp.size else np.nan,
+            'pressure_max_MPa': float(np.max(finite_pressure)) if finite_pressure.size else 0.0,
+            'gap_min_mm': float(np.min(finite_gap)) if finite_gap.size else np.nan,
+            'gap_mean_mm': float(np.mean(finite_gap)) if finite_gap.size else np.nan,
+            'compression_mean_mm': float(np.mean(finite_comp)) if finite_comp.size else np.nan,
             'iteration_count': sol.iteration_count,
             'convergence_status': sol.convergence_status,
+            'solve_status': res.get('solve_status', sol.convergence_status),
+            'operator_source': res.get('operator_source', ''),
+            'lcp_call_count': res.get('lcp_call_count', 1),
             'extended_element_count': int(ext.get('extended_count', 0)) if ext is not None else 0,
             'extended_lambda_sum_N': float(np.sum(ext.get('extra_lambda', []))) if ext is not None else 0.0,
             'tangential_slip_count': int((tang['stick_slip_state'] == 'slip').sum()) if tang is not None and not tang.empty else 0,

@@ -17,6 +17,15 @@ from .multi_part import (
 from .package_validator import data_truthfulness_statement, validate_package_detailed
 from .stage_solver import point_result_table, stage_summary_table
 from .stage_state import stage_transition_runtime_table
+from .topology_step import (
+    connection_lock_history_table,
+    release_history_table,
+    topology_step_contact_summary_table,
+    topology_step_execution_table,
+    topology_step_operator_usage_table,
+    topology_step_state_lineage_table,
+    validate_topology_steps,
+)
 
 
 def runtime_state_lineage(result: dict[str, dict]) -> pd.DataFrame:
@@ -35,6 +44,8 @@ def coupling_ablation_export(pkg: SMSPackage, result: dict[str, dict], threshold
     if pkg.raw_tables.get("matrices/vector_layout.csv", pd.DataFrame()).empty:
         return pd.DataFrame()
     for stage_id in result:
+        if not bool(pd.Series(result[stage_id].get("active_index_mask", [])).all()):
+            continue
         try:
             rows.append(coupling_ablation_comparison(pkg, result, stage_id, threshold)["summary"])
         except (KeyError, ValueError):
@@ -66,6 +77,20 @@ def build_runtime_report_zip(
     validation_summary = validate_package_detailed(pkg)
     ablation = coupling_ablation_export(pkg, result, ablation_threshold)
     truth = data_truthfulness_statement(pkg)
+    step_execution = topology_step_execution_table(result)
+    step_validation = validate_topology_steps(pkg)
+    subassembly_history = step_execution[[
+        column for column in (
+            "sample_id", "topology_id", "topology_step_id", "step_order",
+            "result_subassembly_id", "active_part_ids", "active_interface_ids",
+            "active_joint_ids", "active_boundary_ids", "active_load_ids",
+        ) if column in step_execution.columns
+    ]].copy()
+    step_lineage = topology_step_state_lineage_table(result)
+    operator_usage = topology_step_operator_usage_table(result)
+    step_contact = topology_step_contact_summary_table(result)
+    lock_history = connection_lock_history_table(result)
+    release_history = release_history_table(result)
 
     buf = BytesIO()
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as archive:
@@ -81,6 +106,14 @@ def build_runtime_report_zip(
             "coupling_ablation_comparison.csv": ablation,
             "state_lineage.csv": lineage,
             "validation_summary.csv": validation_summary,
+            "topology_step_execution.csv": step_execution,
+            "topology_step_validation.csv": step_validation,
+            "active_subassembly_history.csv": subassembly_history,
+            "topology_step_state_lineage.csv": step_lineage,
+            "topology_step_operator_usage.csv": operator_usage,
+            "topology_step_contact_summary.csv": step_contact,
+            "connection_lock_history.csv": lock_history,
+            "release_history.csv": release_history,
         }
         for name, frame in csvs.items():
             archive.writestr(name, frame.to_csv(index=False).encode("utf-8-sig"))

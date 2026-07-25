@@ -2,6 +2,20 @@
 
 ## 本次已实现
 
+### topology_step 确定性多轮升级
+
+- `run_all_stages(...)` 保持为兼容入口，内部统一调用 `run_topology_steps(...)`。真实路线以 `topology_step_id` 为结果键，不再用重复的 stage 类型充当步骤身份。
+- `I0/assembly_topology.csv` 经 schema adapter 解析为 `TopologyStepSpec`；分号多值字段在执行前转换为 ID 元组。
+- 每一步从不可变父状态快照出发，动态增删零件、接口、边界、载荷和连接；已有零件继承装配状态，仅新加入零件读取其装配前 SMS，初始化次数保持 1。
+- 活动索引由公共 VectorLayout 中全部活动接口块的并集形成，使用 `np.ix_` 从完整 `W_total` 提取子矩阵，保留所有活动接口交叉块；每个 `solve_required=true` 步骤恰好调用一次全局 LCP。
+- JOIN 每步生成一条唯一 `ConnectionLockHistory`，即使同时锁定多个 joint；RELEASE 读取并继承此前全部锁定历史，按 `retention_rule` 保留连接后重新统一求解。
+- 无父状态 INIT 生成 `INITIALIZE_EMPTY`；有父状态的非求解事件生成 `INHERIT_PARENT_UNCHANGED`，保留父机械向量、接触模式、结构响应、活动 mask 和连接状态，不重新调用 LCP。fallback/物理一致性门把 `NOT_REQUIRED` 作为合法状态事件，而不是 SKIP 或 LCP 失败。
+- RELEASE 的连接集合按“父集合 → 本步激活 → 显式停用 → 对其余 joint 应用 retention_rule”计算。显式停用优先；支持 `RETAIN_THROUGH_RELEASE` 与 `REMOVE_AT_RELEASE`，未知值阻断。
+- 没有真实 topology_step 表的旧包显式转换为 `LEGACY_TS_LOCATE/CLAMP/JOIN/RELEASE`，数值结果与原 `run_stage` 路径等价，并标明兼容回退。
+- 新增 `02_TOPOLOGY_STEP_MIN_CASE` 合成一致性包和独立主动集枚举 LCP oracle；没有修改原六个数据包。
+- 新包生成器每次从模板完整重建校验器、字段字典、对象映射、oracle 与验证附件，不复制旧包统计。当前包内自校验 22/22 PASS，MatrixManifest/NPZ 均为 156 个 key。
+- 预计算 topology_step 算子模式禁用不会重构 q/W/Cn 的倍率及高级重构控件，报告记录 `parameter_effective=false`；Legacy 模式的有效倍率保留。
+
 1. 自动识别 `multi_part_matrices.npz`，数据包类型为 `V25_MULTI_PART`。
 2. 从多个 GapField 按 `contact_domain_id + local_index` 组装全局接触向量。
 3. 优先读取 `StageDefinition`，避免 AssemblyTopology 中同一阶段的多个拓扑步骤被误当成重复求解阶段。
@@ -24,6 +38,12 @@
 20. `contact_structural_response` 只表示接触坐标下的结构柔性响应，不代表全阶阶段位移或完整零件自由度响应。
 
 ## 当前实现边界
+
+- topology_step 路线是单条、确定性、线性有序路线；没有条件分支、返修、并行调度、实测触发切换或动态重规划。
+- 每步的 `q/U_FREE/W_struct/Cn` 来自数据包预计算算子，软件没有在线调用全阶 FE，也没有从全阶 K 自动 Schur 凝聚。
+- 本轮没有实现阶段实测后验更新、后续虚拟 SMS 滚动预测或未来场景 Monte Carlo；仓库既有 Monte Carlo 原型保持兼容，但不属于本执行器的新能力。
+- 预计算 topology_step 模式不运行基于无效倍率的 Monte Carlo/单因素敏感性；本轮没有实现步骤算子在线重构。
+- `02_TOPOLOGY_STEP_MIN_CASE` 是合成数值一致性案例，不是工程验证数据；不得据此宣称 KCP 预测精度或生产级数字孪生能力。
 
 - 软件已建立运行时父状态对象、阶段增量、边界/载荷变化和连接锁定继承；但各阶段 `q/U_FREE/W_struct` 仍来自包内预计算输入，尚未从上一阶段全阶结构状态自动重新凝聚下一阶段算子。界面和导出均设置 `fallback_flag=true`。
 - `PartStageState` 的包内零件位移作为可追溯预计算状态读取；运行时真正递推的是父状态引用、`contact_structural_response = W_struct @ lambda`、间隙增量、全局LCP解、接口状态与锁定历史，不宣称完成全阶阶段位移或零件自由度积分。

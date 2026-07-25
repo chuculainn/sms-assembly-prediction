@@ -1,7 +1,7 @@
 {
-  "generated_at_utc": "2026-07-19T05:23:38.613514+00:00",
-  "tests_run": 62,
-  "passed": 56,
+  "generated_at_utc": "2026-07-23T12:27:22.724697+00:00",
+  "tests_run": 134,
+  "passed": 128,
   "failed": 0,
   "skipped_v6_acceptance": 6,
   "successful": true,
@@ -313,6 +313,366 @@
     },
     {
       "test": "tests.test_multi_part_upgrade_round2.StreamlitSmokeTests.test_app_and_new_pages_render_without_exception",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "tests.test_topology_step_closeout.CliAndParameterSemanticsTests.test_app_disables_topology_multiplier_controls_but_not_legacy",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "tests.test_topology_step_closeout.CliAndParameterSemanticsTests.test_cli_blocking_failure_maps_to_exit_one",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "tests.test_topology_step_closeout.CliAndParameterSemanticsTests.test_cli_solver_failure_maps_to_exit_two",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "tests.test_topology_step_closeout.CliAndParameterSemanticsTests.test_cli_success_has_machine_readable_summary",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "tests.test_topology_step_closeout.CliAndParameterSemanticsTests.test_general_executor_and_validator_have_no_fixture_ids",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "tests.test_topology_step_closeout.CliAndParameterSemanticsTests.test_legacy_runtime_multiplier_behavior_is_preserved",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "tests.test_topology_step_closeout.CliAndParameterSemanticsTests.test_topology_execution_report_marks_parameters_ineffective",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "tests.test_topology_step_closeout.CliAndParameterSemanticsTests.test_topology_mc_page_does_not_offer_fake_multiplier_run",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "tests.test_topology_step_closeout.CliAndParameterSemanticsTests.test_topology_runtime_multipliers_are_not_effective",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "tests.test_topology_step_closeout.MechanicalStateAndRetentionTests.test_explicit_deactivation_overrides_retain_rule",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "tests.test_topology_step_closeout.MechanicalStateAndRetentionTests.test_fallback_treats_not_required_as_valid_state",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "tests.test_topology_step_closeout.MechanicalStateAndRetentionTests.test_following_inspect_inherits_release_joint_set_and_response",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "tests.test_topology_step_closeout.MechanicalStateAndRetentionTests.test_init_not_required_has_empty_state_semantics",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "tests.test_topology_step_closeout.MechanicalStateAndRetentionTests.test_middle_measure_creates_child_state_without_lcp",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "tests.test_topology_step_closeout.MechanicalStateAndRetentionTests.test_middle_measure_inherits_all_mechanical_vectors",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "tests.test_topology_step_closeout.MechanicalStateAndRetentionTests.test_non_solving_mechanical_mutation_is_blocked",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "tests.test_topology_step_closeout.MechanicalStateAndRetentionTests.test_physical_consistency_treats_not_required_as_valid_state",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "tests.test_topology_step_closeout.MechanicalStateAndRetentionTests.test_release_history_matches_actual_active_joint_set",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "tests.test_topology_step_closeout.MechanicalStateAndRetentionTests.test_release_retains_keep_joint_and_removes_drop_joint",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "tests.test_topology_step_closeout.MechanicalStateAndRetentionTests.test_second_fixture_is_two_part_one_interface_two_dimensional",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "tests.test_topology_step_closeout.MechanicalStateAndRetentionTests.test_unknown_retention_rule_is_blocking",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "tests.test_topology_step_closeout.PackageSelfValidationTests.test_blocking_package_validation_returns_nonzero",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "tests.test_topology_step_closeout.PackageSelfValidationTests.test_field_dictionary_covers_actual_topology_step_schema",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "tests.test_topology_step_closeout.PackageSelfValidationTests.test_field_dictionary_covers_every_csv_header",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "tests.test_topology_step_closeout.PackageSelfValidationTests.test_generator_rebuild_is_reproducible",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "tests.test_topology_step_closeout.PackageSelfValidationTests.test_markdown_matches_json_summary",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "tests.test_topology_step_closeout.PackageSelfValidationTests.test_matrix_manifest_exactly_matches_npz_keys",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "tests.test_topology_step_closeout.PackageSelfValidationTests.test_matrix_manifest_shape_dtype_and_layout_match",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "tests.test_topology_step_closeout.PackageSelfValidationTests.test_object_file_map_registers_oracle_and_runtime_objects",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "tests.test_topology_step_closeout.PackageSelfValidationTests.test_package_local_validator_returns_zero_and_all_checks_pass",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "tests.test_topology_step_closeout.PackageSelfValidationTests.test_quality_gate_targets_current_package",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "tests.test_topology_step_closeout.PackageSelfValidationTests.test_run_log_points_to_current_package_and_generator",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "tests.test_topology_step_closeout.PackageSelfValidationTests.test_test_results_match_real_validator_statistics",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "tests.test_topology_step_closeout.PackageSelfValidationTests.test_validation_result_is_topology_step_oracle",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "tests.test_topology_step_closeout.PackageSelfValidationTests.test_validator_source_has_no_old_fixture_ids",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "tests.test_topology_step_executor.TopologyStepExecutorTests.test_active_index_mask_matches_vector_layout",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "tests.test_topology_step_executor.TopologyStepExecutorTests.test_active_interface_endpoints_must_be_members",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "tests.test_topology_step_executor.TopologyStepExecutorTests.test_active_submatrix_keeps_cross_interface_blocks",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "tests.test_topology_step_executor.TopologyStepExecutorTests.test_added_part_must_exist",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "tests.test_topology_step_executor.TopologyStepExecutorTests.test_all_solved_steps_make_exactly_one_global_lcp_call",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "tests.test_topology_step_executor.TopologyStepExecutorTests.test_deactivated_interface_is_excluded_from_lcp",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "tests.test_topology_step_executor.TopologyStepExecutorTests.test_detailed_validator_allows_fixture",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "tests.test_topology_step_executor.TopologyStepExecutorTests.test_distinct_interfaces_are_not_collapsed_by_endpoint_or_activation",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "tests.test_topology_step_executor.TopologyStepExecutorTests.test_each_join_generates_one_unique_lock_history",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "tests.test_topology_step_executor.TopologyStepExecutorTests.test_execution_table_reports_each_step_lcp_count",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "tests.test_topology_step_executor.TopologyStepExecutorTests.test_executor_has_no_fixture_part_interface_or_step_count_constants",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "tests.test_topology_step_executor.TopologyStepExecutorTests.test_future_parent_reference_is_blocked",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "tests.test_topology_step_executor.TopologyStepExecutorTests.test_independent_lcp_oracle_matches_every_solved_step",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "tests.test_topology_step_executor.TopologyStepExecutorTests.test_init_generates_not_required_state",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "tests.test_topology_step_executor.TopologyStepExecutorTests.test_legacy_fallback_is_explicitly_marked",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "tests.test_topology_step_executor.TopologyStepExecutorTests.test_legacy_four_stage_route_is_generated",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "tests.test_topology_step_executor.TopologyStepExecutorTests.test_legacy_wrapper_is_numerically_equivalent_to_run_stage",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "tests.test_topology_step_executor.TopologyStepExecutorTests.test_missing_operator_set_is_blocking",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "tests.test_topology_step_executor.TopologyStepExecutorTests.test_new_fixture_cli_passes_with_current_python311",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "tests.test_topology_step_executor.TopologyStepExecutorTests.test_new_parts_use_sms_once_and_existing_parts_inherit",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "tests.test_topology_step_executor.TopologyStepExecutorTests.test_operator_and_manifest_shape_mismatch_is_blocking",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "tests.test_topology_step_executor.TopologyStepExecutorTests.test_page_selects_topology_step_and_shows_route_audit",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "tests.test_topology_step_executor.TopologyStepExecutorTests.test_parent_chain_must_be_acyclic",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "tests.test_topology_step_executor.TopologyStepExecutorTests.test_parent_step_must_resolve",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "tests.test_topology_step_executor.TopologyStepExecutorTests.test_real_steps_record_precomputed_operator_source",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "tests.test_topology_step_executor.TopologyStepExecutorTests.test_release_inherits_all_prior_join_locks",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "tests.test_topology_step_executor.TopologyStepExecutorTests.test_repeated_stage_types_execute_in_multiple_cycles",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "tests.test_topology_step_executor.TopologyStepExecutorTests.test_report_zip_contains_all_topology_step_contract_files",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "tests.test_topology_step_executor.TopologyStepExecutorTests.test_solver_call_dimension_proves_no_per_interface_split",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "tests.test_topology_step_executor.TopologyStepExecutorTests.test_state_parent_chain_replays_to_ts000_without_overwrite",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "tests.test_topology_step_executor.TopologyStepExecutorTests.test_step_order_is_stably_sorted_and_duplicate_is_blocked",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "tests.test_topology_step_executor.TopologyStepExecutorTests.test_streamlit_page_selects_real_topology_step",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "tests.test_topology_step_executor.TopologyStepExecutorTests.test_subassembly_membership_changes_by_step",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "tests.test_topology_step_executor.TopologyStepExecutorTests.test_synthetic_fixture_disallows_engineering_claims",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "tests.test_topology_step_executor.TopologyStepExecutorTests.test_topology_step_ids_are_unique",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "tests.test_topology_step_executor.TopologyStepExecutorTests.test_topology_step_spec_has_contract_fields",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "tests.test_topology_step_executor.TopologyStepExecutorTests.test_ts301_activates_two_interfaces_in_one_step",
       "status": "PASS",
       "detail": ""
     }

@@ -47,3 +47,22 @@
 6. 接触域离散加密的收敛性验证。
 
 当前阶段递推框架会继承运行时父状态和锁定历史；当包内数据不足以重建下一阶段时，明确使用包内预计算 `q`、`U_FREE` 或矩阵作为兼容回退，不宣称完成全阶重新凝聚。
+
+## topology_step 执行器增量验收（2026-07-22）
+
+- 修改前重新确认基线：62 tests、PASS 56、FAIL 0、SKIP 6，解释器为 `D:\anaconda\envs\thesis\python.exe`（Python 3.11）。
+- 新增 `tests/test_topology_step_executor.py`，覆盖 36 项：步骤唯一性/排序/父链、主外键、TS301 单次 12 维全局 LCP、交叉块、活动 mask、动态成员、接口撤除、INIT、JOIN/RELEASE、多轮重复 stage、legacy 转换与数值等价、算子与 manifest 阻断、真实性、独立 oracle、八类报告、页面选择、无案例规模硬编码和新包 CLI。
+- 旧 62 项测试全部保留，未删除断言、未降低旧测试阈值、未把失败改为跳过。独立 LCP oracle 使用既有求解器合同的 `atol=1e-7`，适配主动集线性方程中固定的 `1e-12` 正则项；oracle 文件未修改。
+- 最终全量统计：99 tests、PASS 93、FAIL 0、SKIP 6；其中新增 topology_step 测试 37 项（含真实 Streamlit 步骤选择测试）。
+- `python -m compileall -q app.py core tests scripts` 通过；六个旧数据包与 `02_TOPOLOGY_STEP_MIN_CASE` 分别执行 `scripts/cli_check.py`，七次均为 exit 0。
+- 使用 `D:\anaconda\envs\thesis\python.exe -m streamlit run app.py --server.headless true` 启动后，`http://127.0.0.1:8501/_stcore/health` 返回 HTTP 200、正文 `ok`，随后已停止本次服务进程。
+
+## topology_step 提交前定向收尾（2026-07-23）
+
+- 收尾前基线为 99 tests、93 PASS、0 FAIL、6 SKIP；原 99 项全部保留，没有删除断言、降低阈值或将失败改为 SKIP。
+- 新增 `tests/test_topology_step_closeout.py` 35 项，覆盖数据包真实自校验与失败退出、字段字典、对象映射、156-key MatrixManifest/NPZ、静态附件一致性、生成器重复构建、INIT/中间 NOT_REQUIRED、父机械状态继承、不调用 LCP、RELEASE retain/remove/显式停用优先、未知规则阻断、fallback/物理一致性、CLI 0/1/2/3 语义、预计算倍率禁用、Legacy 倍率回归及 Streamlit AppTest。
+- 新增内存小夹具为 2 零件、1 接口、2 接触点/2 维 VectorLayout、6 个步骤；包含 MEASURE、JOIN、RELEASE 删除 joint 与后续 INSPECT，不依赖 TS301、G_AD、G_DB 或 12 维布局。
+- topology_step 专项测试合计 72 项：原执行器模块 37 项 + 收尾模块 35 项；专项质量门为 23 项。
+- 最终全量统计：134 tests、128 PASS、0 FAIL、6 SKIP。
+- `02_TOPOLOGY_STEP_MIN_CASE` 自带校验器为 22/22 PASS、exit 0；任一 blocking check 失败时 exit 非 0。实际 MatrixManifest 与 NPZ 均为 156 个唯一 key，shape/dtype/row-layout/column-layout 一致。
+- CLI 固定输出 `FINAL_STATUS`、`BLOCKING_FAIL_COUNT`、`PHYSICAL_FAIL_COUNT`；0=成功，1=阻断校验失败，2=运行时/求解/物理失败，3=未预期异常。

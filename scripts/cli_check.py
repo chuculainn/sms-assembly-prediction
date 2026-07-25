@@ -2,7 +2,10 @@ from __future__ import annotations
 
 from pathlib import Path
 import argparse
+import subprocess
 import sys
+
+import pandas as pd
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
@@ -20,7 +23,54 @@ from core.fallback import FallbackSettings, evaluate_validity_and_fallback, rema
 from core.physical_consistency import physical_consistency_report
 
 
-def main() -> None:
+def _blocking_fail_count(checks) -> int:
+    if checks.empty:
+        return 0
+    blocking = checks.get("blocking")
+    if blocking is None:
+        blocking = checks["status"].astype(str).eq("FAIL")
+    else:
+        blocking = blocking.astype("boolean").fillna(False)
+    return int((checks["status"].astype(str).eq("FAIL") & blocking).sum())
+
+
+def _emit_final_summary(final_status: str, blocking: int, physical: int) -> None:
+    print(f"FINAL_STATUS={final_status}")
+    print(f"BLOCKING_FAIL_COUNT={blocking}")
+    print(f"PHYSICAL_FAIL_COUNT={physical}")
+
+
+def _runtime_exit_code(
+    physical_fail_count: int,
+    fallback_status: str,
+    overall_physical_status: str,
+) -> tuple[str, int]:
+    failed = (
+        int(physical_fail_count) > 0
+        or str(fallback_status).upper() == "FAIL"
+        or str(overall_physical_status).upper() == "FAIL"
+    )
+    return ("FAIL", 2) if failed else ("PASS", 0)
+
+
+def _package_validator_exit(root: Path) -> int:
+    validator = root / "validation" / "validate_package.py"
+    if not validator.exists():
+        return 0
+    completed = subprocess.run(
+        [sys.executable, str(validator), str(root)],
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    print("\n=== Package-local validation ===")
+    print(completed.stdout.strip())
+    if completed.stderr.strip():
+        print(completed.stderr.strip(), file=sys.stderr)
+    return int(completed.returncode)
+
+
+def main() -> int:
     parser = argparse.ArgumentParser(description='SMS E1 数据包命令行检查')
     parser.add_argument('data_dir', nargs='?', default=str(ROOT / 'data' / 'E1_min_closed_loop'), help='标准输入包目录')
     parser.add_argument('--mc', type=int, default=0, help='可选：运行 N 个 Monte Carlo 样本')
@@ -36,6 +86,13 @@ def main() -> None:
     print(pkg.root)
     print('\n=== Quality checks ===')
     print(checks.to_string(index=False))
+    blocking_fail_count = _blocking_fail_count(checks)
+    package_validator_exit = _package_validator_exit(pkg.root)
+    if package_validator_exit != 0:
+        blocking_fail_count += 1
+    if blocking_fail_count:
+        _emit_final_summary("FAIL", blocking_fail_count, 0)
+        return 1
 
     subst = NumericalSubstitutionSettings(enabled=args.subst_mode != 'base_only', mode=args.subst_mode)
     sms_settings = SMSMappingSettings(enabled=args.sms_rebuild)
@@ -113,7 +170,33 @@ def main() -> None:
         print('\n=== Monte Carlo stats ===')
         print(stats.to_string(index=False))
         print('\nSamples:', len(samples))
+    physical_fail_count = int(
+        phys.get("stage_summary", pd.DataFrame())
+        .get("physics_status", pd.Series(dtype=str))
+        .astype(str)
+        .eq("FAIL")
+        .sum()
+    )
+    fallback_status = (
+        str(fb.iloc[-1].get("status", "PASS")).upper()
+        if not fb.empty else "PASS"
+    )
+    overall_physical_status = str(
+        phys.get("overall", {}).get("overall_status", "PASS")
+    ).upper()
+    final_status, exit_code = _runtime_exit_code(
+        physical_fail_count, fallback_status, overall_physical_status
+    )
+    _emit_final_summary(final_status, blocking_fail_count, physical_fail_count)
+    return exit_code
 
 
 if __name__ == '__main__':
-    main()
+    try:
+        raise SystemExit(main())
+    except SystemExit:
+        raise
+    except Exception as exc:
+        print(f"UNEXPECTED_ERROR={type(exc).__name__}: {exc}", file=sys.stderr)
+        _emit_final_summary("FAIL", 0, 1)
+        raise SystemExit(3)

@@ -375,21 +375,77 @@ def validate_package_detailed(pkg: SMSPackage, lcp_tolerance: float = 1e-8) -> p
 
     raw = _raw_npz(pkg)
     manifest = _table(pkg, "matrices/matrix_manifest.csv")
+    topology_operator_mode = (
+        str(pkg.manifest.get("operator_mode", "")).upper()
+        == "PRECOMPUTED_TOPOLOGY_STEP_OPERATOR"
+    )
     if manifest.empty:
         _issue(rows, "MatrixManifest与NPZ一致", "FAIL", "matrices/matrix_manifest.csv", detail="矩阵清单缺失", suggestion="提供每个NPZ数组的key、shape和布局引用。", blocking=True)
     else:
         manifest_errors = []
+        manifest_keys = manifest.get("npz_key", pd.Series(dtype=str)).astype(str).tolist()
+        duplicate_keys = (
+            sorted(
+                set(
+                    manifest.loc[
+                        manifest["npz_key"].astype(str).duplicated(keep=False),
+                        "npz_key",
+                    ].astype(str)
+                )
+            )
+            if "npz_key" in manifest
+            else ["<missing npz_key column>"]
+        )
+        missing_manifest_keys = sorted(set(raw) - set(manifest_keys))
+        extra_manifest_keys = sorted(set(manifest_keys) - set(raw))
         for _, item in manifest.iterrows():
             key = str(item.get("npz_key", ""))
             declared = parse_literal(item.get("shape"), [])
             declared_shape = tuple(int(value) for value in declared) if isinstance(declared, (list, tuple)) else ()
-            if key not in raw or (declared_shape and tuple(raw[key].shape) != declared_shape):
-                manifest_errors.append(f"{key}:{declared_shape}->{None if key not in raw else raw[key].shape}")
+            if key not in raw:
+                manifest_errors.append(f"{key}:missing")
+                continue
+            array = raw[key]
+            dtype_value = str(item.get("dtype", "")).strip()
+            dtype_ok = (
+                not dtype_value and not topology_operator_mode
+            ) or dtype_value == str(array.dtype)
+            row_layout = str(item.get("row_layout_id_optional", "")).strip()
+            column_layout = str(item.get("column_layout_id_optional", "")).strip()
+            row_layout_ok = (
+                not topology_operator_mode
+                or array.ndim < 1
+                or array.shape[0] != len(points)
+                or bool(row_layout)
+            )
+            column_layout_ok = (
+                not topology_operator_mode
+                or array.ndim < 2
+                or array.shape[1] != len(points)
+                or bool(column_layout)
+            )
+            if (
+                tuple(array.shape) != declared_shape
+                or not dtype_ok
+                or not row_layout_ok
+                or not column_layout_ok
+            ):
+                manifest_errors.append(
+                    f"{key}:shape={declared_shape}/{array.shape},"
+                    f"dtype={dtype_value or '<blank>'}/{array.dtype},"
+                    f"layout={row_layout_ok and column_layout_ok}"
+                )
+        manifest_errors.extend(f"duplicate:{key}" for key in duplicate_keys)
+        manifest_errors.extend(
+            f"unregistered_npz:{key}" for key in missing_manifest_keys
+        )
+        manifest_errors.extend(f"missing_npz:{key}" for key in extra_manifest_keys)
         _issue(
             rows, "MatrixManifest与NPZ一致", "PASS" if not manifest_errors else "FAIL", "matrices/matrix_manifest.csv",
-            "npz_key,shape", object_id=";".join(manifest_errors[:10]),
-            detail=f"manifest_rows={len(manifest)}, errors={len(manifest_errors)}",
-            suggestion="清单中的npz_key必须存在，shape必须与实际数组完全一致。", blocking=True,
+            "npz_key,shape,dtype,row_layout_id_optional,column_layout_id_optional",
+            object_id=";".join(manifest_errors[:10]),
+            detail=f"manifest_rows={len(manifest)}, npz_keys={len(raw)}, errors={len(manifest_errors)}",
+            suggestion="清单必须逐 key 覆盖 NPZ，shape/dtype 与实际数组一致；全局向量轴必须登记 VectorLayout。", blocking=True,
         )
     m = len(points)
     cn = np.asarray(raw.get("CN_ALL", raw.get("CN_DEFAULT", pkg.matrices.get("Cn_local", np.empty((0, 0))))), dtype=float)
@@ -478,7 +534,144 @@ def validate_package_detailed(pkg: SMSPackage, lcp_tolerance: float = 1e-8) -> p
         suggestion="合成/占位数据必须显式设置 engineering_claim_allowed=false，并持续显示真实性声明。",
         blocking=blocking,
     )
-    return pd.DataFrame(rows, columns=COLUMNS)
+    if topology_operator_mode:
+        dictionary_path = pkg.root / "field_dictionary.csv"
+        object_map_path = pkg.root / "object_file_map.csv"
+        dictionary = (
+            pd.read_csv(dictionary_path, encoding="utf-8-sig", dtype=str).fillna("")
+            if dictionary_path.exists()
+            else pd.DataFrame()
+        )
+        required_dictionary_columns = {
+            "file_path", "object_name", "field_name", "data_type", "required",
+            "cardinality", "unit", "enum_or_format", "key_semantics",
+            "missing_handling", "description", "example_value",
+        }
+        actual_fields: set[tuple[str, str]] = set()
+        for csv_path in pkg.root.rglob("*.csv"):
+            relative = csv_path.relative_to(pkg.root).as_posix()
+            csv_columns = pd.read_csv(
+                csv_path, encoding="utf-8-sig", nrows=0
+            ).columns.astype(str)
+            actual_fields.update((relative, field) for field in csv_columns)
+        dictionary_fields = (
+            set(
+                zip(
+                    dictionary.get("file_path", pd.Series(dtype=str)).astype(str),
+                    dictionary.get("field_name", pd.Series(dtype=str)).astype(str),
+                )
+            )
+            if not dictionary.empty
+            else set()
+        )
+        missing_fields = sorted(actual_fields - dictionary_fields)
+        dictionary_ok = (
+            not dictionary.empty
+            and required_dictionary_columns <= set(dictionary.columns)
+            and not missing_fields
+        )
+        _issue(
+            rows, "field_dictionary与实际CSV字段一致",
+            "PASS" if dictionary_ok else "FAIL", "field_dictionary.csv",
+            "file_path,field_name", object_id=";".join(
+                f"{path}:{field}" for path, field in missing_fields[:10]
+            ),
+            detail=f"actual_fields={len(actual_fields)}, dictionary_fields={len(dictionary_fields)}, missing={len(missing_fields)}",
+            suggestion="按当前包内实际 CSV schema 重建字段字典，禁止仅保留示例值。",
+            blocking=True,
+        )
+
+        object_map = (
+            pd.read_csv(object_map_path, encoding="utf-8-sig", dtype=str).fillna("")
+            if object_map_path.exists()
+            else pd.DataFrame()
+        )
+        required_objects = {
+            "AssemblyTopology", "TopologyStepSpec", "TopologyStepResult",
+            "ConnectionLockHistory", "ReleaseHistoryRecord",
+            "TopologyStepLcpOracle", "TopologyStepOperatorMatrices",
+            "TopologyStepExecutionReport", "ValidationResults",
+        }
+        mapped_objects = set(
+            object_map.get("object_name", pd.Series(dtype=str)).astype(str)
+        )
+        missing_objects = sorted(required_objects - mapped_objects)
+        missing_files = []
+        for _, item in object_map.iterrows():
+            runtime = str(item.get("is_runtime_result", "")).strip().lower() in {
+                "1", "true", "yes",
+            }
+            relative = str(item.get("file_path", "")).strip()
+            if not runtime and (not relative or not (pkg.root / relative).exists()):
+                missing_files.append(relative or "<blank>")
+        object_map_ok = (
+            not object_map.empty and not missing_objects and not missing_files
+        )
+        _issue(
+            rows, "object_file_map正式对象可解析",
+            "PASS" if object_map_ok else "FAIL", "object_file_map.csv",
+            "object_name,file_path,is_runtime_result",
+            object_id=";".join((missing_objects + missing_files)[:10]),
+            detail=f"mapped={len(mapped_objects)}, missing_objects={len(missing_objects)}, missing_files={len(missing_files)}",
+            suggestion="登记正式输入、算子、oracle、执行报告与验证结果；非运行时文件必须实际存在。",
+            blocking=True,
+        )
+
+        results_path = pkg.root / "validation" / "test_results.json"
+        markdown_path = pkg.root / "validation" / "TEST_RESULTS.md"
+        run_log_path = pkg.root / "validation" / "run_log.csv"
+        quality_path = pkg.root / "validation" / "quality_gate.csv"
+        try:
+            stored_results = json.loads(results_path.read_text(encoding="utf-8"))
+            markdown = markdown_path.read_text(encoding="utf-8")
+            run_log = pd.read_csv(
+                run_log_path, encoding="utf-8-sig", dtype=str
+            ).fillna("")
+            quality_gate = pd.read_csv(
+                quality_path, encoding="utf-8-sig", dtype=str
+            ).fillna("")
+            stored_matrix_count = int(stored_results.get("matrix_manifest_count", -1))
+            stored_npz_count = int(stored_results.get("npz_key_count", -1))
+            attachments_ok = (
+                stored_results.get("package_id") == pkg.root.name
+                and stored_results.get("status") == "PASS"
+                and stored_matrix_count == len(manifest)
+                and stored_npz_count == len(raw)
+                and f"Checks: {stored_results.get('passed')}/{stored_results.get('total')} PASS" in markdown
+                and not run_log.empty
+                and str(run_log.iloc[0].get("input_package_id", "")) == pkg.root.name
+                and int(run_log.iloc[0].get("matrix_manifest_count", "-1")) == len(manifest)
+                and int(run_log.iloc[0].get("npz_key_count", "-1")) == len(raw)
+                and not quality_gate.empty
+                and str(quality_gate.iloc[0].get("target_object_ids", "")) == pkg.root.name
+                and str(quality_gate.iloc[0].get("pass_fail", "")) == "PASS"
+            )
+            attachment_detail = (
+                f"stored={stored_matrix_count}/{stored_npz_count}, "
+                f"actual={len(manifest)}/{len(raw)}"
+            )
+        except (OSError, ValueError, TypeError, json.JSONDecodeError) as exc:
+            attachments_ok = False
+            attachment_detail = f"{type(exc).__name__}: {exc}"
+        _issue(
+            rows, "validation静态附件与当前包一致",
+            "PASS" if attachments_ok else "FAIL", "validation/*",
+            "package_id,status,matrix_manifest_count,npz_key_count",
+            detail=attachment_detail,
+            suggestion="用当前生成器重新计算 JSON/Markdown/run_log/quality_gate，不得复制旧包统计。",
+            blocking=True,
+        )
+    base = pd.DataFrame(rows, columns=COLUMNS)
+    from .topology_step import validate_topology_steps
+    topology = validate_topology_steps(pkg).copy()
+    if not topology.empty:
+        topology["file"] = "I0/assembly_topology.csv"
+        topology["field"] = "topology_step"
+        topology["object_id"] = ""
+        topology["suggestion"] = "按topology_step实现合同修正路线、父链、外键或算子引用。"
+        topology = topology[COLUMNS]
+        base = pd.concat([base, topology], ignore_index=True)
+    return base
 
 
 def has_blocking_failures(validation: pd.DataFrame) -> bool:

@@ -147,6 +147,7 @@ class StageState:
     gap_increment: np.ndarray
     lambda_n: np.ndarray
     pressure: np.ndarray
+    local_compression: np.ndarray
     active_set: list[int]
     boundary_state: dict[str, list[str]]
     load_state: dict[str, list[str]]
@@ -158,14 +159,48 @@ class StageState:
     input_sources: list[str]
     physical_residuals: dict[str, float]
     notes: list[str] = field(default_factory=list)
+    sample_id: str = "SAMPLE_001"
+    topology_id: str = ""
+    topology_step_id: str = ""
+    parent_topology_step_id: str | None = None
+    assembly_cycle_id: str = ""
+    operation_type: str = ""
+    current_subassembly_id: str = ""
+    active_part_ids: list[str] = field(default_factory=list)
+    active_interface_ids: list[str] = field(default_factory=list)
+    active_joint_ids: list[str] = field(default_factory=list)
+    active_boundary_ids: list[str] = field(default_factory=list)
+    active_load_ids: list[str] = field(default_factory=list)
+    operator_set_id: str = ""
+    operator_source: str = ""
+    solve_status: str = "CONVERGED"
+    fallback_reason: str = ""
+    active_index_mask: list[bool] = field(default_factory=list)
+    lambda_active: np.ndarray = field(default_factory=lambda: np.array([], dtype=float))
+    gap_active: np.ndarray = field(default_factory=lambda: np.array([], dtype=float))
+    connection_lock_history_ids: list[str] = field(default_factory=list)
+    release_history_ids: list[str] = field(default_factory=list)
+    mechanical_state_action: str = "SOLVE_GLOBAL_LCP"
+    not_required_reason: str = ""
+    quality_flag: str = "PASS"
 
     def to_record(self) -> dict[str, Any]:
         return {
+            "sample_id": self.sample_id,
+            "topology_id": self.topology_id,
+            "topology_step_id": self.topology_step_id,
+            "parent_topology_step_id": self.parent_topology_step_id or "",
             "stage_state_id": self.stage_state_id,
             "stage_id": self.stage_id,
             "stage_type": self.stage_type,
             "parent_stage_id": self.parent_stage_id or "",
             "parent_stage_state_id": self.parent_stage_state_id or "",
+            "assembly_cycle_id": self.assembly_cycle_id,
+            "operation_type": self.operation_type or self.stage_type,
+            "current_subassembly_id": self.current_subassembly_id,
+            "active_part_ids": ";".join(self.active_part_ids),
+            "active_interface_ids": ";".join(self.active_interface_ids),
+            "active_joint_ids": ";".join(self.active_joint_ids),
             "active_count": len(self.active_set),
             "contact_structural_response_norm_mm": float(np.linalg.norm(self.contact_structural_response)),
             "contact_structural_response_increment_norm_mm": float(np.linalg.norm(self.contact_structural_response_increment)),
@@ -181,8 +216,18 @@ class StageState:
             "joint_lock_history_id": self.joint_lock_state.get("lock_history_id", ""),
             "joint_lock_source": self.joint_lock_state.get("data_source", ""),
             "vector_layout_id": self.vector_layout_id,
+            "operator_set_id": self.operator_set_id,
+            "operator_source": self.operator_source or self.data_source,
+            "solve_status": self.solve_status,
+            "mechanical_state_action": self.mechanical_state_action,
+            "not_required_reason": self.not_required_reason,
             "data_source": self.data_source,
             "fallback_flag": self.fallback_flag,
+            "fallback_reason": self.fallback_reason,
+            "active_index_count": int(sum(self.active_index_mask)) if self.active_index_mask else len(self.lambda_n),
+            "connection_lock_history_ids": ";".join(self.connection_lock_history_ids),
+            "release_history_ids": ";".join(self.release_history_ids),
+            "quality_flag": self.quality_flag,
             "input_sources": ";".join(self.input_sources),
             "complementarity_residual": self.physical_residuals.get("complementarity_residual", np.nan),
             "notes": "；".join(self.notes),
@@ -253,6 +298,7 @@ def build_runtime_stage_state(
         gap_increment=gap_increment,
         lambda_n=np.asarray(stage_result["solution"].lambda_n, dtype=float),
         pressure=np.asarray(stage_result["pressure"], dtype=float),
+        local_compression=np.asarray(stage_result["local_compression"], dtype=float),
         active_set=list(stage_result["solution"].active_indices),
         boundary_state=_activation_changes(
             transition, current_input, parent_input,

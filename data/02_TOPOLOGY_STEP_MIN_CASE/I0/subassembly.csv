@@ -1,0 +1,5 @@
+subassembly_id,parent_subassembly_id,assembly_step,member_part_ids,active_interface_ids,active_joint_ids,reference_state_id,metadata
+ASM_A,,1,P_A,,,REF_NOMINAL,"{""data_nature"":""SYNTHETIC_NUMERICAL_CONSISTENCY_CASE"",""engineering_claim_allowed"":false,""schema_version"":""V2.5"",""schema_revision"":""MULTI_PART_SERIAL_PARALLEL_2026-07""}"
+ASM_AB,ASM_A,2,P_A;P_B,G_AB,,REF_NOMINAL,"{""data_nature"":""SYNTHETIC_NUMERICAL_CONSISTENCY_CASE"",""engineering_claim_allowed"":false,""schema_version"":""V2.5"",""schema_revision"":""MULTI_PART_SERIAL_PARALLEL_2026-07""}"
+ASM_ABC,ASM_AB,3,P_A;P_B;P_C,G_AB;G_BC,,REF_NOMINAL,"{""data_nature"":""SYNTHETIC_NUMERICAL_CONSISTENCY_CASE"",""engineering_claim_allowed"":false,""schema_version"":""V2.5"",""schema_revision"":""MULTI_PART_SERIAL_PARALLEL_2026-07""}"
+ASM_ABCD,ASM_ABC,4,P_A;P_B;P_C;P_D,G_AB;G_BC;G_AD;G_DB,JNT_AB;JNT_BC;JNT_AD;JNT_DB,REF_NOMINAL,"{""data_nature"":""SYNTHETIC_NUMERICAL_CONSISTENCY_CASE"",""engineering_claim_allowed"":false,""schema_version"":""V2.5"",""schema_revision"":""MULTI_PART_SERIAL_PARALLEL_2026-07""}"

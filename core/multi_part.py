@@ -209,7 +209,14 @@ def assembly_path_summary(pkg: SMSPackage, max_paths_per_pair: int = 2) -> pd.Da
 
 def coupling_block_summary(pkg: SMSPackage, stage_id: str) -> pd.DataFrame:
     layout = vector_layout(pkg)
-    W = np.asarray(pkg.matrices.get(f"W_struct__{stage_id}", np.empty((0, 0))), dtype=float)
+    matrix = pkg.matrices.get(f"W_struct__{stage_id}")
+    if matrix is None:
+        topology = pkg.raw_tables.get("I0/assembly_topology.csv", pd.DataFrame())
+        row = topology[topology.get("topology_step_id", pd.Series(dtype=str)).astype(str).eq(str(stage_id))] if not topology.empty else pd.DataFrame()
+        if not row.empty:
+            operator_set_id = str(row.iloc[0].get("operator_set_id", ""))
+            matrix = pkg.matrices.get(f"W_STRUCT_{operator_set_id}")
+    W = np.asarray(matrix if matrix is not None else np.empty((0, 0)), dtype=float)
     if layout.empty or W.ndim != 2:
         return pd.DataFrame()
     rows = []
@@ -249,23 +256,29 @@ def interface_stage_summary(pkg: SMSPackage, result: dict[str, dict]) -> pd.Data
     if "interface_id" not in cp.columns:
         return pd.DataFrame()
     rows = []
-    for stage_id, stage in result.items():
+    for result_key, stage in result.items():
         lam = np.asarray(stage["solution"].lambda_n, dtype=float)
         gap = np.asarray(stage["solution"].gap_g, dtype=float)
         pressure = np.asarray(stage["pressure"], dtype=float)
         for interface_id, indices in cp.groupby("interface_id", sort=False).groups.items():
             idx = np.asarray(list(indices), dtype=int)
+            p_values = pressure[idx]
+            g_values = gap[idx]
+            finite_p = p_values[np.isfinite(p_values)]
+            finite_g = g_values[np.isfinite(g_values)]
             rows.append({
-                "stage_id": stage_id,
+                "topology_step_id": stage.get("topology_step_id", result_key),
+                "stage_id": stage.get("stage_id", result_key),
                 "interface_id": interface_id,
                 "contact_point_count": len(idx),
                 "active_count": int(np.sum(lam[idx] > 1e-9)),
                 "lambda_sum_N": float(lam[idx].sum()),
-                "pressure_max_MPa": float(pressure[idx].max(initial=0.0)),
-                "gap_min_mm": float(gap[idx].min(initial=np.inf)),
-                "gap_mean_mm": float(gap[idx].mean()),
-                "parent_interface_state_id": _parent_interface_state_id(pkg, stage_id, str(interface_id)),
-                "joint_lock_history_id": _interface_lock_history_id(pkg, stage_id, str(interface_id)),
+                "pressure_max_MPa": float(np.max(finite_p)) if finite_p.size else np.nan,
+                "gap_min_mm": float(np.min(finite_g)) if finite_g.size else np.nan,
+                "gap_mean_mm": float(np.mean(finite_g)) if finite_g.size else np.nan,
+                "parent_interface_state_id": _parent_interface_state_id(pkg, str(stage.get("stage_id", result_key)), str(interface_id)),
+                "joint_lock_history_id": ";".join(stage.get("stage_state").connection_lock_history_ids) if stage.get("stage_state") is not None else _interface_lock_history_id(pkg, str(stage.get("stage_id", result_key)), str(interface_id)),
+                "active_interface": str(interface_id) in set(stage.get("active_interface_ids", [])),
                 "state_source": "RUNTIME_GLOBAL_COUPLED_LCP",
             })
     return pd.DataFrame(rows)
@@ -300,23 +313,19 @@ def interface_stage_state_table(pkg: SMSPackage, result: dict[str, dict], stage_
     summary = interface_stage_summary(pkg, result)
     if summary.empty:
         return summary
-    current = summary[summary["stage_id"].astype(str) == str(stage_id)].copy()
+    selector = "topology_step_id" if "topology_step_id" in summary.columns else "stage_id"
+    current = summary[summary[selector].astype(str) == str(stage_id)].copy()
     stage_ids = list(result)
     pos = stage_ids.index(stage_id) if stage_id in stage_ids else 0
-    previous = summary[summary["stage_id"].astype(str) == stage_ids[pos - 1]].set_index("interface_id") if pos > 0 else pd.DataFrame()
+    previous = summary[summary[selector].astype(str) == stage_ids[pos - 1]].set_index("interface_id") if pos > 0 else pd.DataFrame()
     stage_type = str(result[stage_id].get("stage_name", stage_id)).upper()
-    stage_row = pkg.stage_plan[pkg.stage_plan.get("stage_id", pd.Series(dtype=str)).astype(str).eq(str(stage_id))]
-    active_declared: set[str] | None = None
-    if not stage_row.empty and "active_interface_ids" in stage_row.columns:
-        value = stage_row.iloc[0].get("active_interface_ids")
-        if pd.notna(value) and str(value).strip():
-            active_declared = {item for item in str(value).split(";") if item}
+    active_declared = set(result[stage_id].get("active_interface_ids", []))
     joint_definitions = pkg.raw_tables.get("I0/joint_definition.csv", pd.DataFrame())
     joint_interfaces = set(joint_definitions.get("interface_id", pd.Series(dtype=str)).dropna().astype(str))
     statuses = []
     for _, row in current.iterrows():
         previous_active = int(previous.loc[row["interface_id"], "active_count"]) if not previous.empty and row["interface_id"] in previous.index else 0
-        if active_declared is not None and str(row["interface_id"]) not in active_declared:
+        if str(row["interface_id"]) not in active_declared:
             status = "NOT_ACTIVATED"
         elif "JOIN" in stage_type and str(row["interface_id"]) in joint_interfaces:
             status = "JOIN_LOCKED"
