@@ -16,7 +16,16 @@ import streamlit as st
 from core.data_loader import load_package, detect_package_type
 from core.validation import validate_package
 from core.package_validator import data_truthfulness_statement, has_blocking_failures
-from core.reporting import build_runtime_report_zip, coupling_ablation_export, runtime_state_lineage
+from core.reporting import (
+    build_runtime_report_zip,
+    coupling_ablation_export,
+    measurement_update_report_tables,
+    runtime_state_lineage,
+)
+from core.stage_measurement_update import (
+    load_measurement_checkpoints,
+    validate_runtime_measurement_override,
+)
 from core.topology_step import (
     connection_lock_history_table,
     release_history_table,
@@ -536,6 +545,56 @@ with st.sidebar:
         st.error(f'数据包加载失败：{exc}')
         st.stop()
     precomputed_topology_mode = uses_precomputed_topology_operators(pkg)
+    measurement_checkpoints = load_measurement_checkpoints(pkg)
+    has_measurement_checkpoints = bool(
+        [item for item in measurement_checkpoints if item.active_flag]
+    )
+    measurement_update_enabled = True
+    measurement_override = None
+    with st.expander("阶段实测后验更新", expanded=False):
+        measurement_update_enabled = st.checkbox(
+            "启用 measurement update",
+            value=True,
+            disabled=not has_measurement_checkpoints,
+            key="measurement_update_enabled",
+        )
+        measurement_source_choice = st.radio(
+            "测量来源",
+            ["数据包", "运行时 CSV"],
+            disabled=not has_measurement_checkpoints,
+            key="measurement_source_choice",
+            horizontal=True,
+        )
+        if (
+            has_measurement_checkpoints
+            and measurement_source_choice == "运行时 CSV"
+        ):
+            uploaded_measurements = st.file_uploader(
+                "上传过程测量 CSV",
+                type=["csv"],
+                key="measurement_override_upload",
+                help=(
+                    "仅允许 measurement_id/checkpoint_id/value/"
+                    "standard_uncertainty；不会写回 data 目录。"
+                ),
+            )
+            if uploaded_measurements is not None:
+                try:
+                    candidate_override = pd.read_csv(uploaded_measurements)
+                    measurement_override = (
+                        validate_runtime_measurement_override(
+                            pkg, candidate_override
+                        )
+                    )
+                    st.success("运行时测量通过质量门；本次运行使用覆盖值。")
+                except Exception as exc:
+                    measurement_override = None
+                    st.error(
+                        "运行时 CSV 未通过质量门，已保留包内测量："
+                        f"{exc}"
+                    )
+        elif not has_measurement_checkpoints:
+            st.caption("当前数据包没有启用的 measurement checkpoint。")
 
     st.divider()
     if precomputed_topology_mode:
@@ -643,7 +702,19 @@ if '不代表真实工程预测结果' in truth_statement:
     st.warning('仅用于数值一致性与软件联调，不代表真实工程预测结果。')
 
 # Runtime calculation. The app is small enough to run on every interaction.
-result = run_all_stages(pkg, sms_scale=sms_scale, closure_scale=closure_scale, cn_scale=cn_scale, eps=eps, substitution_settings=substitution_settings, sms_mapping_settings=sms_mapping_settings, overconstraint_settings=overconstraint_settings, tangential_settings=tangential_settings)
+result = run_all_stages(
+    pkg,
+    sms_scale=sms_scale,
+    closure_scale=closure_scale,
+    cn_scale=cn_scale,
+    eps=eps,
+    substitution_settings=substitution_settings,
+    sms_mapping_settings=sms_mapping_settings,
+    overconstraint_settings=overconstraint_settings,
+    tangential_settings=tangential_settings,
+    measurement_update_enabled=measurement_update_enabled,
+    measurement_override=measurement_override,
+)
 stage_summary = stage_summary_table(result)
 point_results = point_result_table(pkg, result)
 interface_results = interface_stage_summary(pkg, result)
@@ -658,6 +729,11 @@ if overconstraint_settings.enabled:
     validation_context_reasons.append('启用了扩展LCP')
 if tangential_settings.enabled:
     validation_context_reasons.append('启用了切向摩擦投影')
+if any(
+    bool(getattr(item.get("measurement_update"), "posterior_accepted", False))
+    for item in result.values()
+):
+    validation_context_reasons.append("已接受阶段实测后验更新")
 validation_comparable = not validation_context_reasons
 validation_context = (
     '当前为数据包基线配置，可进行KCP验证值对比。'
@@ -711,6 +787,7 @@ TABS = [
     '⑫ 验证、报告与追溯',
     '⑬ 装配拓扑、阶段路径与状态传递',
     '⑭ 接口耦合诊断与对照试算',
+    '⑮ 阶段实测后验更新与回代',
 ]
 active_page = st.sidebar.radio(
     '功能环节',
@@ -1526,6 +1603,9 @@ if active_page == TABS[11]:
         mc_stats=mc_stats_for_zip, mc_samples=mc_samples_for_zip,
         physical_report=physical_report,
     )
+    measurement_report_tables, measurement_report_traces = (
+        measurement_update_report_tables(pkg, result)
+    )
     d1, d2, d3 = st.columns(3)
     d1.download_button('下载KCP验证CSV（中文表头）', zh_df(validation).to_csv(index=False).encode('utf-8-sig'),
                        file_name='runtime_kcp_validation_zh.csv', mime='text/csv')
@@ -1566,6 +1646,20 @@ if active_page == TABS[11]:
         topology_step_contact_summary_table(result).to_csv(run_dir / 'topology_step_contact_summary.csv', index=False, encoding='utf-8-sig')
         connection_lock_history_table(result).to_csv(run_dir / 'connection_lock_history.csv', index=False, encoding='utf-8-sig')
         release_history_table(result).to_csv(run_dir / 'release_history.csv', index=False, encoding='utf-8-sig')
+        for report_name, report_table in measurement_report_tables.items():
+            report_table.to_csv(
+                run_dir / report_name,
+                index=False,
+                encoding='utf-8-sig',
+            )
+        (run_dir / 'measurement_update_trace.json').write_text(
+            json.dumps(
+                measurement_report_traces,
+                ensure_ascii=False,
+                indent=2,
+            ),
+            encoding='utf-8',
+        )
         (run_dir / 'data_truthfulness_statement.txt').write_text(truth_statement, encoding='utf-8')
         (run_dir / 'physical_consistency_overall.json').write_text(json.dumps(physical_report.get('overall', {}), ensure_ascii=False, indent=2), encoding='utf-8')
         for name in ['stage_summary', 'check_details', 'kcp_anomalies']:
@@ -1669,6 +1763,27 @@ if active_page == TABS[12]:
         'active_interface_ids': ';'.join(selected_state.active_interface_ids),
         'operator_set_id': selected_state.operator_set_id,
         'operator_source': selected_state.operator_source,
+        'measurement_checkpoint_id': selected_state.measurement_checkpoint_id,
+        'predicted_state_id': selected_state.predicted_state_id,
+        'posterior_state_id': (
+            selected_result.get('posterior_stage_state').stage_state_id
+            if selected_result.get('posterior_stage_state') is not None else ''
+        ),
+        'effective_state_id': selected_state.effective_state_id,
+        'state_role': selected_state.state_role,
+        'measurement_update_status': selected_state.measurement_update_status,
+        'posterior_accepted': selected_state.posterior_accepted,
+        'covariance_trace': (
+            float(np.trace(selected_state.state_covariance))
+            if np.asarray(selected_state.state_covariance).size else np.nan
+        ),
+        'state_correction_norm': float(
+            np.linalg.norm(selected_state.state_correction_vector)
+        ),
+        'rollback_status': (
+            selected_state.rollback_record_id
+            or 'NO_ROLLBACK'
+        ),
         'complementarity_residual': selected_result['solution'].residuals.get('complementarity_residual', 0.0),
     }]), width='stretch', hide_index=True)
     history_left, history_right = st.columns(2)
@@ -1756,3 +1871,314 @@ if active_page == TABS[13]:
                 st.dataframe(zh_df(ablation['point_comparison']), width='stretch', hide_index=True)
             with compare_tabs[1]:
                 st.dataframe(zh_df(ablation['kcp_comparison']), width='stretch', hide_index=True)
+
+
+if active_page == TABS[14]:
+    st.subheader("阶段实测后验更新与回代")
+    st.warning(
+        "本页只更新数据包定义的低维阶段状态，不辨识 Cn/Ct/mu/"
+        "beta_r、连接刚度或 SMS，也不执行在线 FE 更新。"
+    )
+    if not has_measurement_checkpoints:
+        st.info(
+            "当前数据包未配置阶段实测后验更新，原 topology_step "
+            "预测流程保持不变。"
+        )
+    else:
+        if (
+            str(
+                pkg.manifest.get(
+                    "measurement_data_nature",
+                    pkg.manifest.get("data_nature", ""),
+                )
+            )
+            == "SYNTHETIC_NUMERICAL_CONSISTENCY_CASE"
+        ):
+            st.info(
+                "当前测量为合成数值一致性数据，仅用于验证后验更新、"
+                "物理重求和状态传递。"
+            )
+        checkpoint_records = pd.DataFrame([
+            item.to_record() for item in measurement_checkpoints
+        ])
+        st.markdown("**checkpoint 路线表**")
+        st.dataframe(
+            checkpoint_records,
+            width="stretch",
+            hide_index=True,
+        )
+        checkpoint_ids = [
+            item.checkpoint_id
+            for item in measurement_checkpoints
+            if item.active_flag
+        ]
+        selected_checkpoint_id = st.selectbox(
+            "checkpoint 选择",
+            checkpoint_ids,
+            key="measurement_checkpoint_selector",
+        )
+        measurement_tables, measurement_traces = (
+            measurement_update_report_tables(pkg, result)
+        )
+        selected_updates = [
+            item.get("measurement_update")
+            for item in result.values()
+            if (
+                item.get("measurement_update") is not None
+                and item["measurement_update"].checkpoint_id
+                == selected_checkpoint_id
+            )
+        ]
+        if not measurement_update_enabled:
+            st.info(
+                "measurement update 已禁用；本次运行保留 prior-only 路径。"
+            )
+        elif not selected_updates:
+            st.error(
+                "checkpoint 已配置，但本次运行没有产生更新记录。"
+            )
+        else:
+            update = selected_updates[0]
+            trace = update.trace
+            prior_residual = float(
+                trace.get("prior_residual_norm", float("nan"))
+            )
+            posterior_residual = float(
+                trace.get("posterior_residual_norm", float("nan"))
+            )
+            posterior_linearized_residual = float(
+                trace.get(
+                    "posterior_linearized_residual_norm",
+                    float("nan"),
+                )
+            )
+            prior_trace = float(
+                trace.get("P_prior_trace", float("nan"))
+            )
+            posterior_trace = float(
+                trace.get("P_posterior_trace", float("nan"))
+            )
+            metric_columns = st.columns(10)
+            metric_values = (
+                ("checkpoint ID", update.checkpoint_id),
+                ("使用测量数", len(update.measurement_ids)),
+                ("更新状态维数", len(update.eta_posterior)),
+                ("prior physical residual", f"{prior_residual:.6g}"),
+                (
+                    "linearized residual",
+                    f"{posterior_linearized_residual:.6g}",
+                ),
+                (
+                    "post-LCP physical residual",
+                    f"{posterior_residual:.6g}",
+                ),
+                (
+                    "weighted physical residual",
+                    f"{float(trace.get('weighted_residual_posterior_physical', float('nan'))):.6g}",
+                ),
+                ("covariance trace reduction",
+                 f"{prior_trace - posterior_trace:.6g}"),
+                ("NIS", f"{update.nis:.6g}"),
+                ("re-solve LCP", update.resolve_lcp_call_count),
+            )
+            for column, (label, value) in zip(
+                metric_columns, metric_values
+            ):
+                column.metric(label, value)
+            status = str(trace.get(
+                "status",
+                "POSTERIOR_ACCEPTED"
+                if update.posterior_accepted
+                else "POSTERIOR_REJECTED_ROLLBACK",
+            ))
+            if update.posterior_accepted:
+                st.success(status)
+            elif update.rollback_record is None:
+                st.info(status)
+            else:
+                st.error(status)
+            st.caption(
+                f"测量来源：{update.measurement_source}；"
+                f"effective_state_id={update.effective_state_id}；"
+                f"接受依据={trace.get('acceptance_basis', trace.get('decision_basis', ''))}；"
+                f"协方差来源={trace.get('measurement_covariance_source', '')}"
+            )
+            st.markdown("**线性预测与实际 post-LCP 物理预测**")
+            if update.measurement_ids:
+                physical_observation_table = pd.DataFrame({
+                    "measurement_id": update.measurement_ids,
+                    "z_predicted_prior_physical":
+                        update.z_predicted_prior_physical,
+                    "z_predicted_posterior_linearized":
+                        update.z_predicted_posterior_linearized,
+                    "z_predicted_posterior_physical":
+                        update.z_predicted_posterior_physical,
+                    "residual_prior_physical":
+                        update.residual_prior_physical,
+                    "residual_posterior_linearized":
+                        update.residual_posterior_linearized,
+                    "residual_posterior_physical":
+                        update.residual_posterior_physical,
+                    "linearization_error": update.linearization_error,
+                    "physical_residual_improved":
+                        update.physical_residual_improved,
+                })
+                st.dataframe(
+                    physical_observation_table,
+                    width="stretch",
+                    hide_index=True,
+                )
+            st.dataframe(
+                pd.DataFrame(update.observation_records),
+                width="stretch",
+                hide_index=True,
+            )
+            st.caption(
+                "posterior residual 默认指 LCP 回代后的实际物理残差；"
+                "linearized residual 仅用于诊断线性化误差。"
+            )
+
+            st.markdown("**预测状态与更新决策**")
+            summary = measurement_tables[
+                "measurement_update_summary.csv"
+            ]
+            st.dataframe(summary, width="stretch", hide_index=True)
+
+            observation_tab, state_tab, resolve_tab = st.tabs([
+                "测量与创新",
+                "状态修正",
+                "物理重求",
+            ])
+            with observation_tab:
+                st.dataframe(
+                    measurement_tables["measurement_innovation.csv"],
+                    width="stretch",
+                    hide_index=True,
+                )
+            with state_tab:
+                st.dataframe(
+                    measurement_tables[
+                        "predicted_posterior_comparison.csv"
+                    ],
+                    width="stretch",
+                    hide_index=True,
+                )
+                st.dataframe(
+                    measurement_tables["stage_covariance_trace.csv"],
+                    width="stretch",
+                    hide_index=True,
+                )
+            with resolve_tab:
+                source = result[update.source_topology_step_id]
+                prior_solution = source["solution"]
+                posterior_solution = update.solution
+                physical_row = pd.DataFrame([{
+                    "source_topology_step":
+                        update.source_topology_step_id,
+                    "operator_set_id":
+                        update.resolve_requirement.source_operator_set_id,
+                    "active_interface_ids": ";".join(
+                        source.get("active_interface_ids", [])
+                    ),
+                    "global_dimension": len(source["q"]),
+                    "q_base_norm": float(
+                        np.linalg.norm(update.q_operator_base)
+                    ),
+                    "q_source_effective_norm": float(
+                        np.linalg.norm(update.q_source_effective)
+                    ),
+                    "eta_increment_norm": float(
+                        np.linalg.norm(update.eta_increment)
+                    ),
+                    "q_update_increment_norm": float(
+                        np.linalg.norm(update.q_update_increment)
+                    ),
+                    "q_base_semantics": update.q_base_semantics,
+                    "linearization_error_norm": float(
+                        np.linalg.norm(update.linearization_error)
+                    ),
+                    "physical_residual_improved":
+                        update.physical_residual_improved,
+                    "lambda_sum_prior": float(
+                        np.sum(prior_solution.lambda_n)
+                    ),
+                    "lambda_sum_posterior": float(
+                        np.sum(posterior_solution.lambda_n)
+                    ) if posterior_solution is not None else np.nan,
+                    "active_count_prior":
+                        len(prior_solution.active_indices),
+                    "active_count_posterior": (
+                        len(posterior_solution.active_indices)
+                        if posterior_solution is not None else 0
+                    ),
+                    "complementarity_residual":
+                        update.physical_residuals.get(
+                            "complementarity_residual", np.nan
+                        ),
+                    "resolve_status":
+                        update.resolve_requirement.quality_flag,
+                }])
+                st.dataframe(
+                    physical_row, width="stretch", hide_index=True
+                )
+
+            st.markdown("**PREDICTED → POSTERIOR → NEXT_PREDICTED 状态链**")
+            lineage = topology_step_state_lineage_table(result)
+            relevant_ids = {
+                update.predicted_state_id,
+                update.posterior_state_id,
+            }
+            route_keys = list(result)
+            checkpoint_position = route_keys.index(
+                update.topology_step_id
+            )
+            if checkpoint_position + 1 < len(route_keys):
+                next_step = result[route_keys[checkpoint_position + 1]]
+                next_state = next_step.get("predicted_stage_state")
+                if next_state is not None:
+                    relevant_ids.add(next_state.stage_state_id)
+            if "stage_state_id" in lineage.columns:
+                lineage = lineage[
+                    lineage["stage_state_id"].astype(str).isin(
+                        relevant_ids
+                    )
+                ]
+            st.dataframe(lineage, width="stretch", hide_index=True)
+
+            rollback = measurement_tables[
+                "update_rollback_record.csv"
+            ]
+            st.markdown("**回滚记录**")
+            if rollback.empty:
+                st.caption("本次后验已接受，无回滚记录。")
+            else:
+                st.dataframe(
+                    rollback, width="stretch", hide_index=True
+                )
+
+            downstream = topology_step_execution_table(result)
+            downstream = downstream[
+                pd.to_numeric(
+                    downstream["step_order"], errors="coerce"
+                )
+                > pd.to_numeric(
+                    result[update.topology_step_id][
+                        "topology_step_spec"
+                    ].step_order,
+                    errors="coerce",
+                )
+            ]
+            st.markdown("**后续步骤影响**")
+            st.dataframe(
+                downstream[[
+                    column for column in (
+                        "topology_step_id", "parent_stage_state_id",
+                        "state_role", "effective_state_id",
+                        "measurement_update_status",
+                        "covariance_trace", "state_correction_norm",
+                        "q_correction_norm",
+                    ) if column in downstream.columns
+                ]],
+                width="stretch",
+                hide_index=True,
+            )

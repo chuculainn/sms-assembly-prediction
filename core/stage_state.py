@@ -183,6 +183,22 @@ class StageState:
     mechanical_state_action: str = "SOLVE_GLOBAL_LCP"
     not_required_reason: str = ""
     quality_flag: str = "PASS"
+    state_role: str = "PREDICTED"
+    measurement_checkpoint_id: str = ""
+    measurement_update_id: str = ""
+    predicted_state_id: str = ""
+    posterior_parent_state_id: str = ""
+    effective_state_id: str = ""
+    update_state_layout_id: str = ""
+    state_correction_vector: np.ndarray = field(default_factory=lambda: np.array([], dtype=float))
+    state_covariance: np.ndarray = field(default_factory=lambda: np.empty((0, 0), dtype=float))
+    measurement_ids: list[str] = field(default_factory=list)
+    measurement_update_status: str = "NOT_CONFIGURED"
+    posterior_accepted: bool = False
+    rollback_record_id: str = ""
+    covariance_source: str = ""
+    covariance_transfer_id: str = ""
+    source_checkpoint_id: str = ""
 
     def to_record(self) -> dict[str, Any]:
         return {
@@ -228,6 +244,30 @@ class StageState:
             "connection_lock_history_ids": ";".join(self.connection_lock_history_ids),
             "release_history_ids": ";".join(self.release_history_ids),
             "quality_flag": self.quality_flag,
+            "state_role": self.state_role,
+            "measurement_checkpoint_id": self.measurement_checkpoint_id,
+            "measurement_update_id": self.measurement_update_id,
+            "predicted_state_id": self.predicted_state_id,
+            "posterior_parent_state_id": self.posterior_parent_state_id,
+            "effective_state_id": self.effective_state_id,
+            "update_state_layout_id": self.update_state_layout_id,
+            "state_correction_vector": self.state_correction_vector.tolist(),
+            "state_correction_norm": (
+                float(np.linalg.norm(self.state_correction_vector))
+                if self.state_correction_vector.size else 0.0
+            ),
+            "state_covariance": self.state_covariance.tolist(),
+            "state_covariance_trace": (
+                float(np.trace(self.state_covariance))
+                if self.state_covariance.ndim == 2 and self.state_covariance.size else np.nan
+            ),
+            "measurement_ids": ";".join(self.measurement_ids),
+            "measurement_update_status": self.measurement_update_status,
+            "posterior_accepted": self.posterior_accepted,
+            "rollback_record_id": self.rollback_record_id,
+            "covariance_source": self.covariance_source,
+            "covariance_transfer_id": self.covariance_transfer_id,
+            "source_checkpoint_id": self.source_checkpoint_id,
             "input_sources": ";".join(self.input_sources),
             "complementarity_residual": self.physical_residuals.get("complementarity_residual", np.nan),
             "notes": "；".join(self.notes),

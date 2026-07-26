@@ -31,7 +31,7 @@ from tests.topology_fixture_factory import make_two_part_two_point_fixture
 
 ROOT = Path(__file__).resolve().parents[1]
 PACKAGE = ROOT / "data" / "02_TOPOLOGY_STEP_MIN_CASE"
-PYTHON = Path(r"D:\anaconda\envs\thesis\python.exe")
+PYTHON = Path(sys.executable)
 TOPOLOGY_FIELDS = {
     "topology_id",
     "topology_step_id",

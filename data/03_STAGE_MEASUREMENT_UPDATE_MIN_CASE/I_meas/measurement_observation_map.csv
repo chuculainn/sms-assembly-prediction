@@ -1,0 +1,3 @@
+﻿observation_id,checkpoint_id,measurement_id,observation_order,observed_quantity,vector_source,global_index_optional,target_object_id_optional,unit,coordinate_system_id,reference_state_id,sensitivity_row_index,quality_flag
+OBS_GAP_AB,MCP_AFTER_ABC,MEAS_GAP_AB_AFTER_RELEASE,0,GAP_G,RUNTIME_STAGE_STATE,1,G_AB,mm,CS_ASSEMBLY,PARENT_RUNTIME_STATE,0,PASS
+OBS_FORCE_AB,MCP_AFTER_ABC,MEAS_FORCE_AB_AFTER_RELEASE,1,LAMBDA_N,RUNTIME_STAGE_STATE,0,G_AB,N,CS_ASSEMBLY,PARENT_RUNTIME_STATE,1,PASS

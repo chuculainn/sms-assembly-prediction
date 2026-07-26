@@ -1,0 +1,2 @@
+random_sample_id,mc_config_id,sample_index,alpha_sms,interface_parameter_sample,process_error_sample,measurement_error_sample_optional,locator_compliance_sample_optional,preload_or_command_displacement_sample_optional,correlation_preserved,source_distribution_ids,metadata
+RSAMPLE_DEFAULT,MC_DEFAULT,0,[0.0],[0.0001],[0.0],[0.0],[0.0001],[0.0],FALSE,JD_DEFAULT,"{""note"":""默认占位值；请替换为真实工程数据。"",""schema_version"":""V2.5""}"

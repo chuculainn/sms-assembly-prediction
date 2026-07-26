@@ -89,11 +89,10 @@ fallback_reason=LEGACY_STAGE_COMPATIBILITY
 
 ## 当前未实现
 
-- 阶段实测后验更新、ProcessObservationModel、StateUpdateResult；
 - 后续虚拟 SMS 滚动预测和未来场景 Monte Carlo；
 - 在线全阶 K/FE Schur 凝聚；
 - 完整法向—切向摩擦 NCP、几何/材料非线性；
 - JSS/J-T 自动构建、真实 KCP 独立验证；
 - 条件分支、返修、并行调度、路线优化和生产级数字孪生平台。
 
-下一轮实测后验更新可以复用 `sample_id + topology_step_id + parent_state_id`、`measurement_checkpoint_id`、`reference_state_id`、不可变 StageState 父链和 operator trace 作为接口，但本轮没有预先实现或伪造更新结果。
+阶段实测后验更新已作为增量层接入：checkpoint 同时保留 PREDICTED/POSTERIOR，状态修正以显式 G_q 进入 q，并对当前活动接口执行一次统一全局 LCP 重求。详细合同、数据治理、回滚和真实性边界见 `STAGE_MEASUREMENT_POSTERIOR_UPDATE.md`。

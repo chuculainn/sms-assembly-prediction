@@ -66,3 +66,10 @@
 - 覆盖全部接触点且连续无重叠的 VectorLayout；
 - 与全局接触维数一致的各阶段 `Q`、`W_STRUCT`、`W_TOTAL` 和 `CN`；
 - 对应的 StageDefinition、状态快照、连接历史和 KCP 投影矩阵/贡献账本。
+
+## 阶段实测后验状态在多零件路线中的传递
+
+- checkpoint 通过数据表唯一关联任意 `topology_step`，核心不依赖 TS205、固定阶段 ID、零件数、接口数或 12 维布局。
+- `G_q` 行布局必须引用公共 `VectorLayout`；后验重求继续保留跨接口 `W_struct` 块并一次求解全部活动接口。
+- 接受的低维 `eta/P` 与子装配、活动接口、JOIN 锁定和 RELEASE 历史共同传递；接触活动集仅作为后续求解暖启动信息。
+- 第一版 F/Q 可以显式配置或采用有 trace 记录的 identity/zero 策略，但不表示全阶 FE 协方差传播。

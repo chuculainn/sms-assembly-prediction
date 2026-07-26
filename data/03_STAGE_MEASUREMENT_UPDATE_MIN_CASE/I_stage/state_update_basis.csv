@@ -1,0 +1,3 @@
+﻿update_state_layout_id,component_order,component_id,component_type,target_object_type,target_object_id,unit,description
+ETA_STAGE_AFTER_ABC_2,0,ETA_POSE_BIAS_ABC,POSE_BIAS,Subassembly,ASM_ABC,mm_equivalent,Synthetic low-dimensional pose-bias correction.
+ETA_STAGE_AFTER_ABC_2,1,ETA_GAP_BIAS_BC,GAP_BIAS,Interface,G_BC,mm,Synthetic low-dimensional interface-gap correction.
