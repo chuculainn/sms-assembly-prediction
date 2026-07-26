@@ -280,7 +280,8 @@ class MultiPartRound2Tests(unittest.TestCase):
         source = (ROOT / "app.py").read_text(encoding="utf-8")
         self.assertIn("装配拓扑、阶段路径与状态传递", source)
         self.assertIn("接口耦合诊断与对照试算", source)
-        self.assertEqual(source.count("if active_page == TABS["), 14)
+        self.assertIn("阶段实测后验更新与回代", source)
+        self.assertEqual(source.count("if active_page == TABS["), 15)
         self.assertNotIn("use_container_width=True", source)
 
 

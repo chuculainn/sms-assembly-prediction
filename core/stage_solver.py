@@ -143,6 +143,8 @@ def run_all_stages(
     sms_mapping_settings: SMSMappingSettings | dict | None = None,
     overconstraint_settings: OverConstraintSettings | dict | None = None,
     tangential_settings: TangentialNCPSettings | dict | None = None,
+    measurement_update_enabled: bool = True,
+    measurement_override: pd.DataFrame | None = None,
 ) -> dict[str, dict]:
     """Compatibility entry point backed by the topology-step executor.
 
@@ -162,6 +164,8 @@ def run_all_stages(
         sms_mapping_settings=sms_mapping_settings,
         overconstraint_settings=overconstraint_settings,
         tangential_settings=tangential_settings,
+        measurement_update_enabled=measurement_update_enabled,
+        measurement_override=measurement_override,
     )
     if step_result and all(bool(item.get("fallback_flag")) for item in step_result.values()):
         return {str(item["stage_id"]): item for item in step_result.values()}

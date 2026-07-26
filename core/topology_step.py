@@ -12,6 +12,13 @@ from .data_loader import SMSPackage
 from .lcp_solver import LCPSolution, solve_lcp_active_set
 from .multi_part import vector_layout
 from .schema_adapter import parse_literal
+from .stage_measurement_update import (
+    effective_q_from_state,
+    has_measurement_checkpoints,
+    propagate_low_dimensional_state,
+    run_stage_measurement_update,
+    validate_measurement_update_package,
+)
 from .stage_state import StageState
 
 
@@ -748,6 +755,7 @@ def _execute_step(
     *,
     eps: float,
     legacy_options: dict[str, Any],
+    dual_state_ids: bool = False,
 ) -> dict[str, Any]:
     parent_parts = parent.active_part_ids if parent is not None else []
     parent_interfaces = parent.active_interface_ids if parent is not None else []
@@ -776,6 +784,20 @@ def _execute_step(
     matrix_keys: dict[str, str] = {}
     lcp_call_count = 0
     legacy_stage_result: dict[str, Any] | None = None
+    propagation = propagate_low_dimensional_state(
+        pkg,
+        parent,
+        spec.topology_step_id,
+    )
+    q_base_full = np.full(m, np.nan, dtype=float)
+    q_application_trace: dict[str, Any] = {
+        "applied": False,
+        "q_base_key": "",
+        "G_q_key": "",
+        "eta_source_state_id": "",
+        "q_correction_norm": 0.0,
+        "effective_q_hash": "",
+    }
     if spec.solve_required:
         if fallback_flag:
             from .stage_solver import run_stage
@@ -797,8 +819,32 @@ def _execute_step(
                 "q_key": f"q__{spec.stage_id}", "W_struct_key": f"W_struct__{spec.stage_id}",
                 "Cn_key": "Cn_local/runtime_substitution", "W_total_key": "RUNTIME_W_STRUCT_PLUS_CN",
             }
+            q_base_full = q_full.copy()
         else:
             q_full, W_struct_full, Cn_full, W_total_full, matrix_keys = _step_operator(pkg, spec)
+            q_base_full = q_full.copy()
+            q_state = parent
+            if (
+                parent is not None
+                and np.asarray(propagation["eta"]).size
+            ):
+                q_state = deepcopy(parent)
+                q_state.state_correction_vector = np.asarray(
+                    propagation["eta"], dtype=float
+                )
+                q_state.state_covariance = np.asarray(
+                    propagation["P"], dtype=float
+                )
+                q_state.update_state_layout_id = str(
+                    propagation["update_state_layout_id"]
+                )
+            q_full, q_application_trace = effective_q_from_state(
+                pkg,
+                q_state,
+                str(spec.operator_set_id or ""),
+                q_base_full,
+            )
+            q_application_trace["q_base_key"] = matrix_keys.get("q_key", "")
             q_active = q_full[active_indices]
             W_active = W_total_full[np.ix_(active_indices, active_indices)]
             active_solution = solve_lcp_active_set(q_active, W_active, eps=eps)
@@ -876,7 +922,11 @@ def _execute_step(
         mechanical_state_action = "SOLVE_GLOBAL_LCP"
         not_required_reason = ""
 
-    state_id = f"STATE_{sample_id}_{spec.topology_step_id}"
+    state_id = (
+        f"STATE_{sample_id}_{spec.topology_step_id}_PREDICTED"
+        if dual_state_ids
+        else f"STATE_{sample_id}_{spec.topology_step_id}"
+    )
     part_state = deepcopy(parent.part_state) if parent is not None else {}
     for part_id in spec.removed_part_ids:
         part_state.pop(part_id, None)
@@ -983,6 +1033,23 @@ def _execute_step(
         mechanical_state_action=mechanical_state_action,
         not_required_reason=not_required_reason,
         quality_flag="PASS" if solve_status in {"CONVERGED", "NOT_REQUIRED"} else "FAIL",
+        state_role="PREDICTED",
+        measurement_checkpoint_id=spec.measurement_checkpoint_id or "",
+        predicted_state_id=state_id,
+        effective_state_id=state_id,
+        update_state_layout_id=str(propagation["update_state_layout_id"]),
+        state_correction_vector=np.asarray(propagation["eta"], dtype=float),
+        state_covariance=np.asarray(propagation["P"], dtype=float),
+        measurement_update_status=(
+            "PENDING"
+            if spec.measurement_checkpoint_id
+            else "NOT_CONFIGURED"
+        ),
+        covariance_source=str(propagation["covariance_source"]),
+        covariance_transfer_id=str(propagation["covariance_transfer_id"]),
+        source_checkpoint_id=(
+            parent.source_checkpoint_id if parent is not None else ""
+        ),
     )
     trace = {
         "trace_id": f"TRACE_{sample_id}_{spec.topology_step_id}",
@@ -1006,6 +1073,20 @@ def _execute_step(
             "LEGACY_RUNTIME_RECONSTRUCTION"
             if fallback_flag else "PRECOMPUTED_TOPOLOGY_STEP_OPERATOR_DISABLED"
         ),
+        "q_base_key": q_application_trace.get(
+            "q_base_key", matrix_keys.get("q_key", "")
+        ),
+        "G_q_key": q_application_trace.get("G_q_key", ""),
+        "eta_source_state_id": q_application_trace.get(
+            "eta_source_state_id", ""
+        ),
+        "q_correction_norm": q_application_trace.get(
+            "q_correction_norm", 0.0
+        ),
+        "effective_q_hash": q_application_trace.get(
+            "effective_q_hash", ""
+        ),
+        "covariance_transfer": propagation["trace"],
         "lambda_active": lambda_active.tolist(),
         "gap_active": gap_active.tolist(),
         "pressure_active": pressure[active_indices].tolist() if active_indices.size else [],
@@ -1018,6 +1099,7 @@ def _execute_step(
         "stage_name": spec.operation_type,
         "topology_step_id": spec.topology_step_id,
         "topology_step_spec": spec,
+        "q_base": q_base_full,
         "q": q_full,
         "q_active": q_full[active_indices] if spec.solve_required else np.array([], dtype=float),
         "W_total": W_total_full,
@@ -1075,12 +1157,27 @@ def run_topology_steps(
     sms_mapping_settings: Any = None,
     overconstraint_settings: Any = None,
     tangential_settings: Any = None,
+    measurement_update_enabled: bool = True,
+    measurement_override: pd.DataFrame | None = None,
 ) -> dict[str, dict[str, Any]]:
     specs = load_topology_steps(pkg, topology_id)
     validation = validate_topology_steps(pkg, specs, topology_id)
     blocking = validation[validation["status"].eq("FAIL") & validation["blocking"].astype(bool)]
     if not blocking.empty:
         raise TopologyStepValidationError(blocking[["check_item", "detail"]].to_string(index=False))
+    checkpoint_configured = has_measurement_checkpoints(pkg)
+    if checkpoint_configured and measurement_update_enabled:
+        measurement_validation = validate_measurement_update_package(pkg, specs)
+        measurement_blocking = measurement_validation[
+            measurement_validation["status"].eq("FAIL")
+            & measurement_validation["blocking"].astype(bool)
+        ]
+        if not measurement_blocking.empty:
+            raise TopologyStepValidationError(
+                measurement_blocking[["check_item", "detail"]].to_string(
+                    index=False
+                )
+            )
     options = {
         "sms_scale": sms_scale,
         "closure_scale": closure_scale,
@@ -1094,9 +1191,117 @@ def run_topology_steps(
     states: dict[str, StageState] = {}
     for spec in specs:
         parent = states.get(spec.parent_topology_step_id) if spec.parent_topology_step_id else None
-        step_result = _execute_step(pkg, spec, sample_id, parent, eps=eps, legacy_options=options)
+        step_result = _execute_step(
+            pkg,
+            spec,
+            sample_id,
+            parent,
+            eps=eps,
+            legacy_options=options,
+            dual_state_ids=checkpoint_configured,
+        )
+        predicted_state: StageState = step_result["stage_state"]
+        predicted_state.state_role = "PREDICTED"
+        predicted_state.predicted_state_id = predicted_state.stage_state_id
+        predicted_state.effective_state_id = predicted_state.stage_state_id
+        step_result["predicted_stage_state"] = predicted_state
+        step_result["posterior_stage_state"] = None
+        step_result["measurement_update"] = None
+        step_result["posterior_lcp_call_count"] = 0
+        effective_state = predicted_state
+        if spec.measurement_checkpoint_id and checkpoint_configured:
+            if measurement_update_enabled:
+                update_result = run_stage_measurement_update(
+                    package=pkg,
+                    checkpoint_id=spec.measurement_checkpoint_id,
+                    predicted_step_result=step_result,
+                    previous_results=result,
+                    predicted_state=predicted_state,
+                    measurement_override=measurement_override,
+                    eps=eps,
+                )
+                step_result["measurement_update"] = update_result
+                step_result["posterior_lcp_call_count"] = (
+                    update_result.resolve_lcp_call_count
+                )
+                if update_result.posterior_accepted:
+                    posterior_state = update_result.posterior_state
+                    measurement_source_result = result[
+                        update_result.source_topology_step_id
+                    ]
+                    step_result["posterior_stage_state"] = posterior_state
+                    step_result["stage_state"] = posterior_state
+                    step_result["q"] = update_result.q_posterior
+                    step_result["q_active"] = update_result.q_posterior[
+                        update_result.active_indices
+                    ]
+                    step_result["W_total"] = update_result.W_total
+                    step_result["W_struct"] = np.asarray(
+                        measurement_source_result["W_struct"],
+                        dtype=float,
+                    ).copy()
+                    step_result["Cn"] = np.asarray(
+                        measurement_source_result["Cn"],
+                        dtype=float,
+                    ).copy()
+                    step_result["W_active"] = update_result.W_total[np.ix_(
+                        update_result.active_indices,
+                        update_result.active_indices,
+                    )]
+                    step_result["solution"] = update_result.solution
+                    step_result["lambda_active"] = update_result.lambda_full[
+                        update_result.active_indices
+                    ]
+                    step_result["gap_active"] = update_result.gap_full[
+                        update_result.active_indices
+                    ]
+                    step_result["lambda_full"] = update_result.lambda_full
+                    step_result["gap_full"] = update_result.gap_full
+                    step_result["pressure"] = update_result.pressure
+                    step_result["local_compression"] = (
+                        update_result.local_compression
+                    )
+                    step_result["solve_status"] = posterior_state.solve_status
+                    step_result["contact_trace"][
+                        "measurement_update_id"
+                    ] = update_result.update_id
+                    step_result["contact_trace"][
+                        "posterior_resolve_lcp_call_count"
+                    ] = update_result.resolve_lcp_call_count
+                    step_result["contact_trace"][
+                        "effective_state_id"
+                    ] = posterior_state.stage_state_id
+                    effective_state = posterior_state
+                else:
+                    rollback = update_result.rollback_record
+                    predicted_state.measurement_update_id = (
+                        update_result.update_id
+                    )
+                    predicted_state.measurement_update_status = (
+                        "POSTERIOR_REJECTED_ROLLBACK"
+                        if rollback is not None
+                        else str(
+                            update_result.trace.get(
+                                "status", "NO_UPDATE_OBSERVATION"
+                            )
+                        )
+                    )
+                    predicted_state.posterior_accepted = False
+                    predicted_state.rollback_record_id = (
+                        rollback.rollback_record_id if rollback else ""
+                    )
+                    predicted_state.effective_state_id = (
+                        predicted_state.stage_state_id
+                    )
+            else:
+                predicted_state.measurement_update_status = "UPDATE_DISABLED"
+                predicted_state.posterior_accepted = False
+        elif checkpoint_configured:
+            predicted_state.measurement_update_status = "NOT_APPLICABLE"
+        else:
+            predicted_state.measurement_update_status = "NOT_CONFIGURED"
         result[spec.topology_step_id] = step_result
-        states[spec.topology_step_id] = step_result["stage_state"]
+        states[spec.topology_step_id] = effective_state
     return result
 
 
@@ -1104,6 +1309,8 @@ def topology_step_execution_table(result: dict[str, dict[str, Any]]) -> pd.DataF
     rows = []
     for key, step in result.items():
         state: StageState = step["stage_state"]
+        predicted_state: StageState = step.get("predicted_stage_state", state)
+        posterior_state: StageState | None = step.get("posterior_stage_state")
         rows.append({
             "sample_id": state.sample_id, "topology_id": state.topology_id,
             "topology_step_id": state.topology_step_id or key,
@@ -1125,6 +1332,37 @@ def topology_step_execution_table(result: dict[str, dict[str, Any]]) -> pd.DataF
             "mechanical_state_action": state.mechanical_state_action,
             "not_required_reason": state.not_required_reason,
             "lcp_call_count": step["lcp_call_count"],
+            "posterior_lcp_call_count": step.get(
+                "posterior_lcp_call_count", 0
+            ),
+            "measurement_checkpoint_id": (
+                predicted_state.measurement_checkpoint_id
+            ),
+            "predicted_state_id": predicted_state.stage_state_id,
+            "posterior_state_id": (
+                posterior_state.stage_state_id if posterior_state else ""
+            ),
+            "effective_state_id": state.stage_state_id,
+            "state_role": state.state_role,
+            "measurement_update_status": state.measurement_update_status,
+            "posterior_accepted": state.posterior_accepted,
+            "state_covariance_trace": (
+                float(np.trace(state.state_covariance))
+                if state.state_covariance.ndim == 2
+                and state.state_covariance.size
+                else np.nan
+            ),
+            "covariance_trace": (
+                float(np.trace(state.state_covariance))
+                if state.state_covariance.ndim == 2
+                and state.state_covariance.size
+                else np.nan
+            ),
+            "state_correction_norm": (
+                float(np.linalg.norm(state.state_correction_vector))
+                if state.state_correction_vector.size else 0.0
+            ),
+            "rollback_record_id": state.rollback_record_id,
             "parameter_effective": step.get("runtime_parameter_effective", True),
             "parameter_mode": step.get("runtime_parameter_mode", ""),
             "fallback_flag": state.fallback_flag, "fallback_reason": state.fallback_reason,
@@ -1136,15 +1374,40 @@ def topology_step_execution_table(result: dict[str, dict[str, Any]]) -> pd.DataF
 def topology_step_state_lineage_table(result: dict[str, dict[str, Any]]) -> pd.DataFrame:
     rows = []
     for step in result.values():
-        state: StageState = step["stage_state"]
-        rows.append({
-            "state_id": state.stage_state_id, "topology_step_id": state.topology_step_id,
-            "parent_topology_step_id": state.parent_topology_step_id or "",
-            "parent_state_id": state.parent_stage_state_id or "",
-            "reference_state_id": state.reference_state,
-            "connection_lock_history_ids": ";".join(state.connection_lock_history_ids),
-            "release_history_ids": ";".join(state.release_history_ids),
-        })
+        predicted: StageState = step.get(
+            "predicted_stage_state", step["stage_state"]
+        )
+        states = [predicted]
+        posterior = step.get("posterior_stage_state")
+        if posterior is not None:
+            states.append(posterior)
+        for state in states:
+            rows.append({
+                "state_id": state.stage_state_id,
+                "topology_step_id": state.topology_step_id,
+                "state_role": state.state_role,
+                "parent_topology_step_id": (
+                    state.parent_topology_step_id or ""
+                ),
+                "parent_state_id": state.parent_stage_state_id or "",
+                "predicted_state_id": state.predicted_state_id,
+                "effective_state_id": state.effective_state_id,
+                "measurement_checkpoint_id": (
+                    state.measurement_checkpoint_id
+                ),
+                "measurement_update_id": state.measurement_update_id,
+                "measurement_update_status": (
+                    state.measurement_update_status
+                ),
+                "posterior_accepted": state.posterior_accepted,
+                "reference_state_id": state.reference_state,
+                "connection_lock_history_ids": ";".join(
+                    state.connection_lock_history_ids
+                ),
+                "release_history_ids": ";".join(
+                    state.release_history_ids
+                ),
+            })
     return pd.DataFrame(rows)
 
 

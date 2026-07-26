@@ -102,3 +102,10 @@ python scripts/run_automated_tests.py
 - 无接触/全接触状态保留WARN提示，但不再等同于LCP物理FAIL。
 - 高级模块改变运行配置而数据包未提供同配置验证批次时，KCP验证标记为`REFERENCE_ONLY`。
 - 对V2.5单点最小占位包增加用途说明，并将异常项、KCP检查、阈值公式分为独立页签。
+
+## 阶段实测后验更新
+
+- 新增 measurement checkpoint 驱动的低维线性高斯更新、Joseph 协方差、显式 `G_q` 状态回代和一次统一全局 LCP 重求。
+- 同时保留 PREDICTED/POSTERIOR 状态；成功后验传递到后续 `topology_step`，失败则生成回滚记录并保留预测状态。
+- 新增确定性 `03_STAGE_MEASUREMENT_UPDATE_MIN_CASE`、独立后验/LCP oracle、本地验证器、CLI 计数、完整报告产物与 Streamlit 第 15 页。
+- 本功能冻结参数和 SMS；合成测量只用于数值一致性验证。详见 `STAGE_MEASUREMENT_POSTERIOR_UPDATE.md`。

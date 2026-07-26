@@ -66,3 +66,26 @@
 - 最终全量统计：134 tests、128 PASS、0 FAIL、6 SKIP。
 - `02_TOPOLOGY_STEP_MIN_CASE` 自带校验器为 22/22 PASS、exit 0；任一 blocking check 失败时 exit 非 0。实际 MatrixManifest 与 NPZ 均为 156 个唯一 key，shape/dtype/row-layout/column-layout 一致。
 - CLI 固定输出 `FINAL_STATUS`、`BLOCKING_FAIL_COUNT`、`PHYSICAL_FAIL_COUNT`；0=成功，1=阻断校验失败，2=运行时/求解/物理失败，3=未预期异常。
+
+## 阶段实测后验更新增量
+
+- 新增 03 确定性合成包、2 维状态、GAP_G/LAMBDA_N 测量、P/H/R/G_q/F/Q、独立 NumPy 后验 oracle 和独立活动集 LCP oracle。
+- 03 本地验证器检查 checkpoint 外键、用途隔离、冻结目标、矩阵清单、协方差传递、oracle、对象映射与真实性边界。
+- 完整报告和 CLI 已增加 measurement checkpoint、接受/回滚和失败计数；Streamlit 增加第 15 页并增强第 13 页双状态父链。
+- 最终全量统计：169 tests、163 PASS、0 FAIL、6 个既有 V6 acceptance SKIP；原 134 项全部保留。
+- 八个正式数据包 CLI 均为 exit 0 / `FINAL_STATUS=PASS`；无 checkpoint 包计数为 0，03 包为 checkpoint 1、attempt 1、accepted 1、rollback 0、update fail 0。
+- 03 本地验证器 31/31 PASS，MatrixManifest/NPZ 均为 167 项；生成器连续两次包级 SHA-256 为 `344cb414d9a1c37326668c7d95f03a670c7df3a4d8156cb12c7d6e39368edd32`。
+- AppTest 已覆盖 03 第 15 页、checkpoint 选择、prior/posterior 展示、接受状态及 02 未配置提示；Streamlit 健康端点返回 HTTP 200 / `ok`。
+
+## 阶段实测后验更新独立审计定向修复（2026-07-26）
+
+- 修复了原实现用线性后验残差代替 post-LCP 实际物理残差的 BLOCKER；正式接受判据现使用统一 extractor 从后验全局 LCP 状态提取的物理观测及加权残差。
+- 03 包的 prior physical residual 为 `0.691859980228161`，posterior linearized residual 为约 `9.32338e-06`，post-LCP physical residual 为 `9.323377868711058e-06`；加权物理指标由 `54150.25458676836` 降至 `2.101731704278381e-05`。
+- H 来自独立全局 LCP 中央有限差分，epsilon=`1e-5`，prior、正负扰动和 eta_true 主动集稳定；oracle 不调用生产 update 或 topology runner。
+- 修复连续 checkpoint 重复施加 eta：当前 checkpoint 使用增量 q，后续新步骤使用原始算子 q 加完整当前 eta。双 checkpoint 零创新的 q 差异小于 `1e-12`。
+- 冻结快照覆盖 SMS、材料/参数、Cn/Ct、mu/beta、连接刚度、W_struct 与 MatrixManifest，并在数值处理前后真实比较。
+- 新增 35 项独立审计回归，原 169 项全部保留；最终自动化统计为 204 tests、198 PASS、0 FAIL、6 个既有 V6 acceptance SKIP。
+- 四组显式 unittest 分别为 stage measurement 70/70、topology executor 37/37、closeout 35/35、multi-part round2 23/23。
+- 03 本地 validator 为 38/38 PASS，MatrixManifest/NPZ 为 167/167；连续两次包级 SHA-256 均为 `c1d24323abda402b89a78ff2362fa4df37347810debb03b40b43598896511c16`。
+- 八个正式数据包 CLI 均为 exit 0 / `FINAL_STATUS=PASS` / blocking 0 / physical 0。03 包为 checkpoint 1、attempt 1、accepted 1、rollback 0、update fail 0、物理残差门 PASS；其余七包为 NOT_APPLICABLE。
+- 独立 AppTest 2/2 PASS；Streamlit 健康端点返回 HTTP 200 / `ok`，随后已停止测试进程。

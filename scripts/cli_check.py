@@ -21,6 +21,7 @@ from core.overconstraint import OverConstraintSettings, extended_solution_table
 from core.tangential_ncp import TangentialNCPSettings, tangential_summary_table
 from core.fallback import FallbackSettings, evaluate_validity_and_fallback, remaining_limitations_table
 from core.physical_consistency import physical_consistency_report
+from core.stage_measurement_update import validate_measurement_update_package
 
 
 def _blocking_fail_count(checks) -> int:
@@ -34,19 +35,38 @@ def _blocking_fail_count(checks) -> int:
     return int((checks["status"].astype(str).eq("FAIL") & blocking).sum())
 
 
-def _emit_final_summary(final_status: str, blocking: int, physical: int) -> None:
+def _emit_final_summary(
+    final_status: str,
+    blocking: int,
+    physical: int,
+    *,
+    checkpoint_count: int = 0,
+    update_attempt_count: int = 0,
+    posterior_accepted_count: int = 0,
+    posterior_rollback_count: int = 0,
+    measurement_update_fail_count: int = 0,
+    physical_residual_gate: str = "NOT_APPLICABLE",
+) -> None:
     print(f"FINAL_STATUS={final_status}")
     print(f"BLOCKING_FAIL_COUNT={blocking}")
     print(f"PHYSICAL_FAIL_COUNT={physical}")
+    print(f"MEASUREMENT_CHECKPOINT_COUNT={checkpoint_count}")
+    print(f"MEASUREMENT_UPDATE_ATTEMPT_COUNT={update_attempt_count}")
+    print(f"POSTERIOR_ACCEPTED_COUNT={posterior_accepted_count}")
+    print(f"POSTERIOR_ROLLBACK_COUNT={posterior_rollback_count}")
+    print(f"MEASUREMENT_UPDATE_FAIL_COUNT={measurement_update_fail_count}")
+    print(f"POSTERIOR_PHYSICAL_RESIDUAL_GATE={physical_residual_gate}")
 
 
 def _runtime_exit_code(
     physical_fail_count: int,
     fallback_status: str,
     overall_physical_status: str,
+    measurement_update_fail_count: int = 0,
 ) -> tuple[str, int]:
     failed = (
         int(physical_fail_count) > 0
+        or int(measurement_update_fail_count) > 0
         or str(fallback_status).upper() == "FAIL"
         or str(overall_physical_status).upper() == "FAIL"
     )
@@ -87,11 +107,25 @@ def main() -> int:
     print('\n=== Quality checks ===')
     print(checks.to_string(index=False))
     blocking_fail_count = _blocking_fail_count(checks)
+    checkpoint_table = pkg.raw_tables.get(
+        "I_meas/measurement_checkpoint.csv", pd.DataFrame()
+    )
+    checkpoint_count = int(len(checkpoint_table))
+    measurement_checks = validate_measurement_update_package(pkg)
+    if not measurement_checks.empty:
+        print("\n=== Stage measurement update quality checks ===")
+        print(measurement_checks.to_string(index=False))
+        blocking_fail_count += _blocking_fail_count(measurement_checks)
     package_validator_exit = _package_validator_exit(pkg.root)
     if package_validator_exit != 0:
         blocking_fail_count += 1
     if blocking_fail_count:
-        _emit_final_summary("FAIL", blocking_fail_count, 0)
+        _emit_final_summary(
+            "FAIL",
+            blocking_fail_count,
+            0,
+            checkpoint_count=checkpoint_count,
+        )
         return 1
 
     subst = NumericalSubstitutionSettings(enabled=args.subst_mode != 'base_only', mode=args.subst_mode)
@@ -141,6 +175,11 @@ def main() -> int:
         changed.append('tangential projection')
     if args.extended_lcp:
         changed.append('extended LCP')
+    if any(
+        bool(getattr(item.get("measurement_update"), "posterior_accepted", False))
+        for item in result.values()
+    ):
+        changed.append('accepted stage measurement posterior update')
     phys = physical_consistency_report(
         pkg, result, kcp, val,
         validation_comparable=not changed,
@@ -184,10 +223,52 @@ def main() -> int:
     overall_physical_status = str(
         phys.get("overall", {}).get("overall_status", "PASS")
     ).upper()
-    final_status, exit_code = _runtime_exit_code(
-        physical_fail_count, fallback_status, overall_physical_status
+    updates = [
+        item.get("measurement_update")
+        for item in result.values()
+        if item.get("measurement_update") is not None
+    ]
+    update_attempt_count = len(updates)
+    posterior_accepted_count = sum(
+        bool(update.posterior_accepted) for update in updates
     )
-    _emit_final_summary(final_status, blocking_fail_count, physical_fail_count)
+    posterior_rollback_count = sum(
+        update.rollback_record is not None for update in updates
+    )
+    measurement_update_fail_count = sum(
+        str(update.quality_flag).upper() == "FAIL" for update in updates
+    )
+    physical_gate_values = [
+        bool(update.trace.get("physical_residual_improved"))
+        for update in updates
+        if str(update.trace.get("status", "")).upper()
+        in {"POSTERIOR_ACCEPTED", "POSTERIOR_REJECTED_ROLLBACK"}
+        and "physical_residual_improved" in update.trace
+    ]
+    physical_residual_gate = (
+        "PASS"
+        if physical_gate_values and all(physical_gate_values)
+        else "FAIL"
+        if physical_gate_values
+        else "NOT_APPLICABLE"
+    )
+    final_status, exit_code = _runtime_exit_code(
+        physical_fail_count,
+        fallback_status,
+        overall_physical_status,
+        measurement_update_fail_count,
+    )
+    _emit_final_summary(
+        final_status,
+        blocking_fail_count,
+        physical_fail_count,
+        checkpoint_count=checkpoint_count,
+        update_attempt_count=update_attempt_count,
+        posterior_accepted_count=posterior_accepted_count,
+        posterior_rollback_count=posterior_rollback_count,
+        measurement_update_fail_count=measurement_update_fail_count,
+        physical_residual_gate=physical_residual_gate,
+    )
     return exit_code
 
 
