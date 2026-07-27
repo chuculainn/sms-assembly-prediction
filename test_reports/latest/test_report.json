@@ -1,7 +1,7 @@
 {
-  "generated_at_utc": "2026-07-26T09:01:36.870659+00:00",
-  "tests_run": 204,
-  "passed": 198,
+  "generated_at_utc": "2026-07-27T06:01:48.012392+00:00",
+  "tests_run": 243,
+  "passed": 237,
   "failed": 0,
   "skipped_v6_acceptance": 6,
   "successful": true,
@@ -313,6 +313,201 @@
     },
     {
       "test": "tests.test_multi_part_upgrade_round2.StreamlitSmokeTests.test_app_and_new_pages_render_without_exception",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "tests.test_posterior_virtual_sms_rolling.PosteriorVirtualSMSRollingAuditRepairTests.test_audit_01_authoritative_status_is_shared_everywhere",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "tests.test_posterior_virtual_sms_rolling.PosteriorVirtualSMSRollingAuditRepairTests.test_audit_02_duplicate_kcp_propagates_sample_run_report_cli",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "tests.test_posterior_virtual_sms_rolling.PosteriorVirtualSMSRollingAuditRepairTests.test_audit_03_assignment_interval_faults_are_blocking",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "tests.test_posterior_virtual_sms_rolling.PosteriorVirtualSMSRollingAuditRepairTests.test_audit_04_bad_step_cli_is_blocking_exit_one",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "tests.test_posterior_virtual_sms_rolling.PosteriorVirtualSMSRollingAuditRepairTests.test_audit_05_application_matrix_missing_duplicate_unexpected",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "tests.test_posterior_virtual_sms_rolling.PosteriorVirtualSMSRollingAuditRepairTests.test_audit_06_normal_application_matrix_has_twenty_rows",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "tests.test_posterior_virtual_sms_rolling.PosteriorVirtualSMSRollingAuditRepairTests.test_audit_07_mapping_role_and_matrix_norm_are_governed",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "tests.test_posterior_virtual_sms_rolling.PosteriorVirtualSMSRollingAuditRepairTests.test_audit_08_policy_quality_reference_and_unit_faults",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "tests.test_posterior_virtual_sms_rolling.PosteriorVirtualSMSRollingAuditRepairTests.test_audit_09_predicted_only_failure_has_separate_counts",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "tests.test_posterior_virtual_sms_rolling.PosteriorVirtualSMSRollingAuditRepairTests.test_audit_10_posterior_only_policy_skips_baseline",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "tests.test_posterior_virtual_sms_rolling.PosteriorVirtualSMSRollingAuditRepairTests.test_audit_11_complete_topology_hash_detects_start_mutation",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "tests.test_posterior_virtual_sms_rolling.PosteriorVirtualSMSRollingAuditRepairTests.test_audit_12_cli_counts_unique_samples_for_multiple_parts",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "tests.test_posterior_virtual_sms_rolling.PosteriorVirtualSMSRollingAuditRepairTests.test_audit_13_package_file_hash_uses_raw_bytes",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "tests.test_posterior_virtual_sms_rolling.PosteriorVirtualSMSRollingAuditRepairTests.test_final_01_direct_sms_boolean_changes_actual_kcp_path",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "tests.test_posterior_virtual_sms_rolling.PosteriorVirtualSMSRollingAuditRepairTests.test_final_02_direct_sms_invalid_and_conflicting_config_blocks",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "tests.test_posterior_virtual_sms_rolling.PosteriorVirtualSMSRollingAuditRepairTests.test_final_03_source_checkpoint_and_runtime_linkage_faults_block",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "tests.test_posterior_virtual_sms_rolling.PosteriorVirtualSMSRollingAuditRepairTests.test_final_04_checkpoint_step_fault_cli_exit_one",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "tests.test_posterior_virtual_sms_rolling.PosteriorVirtualSMSRollingAuditRepairTests.test_final_05_streamlit_real_all_failure_and_posterior_only",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "tests.test_posterior_virtual_sms_rolling.PosteriorVirtualSMSRollingAuditRepairTests.test_final_06_coefficient_delta_has_single_assignment",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "tests.test_posterior_virtual_sms_rolling.PosteriorVirtualSMSRollingTests.test_cli_summary_and_runtime_failure_exit_contract",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "tests.test_posterior_virtual_sms_rolling.PosteriorVirtualSMSRollingTests.test_descriptive_summary_truth_and_contact_modes",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "tests.test_posterior_virtual_sms_rolling.PosteriorVirtualSMSRollingTests.test_explicit_zero_mapping_is_valid",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "tests.test_posterior_virtual_sms_rolling.PosteriorVirtualSMSRollingTests.test_fixture_governance_and_local_validator",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "tests.test_posterior_virtual_sms_rolling.PosteriorVirtualSMSRollingTests.test_generator_is_reproducible",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "tests.test_posterior_virtual_sms_rolling.PosteriorVirtualSMSRollingTests.test_invalid_source_posterior_blocks_formal_run",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "tests.test_posterior_virtual_sms_rolling.PosteriorVirtualSMSRollingTests.test_kcp_ledger_oracle_and_baseline_comparison",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "tests.test_posterior_virtual_sms_rolling.PosteriorVirtualSMSRollingTests.test_mapping_missing_and_shape_layout_mismatch_block",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "tests.test_posterior_virtual_sms_rolling.PosteriorVirtualSMSRollingTests.test_no_formal_fixture_ids_are_hardcoded_in_core",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "tests.test_posterior_virtual_sms_rolling.PosteriorVirtualSMSRollingTests.test_non12d_in_memory_fixture_runs_formal_entry",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "tests.test_posterior_virtual_sms_rolling.PosteriorVirtualSMSRollingTests.test_order_invariance_single_batch_and_repeatability",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "tests.test_posterior_virtual_sms_rolling.PosteriorVirtualSMSRollingTests.test_plan_source_and_legacy_compatibility",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "tests.test_posterior_virtual_sms_rolling.PosteriorVirtualSMSRollingTests.test_q_decomposition_and_operator_base_semantics",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "tests.test_posterior_virtual_sms_rolling.PosteriorVirtualSMSRollingTests.test_report_contains_all_required_rolling_artifacts",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "tests.test_posterior_virtual_sms_rolling.PosteriorVirtualSMSRollingTests.test_sample_failure_is_isolated",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "tests.test_posterior_virtual_sms_rolling.PosteriorVirtualSMSRollingTests.test_sample_library_component_order_reference_and_delta",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "tests.test_posterior_virtual_sms_rolling.PosteriorVirtualSMSRollingTests.test_source_historical_and_package_hashes_are_immutable",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "tests.test_posterior_virtual_sms_rolling.PosteriorVirtualSMSRollingTests.test_streamlit_page_16_plan_sample_and_legacy_message",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "tests.test_posterior_virtual_sms_rolling.PosteriorVirtualSMSRollingTests.test_topology_branch_lineage_global_lcp_and_physics",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "tests.test_posterior_virtual_sms_rolling.PosteriorVirtualSMSRollingTests.test_virtual_sms_applies_once_only_on_future_steps",
       "status": "PASS",
       "detail": ""
     },

@@ -1,0 +1,82 @@
+{
+  "package_name": "04_POSTERIOR_VIRTUAL_SMS_ROLLING_MIN_CASE",
+  "schema_version": "V2.5_POSTERIOR_VIRTUAL_SMS_ROLLING",
+  "schema_revision": "POSTERIOR_VIRTUAL_SMS_ROLLING_2026-07",
+  "row_mode": "synthetic_multi_part",
+  "created_at": "2026-07-26T00:00:00+08:00",
+  "source": "数学模型数据结构说明书 V2.5 + 多零件串并联同步修订稿",
+  "description": "Synthetic deterministic posterior-driven virtual SMS rolling fixture.",
+  "data_nature": "SYNTHETIC_NUMERICAL_CONSISTENCY_CASE",
+  "engineering_claim_allowed": false,
+  "topology_summary": {
+    "parts": 4,
+    "interfaces": 4,
+    "serial_path": [
+      "P_A",
+      "P_B",
+      "P_C"
+    ],
+    "parallel_paths_between_A_B": [
+      [
+        "G_AB"
+      ],
+      [
+        "G_AD",
+        "G_DB"
+      ]
+    ]
+  },
+  "contact_vector_layout": "VL_CONTACT_ALL_12: AB[0:3], BC[3:6], AD[6:9], BD[9:12]",
+  "notes": [
+    "可用于解析、状态继承、跨接口耦合、贡献账本和自动测试。",
+    "不得用于论文工程数值结论；须由真实FE、测量与试验数据替换。"
+  ],
+  "purpose": "stage measurement posterior update, global LCP re-solve, rollback and propagation integration fixture",
+  "operator_mode": "PRECOMPUTED_TOPOLOGY_STEP_OPERATOR",
+  "fixture_expectations": {
+    "part_count": 4,
+    "interface_count": 4,
+    "contact_points_per_interface": 3,
+    "vector_dimension": 12,
+    "topology_step_count": 14,
+    "minimum_multi_interface_activation_steps": 1,
+    "serial_paths": [
+      [
+        "P_A",
+        "P_B",
+        "P_C"
+      ]
+    ],
+    "parallel_paths": [
+      {
+        "endpoints": [
+          "P_A",
+          "P_B"
+        ],
+        "paths": [
+          [
+            "P_A",
+            "P_B"
+          ],
+          [
+            "P_A",
+            "P_D",
+            "P_B"
+          ]
+        ]
+      }
+    ],
+    "require_nonzero_cross_blocks": true,
+    "measurement_checkpoint_count": 1,
+    "measurement_count": 2,
+    "update_state_dimension": 2,
+    "posterior_resolve_lcp_count": 1
+  },
+  "truthfulness_statement": "Synthetic numerical-consistency measurements and precomputed operators only. Not factory data, online FE, parameter identification, or engineering accuracy evidence.",
+  "measurement_data_nature": "SYNTHETIC_NUMERICAL_CONSISTENCY_CASE",
+  "measurement_update_mode": "LINEAR_GAUSSIAN_JOSEPH_LOW_DIMENSIONAL_STATE",
+  "virtual_sms_sample_nature": "EXPLICIT_SYNTHETIC_VIRTUAL_SMS_LIBRARY",
+  "probability_interpretation_allowed": false,
+  "rolling_plan_count": 1,
+  "virtual_sms_sample_count": 5
+}

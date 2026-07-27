@@ -18,6 +18,11 @@ from .package_validator import data_truthfulness_statement, validate_package_det
 from .stage_solver import point_result_table, stage_summary_table
 from .stage_state import stage_transition_runtime_table
 from .stage_measurement_update import StageMeasurementUpdateResult
+from .rolling_prediction import (
+    CONTRIBUTION_LEDGER_COLUMNS,
+    ROLLING_KCP_COLUMNS,
+    RollingPredictionRunResult,
+)
 from .topology_step import (
     connection_lock_history_table,
     release_history_table,
@@ -314,6 +319,370 @@ def measurement_update_report_tables(
     return tables, traces
 
 
+def _report_cell(value):
+    if isinstance(value, (dict, list, tuple)):
+        return json.dumps(value, ensure_ascii=False, sort_keys=True)
+    return value
+
+
+def rolling_prediction_report_tables(
+    pkg: SMSPackage,
+    rolling_result: RollingPredictionRunResult,
+) -> tuple[dict[str, pd.DataFrame], dict]:
+    """Build the durable tables for one posterior-driven rolling run."""
+    sample_columns = [
+        "rolling_run_id", "rolling_plan_id", "virtual_sms_sample_id",
+        "source_checkpoint_id", "source_predicted_state_id",
+        "source_posterior_state_id", "effective_source_state_id",
+        "prediction_start_step_id", "prediction_end_step_id",
+        "future_part_ids", "sms_coefficients",
+        "sms_reference_coefficients", "sms_delta_coefficients",
+        "future_process_scenario_id", "final_state_id",
+        "contact_mode_signature", "quality_status",
+        "sample_quality_status", "run_quality_status",
+        "failure_reason", "authoritative_failure_reason",
+        "double_count_fail_count", "application_fail_count",
+        "kcp_fail_count", "source_linkage_status",
+        "final_state_includes_direct_sms_geometry",
+        "direct_sms_aggregation_action",
+        "probability_interpretation_allowed",
+        "engineering_claim_allowed",
+    ]
+    step_columns = [
+        "rolling_run_id", "rolling_plan_id", "virtual_sms_sample_id",
+        "source_state_role", "topology_step_id", "operator_set_id",
+        "stage_id", "active_interface_ids", "active_indices",
+        "q_operator_base_norm", "q_posterior_state_correction_norm",
+        "q_virtual_sms_correction_norm",
+        "q_future_process_correction_norm", "q_effective_norm",
+        "effective_q_hash", "lcp_call_count",
+        "complementarity_residual", "solve_status", "quality_flag",
+    ]
+    lineage_columns = [
+        "rolling_run_id", "rolling_plan_id", "virtual_sms_sample_id",
+        "source_state_role", "source_checkpoint_id",
+        "source_predicted_state_id", "source_posterior_state_id",
+        "effective_source_state_id", "topology_step_id",
+        "parent_state_id", "stage_state_id", "state_role",
+        "posterior_accepted",
+    ]
+    failure_columns = [
+        "rolling_run_id", "rolling_plan_id", "virtual_sms_sample_id",
+        "failure_branch", "source_state_role",
+        "effective_source_state_id", "sample_quality_status",
+        "run_quality_status", "double_count_fail_count",
+        "application_fail_count", "kcp_fail_count",
+        "authoritative_failure_reason", "failure_reason",
+    ]
+    sample_rows = []
+    step_rows = []
+    sms_rows = []
+    lineage_rows = []
+    failure_rows = []
+    all_results = [
+        *rolling_result.sample_results,
+        *rolling_result.sample_failures,
+        *rolling_result.predicted_baseline_results,
+        *rolling_result.predicted_baseline_failures,
+    ]
+    for sample in all_results:
+        if sample.source_state_role == "POSTERIOR":
+            sample_rows.append({
+                "rolling_run_id": sample.rolling_run_id,
+                "rolling_plan_id": sample.rolling_plan_id,
+                "virtual_sms_sample_id": sample.virtual_sms_sample_id,
+                "source_checkpoint_id": sample.source_checkpoint_id,
+                "source_predicted_state_id":
+                    sample.source_predicted_state_id,
+                "source_posterior_state_id":
+                    sample.source_posterior_state_id,
+                "effective_source_state_id":
+                    sample.effective_source_state_id,
+                "prediction_start_step_id":
+                    sample.prediction_start_step_id,
+                "prediction_end_step_id": sample.prediction_end_step_id,
+                "future_part_ids": _report_cell(sample.future_part_ids),
+                "sms_coefficients": _report_cell(sample.sms_coefficients),
+                "sms_reference_coefficients": _report_cell(
+                    sample.sms_reference_coefficients
+                ),
+                "sms_delta_coefficients": _report_cell(
+                    sample.sms_delta_coefficients
+                ),
+                "future_process_scenario_id":
+                    sample.future_process_scenario_id,
+                "final_state_id": sample.final_state_id,
+                "contact_mode_signature": sample.contact_mode_signature,
+                "quality_status": sample.quality_status,
+                "sample_quality_status": sample.quality_status,
+                "run_quality_status":
+                    rolling_result.quality_status,
+                "failure_reason": sample.failure_reason,
+                "authoritative_failure_reason":
+                    sample.authoritative_failure_reason,
+                "double_count_fail_count":
+                    sample.double_count_fail_count,
+                "application_fail_count":
+                    sample.application_fail_count,
+                "kcp_fail_count": sample.kcp_fail_count,
+                "source_linkage_status":
+                    rolling_result.status_summary.get(
+                        "source_linkage_status", "N/A"
+                    ),
+                "final_state_includes_direct_sms_geometry":
+                    rolling_result.status_summary.get(
+                        "final_state_includes_direct_sms_geometry"
+                    ),
+                "direct_sms_aggregation_action":
+                    rolling_result.status_summary.get(
+                        "direct_sms_aggregation_action", "N/A"
+                    ),
+                "probability_interpretation_allowed": False,
+                "engineering_claim_allowed": False,
+            })
+        parent_state_id = sample.effective_source_state_id
+        for step_id, step in sample.step_results.items():
+            trace = step.get("contact_trace", {})
+            state = step.get("stage_state")
+            residuals = getattr(
+                step.get("solution"), "residuals", {}
+            )
+            step_rows.append({
+                "rolling_run_id": sample.rolling_run_id,
+                "rolling_plan_id": sample.rolling_plan_id,
+                "virtual_sms_sample_id": sample.virtual_sms_sample_id,
+                "source_state_role": sample.source_state_role,
+                "topology_step_id": step_id,
+                "operator_set_id": step.get("operator_set_id", ""),
+                "stage_id": step.get("stage_id", ""),
+                "active_interface_ids": _report_cell(
+                    step.get("active_interface_ids", [])
+                ),
+                "active_indices": _report_cell(
+                    trace.get("active_indices", [])
+                ),
+                "q_operator_base_norm": trace.get(
+                    "q_operator_base_norm", 0.0
+                ),
+                "q_posterior_state_correction_norm": trace.get(
+                    "q_posterior_state_correction_norm", 0.0
+                ),
+                "q_virtual_sms_correction_norm": trace.get(
+                    "q_virtual_sms_correction_norm", 0.0
+                ),
+                "q_future_process_correction_norm": trace.get(
+                    "q_future_process_correction_norm", 0.0
+                ),
+                "q_effective_norm": trace.get("q_effective_norm", 0.0),
+                "effective_q_hash": trace.get("effective_q_hash", ""),
+                "lcp_call_count": step.get("lcp_call_count", 0),
+                "complementarity_residual": residuals.get(
+                    "complementarity_residual"
+                ),
+                "solve_status": step.get("solve_status", ""),
+                "quality_flag": getattr(state, "quality_flag", ""),
+            })
+            state_id = getattr(state, "stage_state_id", "")
+            lineage_rows.append({
+                "rolling_run_id": sample.rolling_run_id,
+                "rolling_plan_id": sample.rolling_plan_id,
+                "virtual_sms_sample_id": sample.virtual_sms_sample_id,
+                "source_state_role": sample.source_state_role,
+                "source_checkpoint_id": sample.source_checkpoint_id,
+                "source_predicted_state_id":
+                    sample.source_predicted_state_id,
+                "source_posterior_state_id":
+                    sample.source_posterior_state_id,
+                "effective_source_state_id":
+                    sample.effective_source_state_id,
+                "topology_step_id": step_id,
+                "parent_state_id": parent_state_id,
+                "stage_state_id": state_id,
+                "state_role": getattr(state, "state_role", ""),
+                "posterior_accepted": getattr(
+                    state, "posterior_accepted", False
+                ),
+            })
+            parent_state_id = state_id
+        for record in sample.trace.get("sms_application_trace", []):
+            sms_rows.append({
+                key: _report_cell(value)
+                for key, value in {
+                    **record,
+                    "source_state_role": sample.source_state_role,
+                }.items()
+            })
+    for failure_branch, failures in (
+        ("POSTERIOR_FORMAL", rolling_result.sample_failures),
+        (
+            "PREDICTED_BASELINE",
+            rolling_result.predicted_baseline_failures,
+        ),
+    ):
+        for failure in failures:
+            failure_rows.append({
+                "rolling_run_id": failure.rolling_run_id,
+                "rolling_plan_id": failure.rolling_plan_id,
+                "virtual_sms_sample_id": failure.virtual_sms_sample_id,
+                "failure_branch": failure_branch,
+                "source_state_role": failure.source_state_role,
+                "effective_source_state_id":
+                    failure.effective_source_state_id,
+                "sample_quality_status": failure.quality_status,
+                "run_quality_status": rolling_result.quality_status,
+                "double_count_fail_count":
+                    failure.double_count_fail_count,
+                "application_fail_count":
+                    failure.application_fail_count,
+                "kcp_fail_count": failure.kcp_fail_count,
+                "authoritative_failure_reason":
+                    failure.authoritative_failure_reason,
+                "failure_reason": failure.failure_reason,
+            })
+    sample_manifest = pkg.raw_tables.get(
+        "I_pred/virtual_sms_sample.csv", pd.DataFrame()
+    ).copy()
+    sample_sets = pkg.raw_tables.get(
+        "I_pred/virtual_sms_sample_set.csv", pd.DataFrame()
+    ).copy()
+    if (
+        not sample_manifest.empty
+        and not sample_sets.empty
+        and "sample_set_id" in sample_manifest
+        and "sample_set_id" in sample_sets
+    ):
+        sample_manifest = sample_manifest.merge(
+            sample_sets,
+            on="sample_set_id",
+            how="left",
+            suffixes=("", "_set"),
+        )
+    kcp_report_frames = [
+        item.kcp_prediction_result.assign(
+            sample_quality_status=item.quality_status,
+            run_quality_status=rolling_result.quality_status,
+            authoritative_failure_reason=(
+                item.authoritative_failure_reason
+                or rolling_result.authoritative_failure_reason
+            ),
+        )
+        for item in [
+            *rolling_result.sample_results,
+            *rolling_result.sample_failures,
+        ]
+        if not item.kcp_prediction_result.empty
+    ]
+    kcp_report = (
+        pd.concat(kcp_report_frames, ignore_index=True)
+        if kcp_report_frames else pd.DataFrame(
+            columns=[
+                *ROLLING_KCP_COLUMNS,
+                "run_quality_status",
+                "authoritative_failure_reason",
+            ]
+        )
+    )
+    ledger_frames = [
+        item.contribution_ledger.assign(
+            rolling_run_id=item.rolling_run_id,
+            rolling_plan_id=item.rolling_plan_id,
+            virtual_sms_sample_id=item.virtual_sms_sample_id,
+            sample_quality_status=item.quality_status,
+            run_quality_status=rolling_result.quality_status,
+        )
+        for item in [
+            *rolling_result.sample_results,
+            *rolling_result.sample_failures,
+        ]
+        if not item.contribution_ledger.empty
+    ]
+    ledger_columns = [
+        *CONTRIBUTION_LEDGER_COLUMNS,
+        "rolling_run_id",
+        "rolling_plan_id",
+        "virtual_sms_sample_id",
+        "sample_quality_status",
+        "run_quality_status",
+    ]
+    ledger_report = (
+        pd.concat(ledger_frames, ignore_index=True)
+        if ledger_frames else pd.DataFrame(columns=ledger_columns)
+    )
+    tables = {
+        "rolling_prediction_plan.csv": pkg.raw_tables.get(
+            "I_pred/rolling_prediction_plan.csv", pd.DataFrame()
+        ).copy(),
+        "virtual_sms_sample_manifest.csv": sample_manifest,
+        "virtual_sms_coefficients.csv": pkg.raw_tables.get(
+            "I_pred/virtual_sms_coefficients.csv", pd.DataFrame()
+        ).copy(),
+        "future_sms_assignment.csv": pkg.raw_tables.get(
+            "I_pred/future_sms_assignment.csv", pd.DataFrame()
+        ).copy(),
+        "sms_operator_mapping.csv": pkg.raw_tables.get(
+            "I_pred/sms_operator_mapping.csv", pd.DataFrame()
+        ).copy(),
+        "rolling_sample_summary.csv":
+            pd.DataFrame(sample_rows, columns=sample_columns),
+        "rolling_step_execution.csv":
+            pd.DataFrame(step_rows, columns=step_columns),
+        "rolling_sms_application_trace.csv": pd.DataFrame(sms_rows),
+        "rolling_state_lineage.csv":
+            pd.DataFrame(lineage_rows, columns=lineage_columns),
+        "rolling_kcp_predictions.csv":
+            kcp_report,
+        "rolling_contribution_ledger.csv": ledger_report,
+        "rolling_kcp_summary.csv":
+            rolling_result.descriptive_summary.kcp_summary.copy(),
+        "rolling_baseline_comparison.csv":
+            rolling_result.baseline_comparison.copy(),
+        "rolling_contact_mode_summary.csv":
+            rolling_result.contact_mode_summary.copy(),
+        "rolling_sample_failure.csv":
+            pd.DataFrame(failure_rows, columns=failure_columns),
+        "rolling_quality_gate.csv":
+            rolling_result.quality_gates.copy(),
+    }
+    trace = {
+        **rolling_result.trace,
+        "run_quality_status": rolling_result.quality_status,
+        "authoritative_failure_reason":
+            rolling_result.authoritative_failure_reason,
+        "status_summary": rolling_result.status_summary,
+        "plan": {
+            key: _report_cell(value)
+            for key, value in vars(rolling_result.plan).items()
+        },
+        "sample_traces": {
+            item.virtual_sms_sample_id: item.trace
+            for item in rolling_result.sample_results
+        },
+        "predicted_baseline_traces": {
+            item.virtual_sms_sample_id: item.trace
+            for item in rolling_result.predicted_baseline_results
+        },
+    }
+    return tables, trace
+
+
+def build_rolling_prediction_report_zip(
+    pkg: SMSPackage,
+    rolling_result: RollingPredictionRunResult,
+) -> bytes:
+    tables, trace = rolling_prediction_report_tables(pkg, rolling_result)
+    buf = BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as archive:
+        for name, frame in tables.items():
+            archive.writestr(
+                name, frame.to_csv(index=False).encode("utf-8-sig")
+            )
+        archive.writestr(
+            "rolling_prediction_trace.json",
+            json.dumps(trace, ensure_ascii=False, indent=2, default=str),
+        )
+    return buf.getvalue()
+
+
 def build_runtime_report_zip(
     pkg: SMSPackage,
     result: dict[str, dict],
@@ -323,6 +692,7 @@ def build_runtime_report_zip(
     mc_stats: pd.DataFrame | None = None,
     mc_samples: pd.DataFrame | None = None,
     physical_report: dict | None = None,
+    rolling_result: RollingPredictionRunResult | None = None,
     ablation_threshold: float = 0.05,
 ) -> bytes:
     stage_summary = stage_summary_table(result)
@@ -404,5 +774,22 @@ def build_runtime_report_zip(
                         f"physical_consistency_{name}.csv",
                         frame.to_csv(index=False).encode("utf-8-sig"),
                     )
+        if rolling_result is not None:
+            rolling_tables, rolling_trace = rolling_prediction_report_tables(
+                pkg, rolling_result
+            )
+            for name, frame in rolling_tables.items():
+                archive.writestr(
+                    name, frame.to_csv(index=False).encode("utf-8-sig")
+                )
+            archive.writestr(
+                "rolling_prediction_trace.json",
+                json.dumps(
+                    rolling_trace,
+                    ensure_ascii=False,
+                    indent=2,
+                    default=str,
+                ),
+            )
     return buf.getvalue()
 

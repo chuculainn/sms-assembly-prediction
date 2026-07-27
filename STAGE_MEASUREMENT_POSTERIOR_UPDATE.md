@@ -96,3 +96,7 @@ Streamlit 第 15 页展示 checkpoint 路线、测量、更新决策、prior/pos
 ## 当前未实现
 
 当前不支持状态—参数联合估计、参数辨识、在线 FE/Schur 更新、非线性观测、EKF/UKF/粒子滤波、多次高斯—牛顿、完整摩擦 NCP、后验 Monte Carlo 或生产级工程精度声明。
+
+## accepted posterior 的下游 rolling 使用
+
+阶段后验模块仍只负责 checkpoint 更新、物理重求、接受/回滚和后续状态传递。新增 rolling 层只消费已接受且 `quality_flag=PASS` 的 POSTERIOR 状态，不回写测量、posterior、SMS、参数或历史 topology 结果。对照路径可读取同一 checkpoint 的 PREDICTED 状态，但不得替代正式 posterior source。future-part SMS 的 reference、`Delta alpha` 和 `G_SMS` 规则见 `POSTERIOR_VIRTUAL_SMS_ROLLING_PREDICTION.md`。

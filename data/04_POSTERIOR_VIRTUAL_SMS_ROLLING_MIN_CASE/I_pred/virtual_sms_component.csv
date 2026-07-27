@@ -1,0 +1,3 @@
+﻿sms_layout_id,component_order,component_id,component_type,part_id,unit,reference_state_id,quality_flag,description
+SMS_LAYOUT_P_D_2,0,P_D_MODE_1,SYNTHETIC_SHAPE_MODE,P_D,1,SMS_REF_P_D_OPERATOR,PASS,Synthetic future-part SMS mode 1.
+SMS_LAYOUT_P_D_2,1,P_D_MODE_2,SYNTHETIC_SHAPE_MODE,P_D,1,SMS_REF_P_D_OPERATOR,PASS,Synthetic future-part SMS mode 2.

@@ -1,0 +1,656 @@
+{
+  "package": "04_POSTERIOR_VIRTUAL_SMS_ROLLING_MIN_CASE",
+  "package_id": "04_POSTERIOR_VIRTUAL_SMS_ROLLING_MIN_CASE",
+  "status": "PASS",
+  "passed": 67,
+  "total": 67,
+  "blocking_fail_count": 0,
+  "matrix_manifest_count": 173,
+  "npz_key_count": 173,
+  "checks": [
+    {
+      "name": "interface endpoint foreign keys",
+      "passed": true,
+      "status": "PASS",
+      "blocking": true,
+      "detail": "parts=4, interfaces=4"
+    },
+    {
+      "name": "fixture expectation: part_count",
+      "passed": true,
+      "status": "PASS",
+      "blocking": true,
+      "detail": "expected=4, actual=4"
+    },
+    {
+      "name": "fixture expectation: interface_count",
+      "passed": true,
+      "status": "PASS",
+      "blocking": true,
+      "detail": "expected=4, actual=4"
+    },
+    {
+      "name": "fixture expectation: topology_step_count",
+      "passed": true,
+      "status": "PASS",
+      "blocking": true,
+      "detail": "expected=14, actual=14"
+    },
+    {
+      "name": "serial paths from actual part-interface graph",
+      "passed": true,
+      "status": "PASS",
+      "blocking": true,
+      "detail": "[[\"P_A\", \"P_B\", \"P_C\"]]"
+    },
+    {
+      "name": "parallel direct and bridge paths from actual graph",
+      "passed": true,
+      "status": "PASS",
+      "blocking": true,
+      "detail": "[{\"endpoints\": [\"P_A\", \"P_B\"], \"paths\": [[\"P_A\", \"P_B\"], [\"P_A\", \"P_D\", \"P_B\"]], \"path_status\": [true, true]}]"
+    },
+    {
+      "name": "contact point foreign keys and per-interface grouping",
+      "passed": true,
+      "status": "PASS",
+      "blocking": true,
+      "detail": "{\"G_AB\": 3, \"G_AD\": 3, \"G_BC\": 3, \"G_DB\": 3}"
+    },
+    {
+      "name": "fixture expectation: contact points per interface",
+      "passed": true,
+      "status": "PASS",
+      "blocking": true,
+      "detail": "expected=3, actual={\"G_AB\": 3, \"G_AD\": 3, \"G_BC\": 3, \"G_DB\": 3}"
+    },
+    {
+      "name": "vector layout contiguous, unique and data-linked",
+      "passed": true,
+      "status": "PASS",
+      "blocking": true,
+      "detail": "dimension=12, intervals=[(0, 2), (3, 5), (6, 8), (9, 11)]"
+    },
+    {
+      "name": "fixture expectation: vector dimension",
+      "passed": true,
+      "status": "PASS",
+      "blocking": true,
+      "detail": "expected=12, actual=12"
+    },
+    {
+      "name": "topology route IDs, order and parent chain",
+      "passed": true,
+      "status": "PASS",
+      "blocking": true,
+      "detail": "steps=['TS000', 'TS101', 'TS102', 'TS103', 'TS104', 'TS201', 'TS202', 'TS203', 'TS204', 'TS205', 'TS301', 'TS302', 'TS303', 'TS304']"
+    },
+    {
+      "name": "topology route part/interface foreign keys",
+      "passed": true,
+      "status": "PASS",
+      "blocking": true,
+      "detail": "all activated/deactivated IDs resolve"
+    },
+    {
+      "name": "same-step multi-interface activation from route data",
+      "passed": true,
+      "status": "PASS",
+      "blocking": true,
+      "detail": "expected_min=1, actual=['TS301']"
+    },
+    {
+      "name": "MatrixManifest and NPZ key set",
+      "passed": true,
+      "status": "PASS",
+      "blocking": true,
+      "detail": "manifest=173, npz=173, unique=173"
+    },
+    {
+      "name": "MatrixManifest shape, dtype and row/column layout",
+      "passed": true,
+      "status": "PASS",
+      "blocking": true,
+      "detail": "errors=[]"
+    },
+    {
+      "name": "precomputed topology operator completeness and identity",
+      "passed": true,
+      "status": "PASS",
+      "blocking": true,
+      "detail": "solved_steps=['TS101', 'TS102', 'TS103', 'TS104', 'TS201', 'TS202', 'TS203', 'TS204', 'TS301', 'TS302', 'TS303', 'TS304'], errors=[]"
+    },
+    {
+      "name": "active W_struct cross-interface block norms",
+      "passed": true,
+      "status": "PASS",
+      "blocking": true,
+      "detail": "{\"TS101\": {}, \"TS102\": {}, \"TS103\": {}, \"TS104\": {}, \"TS201\": {\"G_AB|G_BC\": 0.00020759561652404902}, \"TS202\": {\"G_AB|G_BC\": 0.00017645627404544166}, \"TS203\": {\"G_AB|G_BC\": 0.00013493715074063185}, \"TS204\": {\"G_AB|G_BC\": 0.00015569671239303677}, \"TS301\": {\"G_AB|G_AD\": 0.00012666424120484835, \"G_AB|G_BC\": 0.00020759561652404902, \"G_AB|G_DB\": 0.00012186771516689728, \"G_AD|G_BC\": 6.733453794302e-05, \"G_AD|G_DB\": 7.904416487002694e-05, \"G_BC|G_DB\": 0.0001103934780682265}, \"TS302\": {\"G_AB|G_AD\": 0.0001076646050241211, \"G_AB|G_BC\": 0.00017645627404544166, \"G_AB|G_DB\": 0.00010358755789186268, \"G_AD|G_BC\": 5.7234357251567e-05, \"G_AD|G_DB\": 6.71875401395229e-05, \"G_BC|G_DB\": 9.383445635799252e-05}, \"TS303\": {\"G_AB|G_AD\": 8.233175678315143e-05, \"G_AB|G_BC\": 0.00013493715074063185, \"G_AB|G_DB\": 7.921401485848322e-05, \"G_AD|G_BC\": 4.376744966296301e-05, \"G_AD|G_DB\": 5.137870716551752e-05, \"G_BC|G_DB\": 7.175576074434723e-05}, \"TS304\": {\"G_AB|G_AD\": 9.499818090363627e-05, \"G_AB|G_BC\": 0.00015569671239303677, \"G_AB|G_DB\": 9.140078637517296e-05, \"G_AD|G_BC\": 5.0500903457265e-05, \"G_AD|G_DB\": 5.928312365252021e-05, \"G_BC|G_DB\": 8.279510855116987e-05}}"
+    },
+    {
+      "name": "topology_step independent LCP oracle registration",
+      "passed": true,
+      "status": "PASS",
+      "blocking": true,
+      "detail": "oracle_steps=['TS101', 'TS102', 'TS103', 'TS104', 'TS201', 'TS202', 'TS203', 'TS204', 'TS301', 'TS302', 'TS303', 'TS304'], solved_steps=['TS101', 'TS102', 'TS103', 'TS104', 'TS201', 'TS202', 'TS203', 'TS204', 'TS301', 'TS302', 'TS303', 'TS304']"
+    },
+    {
+      "name": "field_dictionary covers actual CSV schema and TopologyStepSpec",
+      "passed": true,
+      "status": "PASS",
+      "blocking": true,
+      "detail": "missing=[]"
+    },
+    {
+      "name": "object_file_map formal objects and files",
+      "passed": true,
+      "status": "PASS",
+      "blocking": true,
+      "detail": "missing_objects=[]"
+    },
+    {
+      "name": "synthetic-data truthfulness boundary",
+      "passed": true,
+      "status": "PASS",
+      "blocking": true,
+      "detail": "data_nature=SYNTHETIC_NUMERICAL_CONSISTENCY_CASE, engineering_claim_allowed=False"
+    },
+    {
+      "name": "stage measurement update required files",
+      "passed": true,
+      "status": "PASS",
+      "blocking": true,
+      "detail": "missing=[]"
+    },
+    {
+      "name": "checkpoint route relation and explicit source step",
+      "passed": true,
+      "status": "PASS",
+      "blocking": true,
+      "detail": "checkpoints=['MCP_AFTER_ABC'], invalid=[]"
+    },
+    {
+      "name": "measurement/config/checkpoint foreign keys",
+      "passed": true,
+      "status": "PASS",
+      "blocking": true,
+      "detail": "measurements=['MEAS_GAP_AB_AFTER_RELEASE', 'MEAS_FORCE_AB_AFTER_RELEASE'], observations=['MEAS_GAP_AB_AFTER_RELEASE', 'MEAS_FORCE_AB_AFTER_RELEASE'], configs=['MUCFG_AFTER_ABC']"
+    },
+    {
+      "name": "measurement data_role and frozen parameter governance",
+      "passed": true,
+      "status": "PASS",
+      "blocking": true,
+      "detail": "only CALIBRATE/UPDATE state targets; parameter_update_allowed=false"
+    },
+    {
+      "name": "posterior P/H/R/G_q matrix completeness",
+      "passed": true,
+      "status": "PASS",
+      "blocking": true,
+      "detail": "mapping_count=5, errors=[]"
+    },
+    {
+      "name": "stage covariance transfer F/Q registration",
+      "passed": true,
+      "status": "PASS",
+      "blocking": true,
+      "detail": "transfers=4"
+    },
+    {
+      "name": "independent posterior and LCP oracle",
+      "passed": true,
+      "status": "PASS",
+      "blocking": true,
+      "detail": "oracle_rows=1, expected_status=POSTERIOR_ACCEPTED"
+    },
+    {
+      "name": "oracle physical observation fields",
+      "passed": true,
+      "status": "PASS",
+      "blocking": true,
+      "detail": "missing=[]"
+    },
+    {
+      "name": "post-LCP physical residual improvement",
+      "passed": true,
+      "status": "PASS",
+      "blocking": true,
+      "detail": "raw=0.691859980228161->9.323377868711058e-06; weighted=54150.25458676836->2.101731704278381e-05"
+    },
+    {
+      "name": "H independent physical finite difference",
+      "passed": true,
+      "status": "PASS",
+      "blocking": true,
+      "detail": "source=INDEPENDENT_GLOBAL_LCP_CENTRAL_FINITE_DIFFERENCE; method=CENTRAL_DIFFERENCE; stable=True"
+    },
+    {
+      "name": "oracle uses unified observation extractor",
+      "passed": true,
+      "status": "PASS",
+      "blocking": true,
+      "detail": "extractor=core.stage_measurement_update.extract_observation_vector"
+    },
+    {
+      "name": "parameter SMS Cn W_struct frozen package hash",
+      "passed": true,
+      "status": "PASS",
+      "blocking": true,
+      "detail": "before=d4c3b204faadef449662341c9c8d39b1688eebd8a43fd1ce83211d4623fdf16b; after=d4c3b204faadef449662341c9c8d39b1688eebd8a43fd1ce83211d4623fdf16b"
+    },
+    {
+      "name": "single posterior global LCP call",
+      "passed": true,
+      "status": "PASS",
+      "blocking": true,
+      "detail": "resolve_lcp_call_count=1"
+    },
+    {
+      "name": "posterior covariance trace reduction",
+      "passed": true,
+      "status": "PASS",
+      "blocking": true,
+      "detail": "trace=0.000625->0.00022627875879919823"
+    },
+    {
+      "name": "measurement update objects registered",
+      "passed": true,
+      "status": "PASS",
+      "blocking": true,
+      "detail": "missing=[]"
+    },
+    {
+      "name": "measurement truthfulness boundary",
+      "passed": true,
+      "status": "PASS",
+      "blocking": true,
+      "detail": "data_nature=SYNTHETIC_NUMERICAL_CONSISTENCY_CASE, measurement_data_nature=SYNTHETIC_NUMERICAL_CONSISTENCY_CASE, engineering_claim_allowed=False"
+    },
+    {
+      "name": "rolling prediction required files",
+      "passed": true,
+      "status": "PASS",
+      "blocking": true,
+      "detail": "missing=[]"
+    },
+    {
+      "name": "rolling plan primary key and active row",
+      "passed": true,
+      "status": "PASS",
+      "blocking": true,
+      "detail": "plans=['ROLL_PLAN_ABC_TO_ABCD']"
+    },
+    {
+      "name": "explicit virtual SMS sample cardinality",
+      "passed": true,
+      "status": "PASS",
+      "blocking": true,
+      "detail": "declared=5, rows=5"
+    },
+    {
+      "name": "component layout and coefficient completeness",
+      "passed": true,
+      "status": "PASS",
+      "blocking": true,
+      "detail": "component_orders=[0, 1], counts={'VSMS_COMBO': 2, 'VSMS_M1_NEG': 2, 'VSMS_M1_POS': 2, 'VSMS_M2_POS': 2, 'VSMS_REF': 2}"
+    },
+    {
+      "name": "single zero reference SMS sample",
+      "passed": true,
+      "status": "PASS",
+      "blocking": true,
+      "detail": "reference_ids=['VSMS_REF'], values=[0.0, 0.0]"
+    },
+    {
+      "name": "sample assignment keys unique and complete",
+      "passed": true,
+      "status": "PASS",
+      "blocking": true,
+      "detail": "assignment_rows=5"
+    },
+    {
+      "name": "G_SMS manifest coverage and column layout",
+      "passed": true,
+      "status": "PASS",
+      "blocking": true,
+      "detail": "G_SMS_P_D_OP_TS301:(12, 2), G_SMS_P_D_OP_TS302:(12, 2), G_SMS_P_D_OP_TS303:(12, 2), G_SMS_P_D_OP_TS304:(12, 2)"
+    },
+    {
+      "name": "synthetic descriptive truth boundary",
+      "passed": true,
+      "status": "PASS",
+      "blocking": true,
+      "detail": "probability=false, engineering=false, explicit deterministic samples"
+    },
+    {
+      "name": "direct SMS final-state boolean semantics",
+      "passed": true,
+      "status": "PASS",
+      "blocking": true,
+      "detail": "tokens=['false'], values=[False]"
+    },
+    {
+      "name": "plan checkpoint topology and step linkage",
+      "passed": true,
+      "status": "PASS",
+      "blocking": true,
+      "detail": "plan_topology=TOPOLOGY_STEP_MIN_CASE, checkpoint_topology=TOPOLOGY_STEP_MIN_CASE, plan_step=TS205, checkpoint_step=TS205"
+    },
+    {
+      "name": "production static rolling quality gates",
+      "passed": true,
+      "status": "PASS",
+      "blocking": true,
+      "detail": "pass=45/45"
+    },
+    {
+      "name": "source package immutable during rolling run",
+      "passed": true,
+      "status": "PASS",
+      "blocking": true,
+      "detail": "before=6db1f993c031861d818902b091d578349bbfe38f6e328be26ed16d693e29db6f, after=6db1f993c031861d818902b091d578349bbfe38f6e328be26ed16d693e29db6f"
+    },
+    {
+      "name": "accepted posterior is formal source",
+      "passed": true,
+      "status": "PASS",
+      "blocking": true,
+      "detail": "state_id=STATE_SAMPLE_001_TS205_POSTERIOR"
+    },
+    {
+      "name": "runtime posterior source linkage closure",
+      "passed": true,
+      "status": "PASS",
+      "blocking": true,
+      "detail": "{\"actual_source_state_checkpoint_id\": \"MCP_AFTER_ABC\", \"actual_source_state_id\": \"STATE_SAMPLE_001_TS205_POSTERIOR\", \"actual_source_state_role\": \"POSTERIOR\", \"actual_source_state_sample_id\": \"SAMPLE_001\", \"checkpoint_topology_id\": \"TOPOLOGY_STEP_MIN_CASE\", \"checkpoint_topology_step_id\": \"TS205\", \"failure_reasons\": [], \"measurement_update_checkpoint_id\": \"MCP_AFTER_ABC\", \"measurement_update_id\": \"MEAS_UPDATE_SAMPLE_001_MCP_AFTER_ABC\", \"measurement_update_posterior_state_id\": \"STATE_SAMPLE_001_TS205_POSTERIOR\", \"plan_source_step_id\": \"TS205\", \"plan_topology_id\": \"TOPOLOGY_STEP_MIN_CASE\", \"source_linkage_status\": \"PASS\"}"
+    },
+    {
+      "name": "all explicit samples complete with isolated branches",
+      "passed": true,
+      "status": "PASS",
+      "blocking": true,
+      "detail": "success=5, failure=0, baseline_success=5, baseline_failure=0"
+    },
+    {
+      "name": "expected SMS application matrix complete",
+      "passed": true,
+      "status": "PASS",
+      "blocking": true,
+      "detail": "applications=20, expected=20"
+    },
+    {
+      "name": "independent oracle q decomposition",
+      "passed": true,
+      "status": "PASS",
+      "blocking": true,
+      "detail": "matched=40/40"
+    },
+    {
+      "name": "independent oracle global LCP solutions",
+      "passed": true,
+      "status": "PASS",
+      "blocking": true,
+      "detail": "matched=40/40, one_call_per_step=true"
+    },
+    {
+      "name": "oracle implementation independence declarations",
+      "passed": true,
+      "status": "PASS",
+      "blocking": true,
+      "detail": "active-set enumeration and direct KCP formula are independent"
+    },
+    {
+      "name": "independent KCP oracle agreement",
+      "passed": true,
+      "status": "PASS",
+      "blocking": true,
+      "detail": "rows=30, max_abs_error=1.021e-12"
+    },
+    {
+      "name": "reference sample has zero virtual SMS correction",
+      "passed": true,
+      "status": "PASS",
+      "blocking": true,
+      "detail": "reference_count=1"
+    },
+    {
+      "name": "non-reference SMS sensitivity is observable",
+      "passed": true,
+      "status": "PASS",
+      "blocking": true,
+      "detail": "distinct_kcp_vectors=5"
+    },
+    {
+      "name": "coupled W_struct cross-interface blocks preserved",
+      "passed": true,
+      "status": "PASS",
+      "blocking": true,
+      "detail": "checked_steps=20, max_norm=2.075956e-04"
+    },
+    {
+      "name": "KCP contribution ledger and double-count gates",
+      "passed": true,
+      "status": "PASS",
+      "blocking": true,
+      "detail": "samples=5"
+    },
+    {
+      "name": "runtime direct SMS aggregation semantics",
+      "passed": true,
+      "status": "PASS",
+      "blocking": true,
+      "detail": "included=False, action=ADD_DIRECT_SMS_CONTRIBUTION"
+    },
+    {
+      "name": "direct SMS contribution ledger action",
+      "passed": true,
+      "status": "PASS",
+      "blocking": true,
+      "detail": "expected_action=ADD_DIRECT_SMS_CONTRIBUTION"
+    },
+    {
+      "name": "predicted-cutoff comparison is complete",
+      "passed": true,
+      "status": "PASS",
+      "blocking": true,
+      "detail": "policy=POSTERIOR_AND_PREDICTED_CUTOFF, rows=15"
+    },
+    {
+      "name": "descriptive summary oracle and probability labels",
+      "passed": true,
+      "status": "PASS",
+      "blocking": true,
+      "detail": "kcp_ids=['KCP_END_GAP', 'KCP_STEP_AB', 'KCP_PARALLEL_BALANCE']"
+    },
+    {
+      "name": "runtime rolling quality gates",
+      "passed": true,
+      "status": "PASS",
+      "blocking": true,
+      "detail": "pass=52/52"
+    },
+    {
+      "name": "validation attachments match current rolling package",
+      "passed": true,
+      "status": "PASS",
+      "blocking": true,
+      "detail": "stored_status=PASS"
+    }
+  ],
+  "matrix_digests": {
+    "BN_AB": "128d6261e0408ee157952d1e82d33e0829072b9fbcfadda6e83f22e0208451ce",
+    "BN_AD": "ad255ecaf19376cfa9d11b8bd8db1f9ba4d3d605047938125cba460eb021b4b9",
+    "BN_BC": "874b6ec974c14e959fe6ab0df802ca864c234fb33d70dd780d06143a8fac6d61",
+    "BN_BD": "4151802eff07dd54d69ee5bb720d21d2a203b48092167e222841536263113ff3",
+    "B_EXT_ALL": "4f254dd664be1db80fb0796990b61db0846137d8039edd2b891da1f626141e0d",
+    "CN_ALL": "3903bf3089eb14e62f560dd07ac8f022fb3909d428a20b5d3e97ffa847933696",
+    "CN_OP_TS101": "3903bf3089eb14e62f560dd07ac8f022fb3909d428a20b5d3e97ffa847933696",
+    "CN_OP_TS102": "3903bf3089eb14e62f560dd07ac8f022fb3909d428a20b5d3e97ffa847933696",
+    "CN_OP_TS103": "3903bf3089eb14e62f560dd07ac8f022fb3909d428a20b5d3e97ffa847933696",
+    "CN_OP_TS104": "3903bf3089eb14e62f560dd07ac8f022fb3909d428a20b5d3e97ffa847933696",
+    "CN_OP_TS201": "3903bf3089eb14e62f560dd07ac8f022fb3909d428a20b5d3e97ffa847933696",
+    "CN_OP_TS202": "3903bf3089eb14e62f560dd07ac8f022fb3909d428a20b5d3e97ffa847933696",
+    "CN_OP_TS203": "3903bf3089eb14e62f560dd07ac8f022fb3909d428a20b5d3e97ffa847933696",
+    "CN_OP_TS204": "3903bf3089eb14e62f560dd07ac8f022fb3909d428a20b5d3e97ffa847933696",
+    "CN_OP_TS301": "3903bf3089eb14e62f560dd07ac8f022fb3909d428a20b5d3e97ffa847933696",
+    "CN_OP_TS302": "3903bf3089eb14e62f560dd07ac8f022fb3909d428a20b5d3e97ffa847933696",
+    "CN_OP_TS303": "3903bf3089eb14e62f560dd07ac8f022fb3909d428a20b5d3e97ffa847933696",
+    "CN_OP_TS304": "3903bf3089eb14e62f560dd07ac8f022fb3909d428a20b5d3e97ffa847933696",
+    "COV_MEAS_SYNTH": "244daf676b076b34d5be3f723196f6a9a2fa7e81a05c781394a14fa645e1d6d8",
+    "COV_SENSOR_SYNTH": "244daf676b076b34d5be3f723196f6a9a2fa7e81a05c781394a14fa645e1d6d8",
+    "COV_SMS_BRACKET": "90796e63a7f7b15cd460d60c3e35af43c165c5f265ba77da5283ae9ac956d23d",
+    "COV_SMS_PANEL": "90796e63a7f7b15cd460d60c3e35af43c165c5f265ba77da5283ae9ac956d23d",
+    "COV_SMS_RIB": "90796e63a7f7b15cd460d60c3e35af43c165c5f265ba77da5283ae9ac956d23d",
+    "COV_SMS_SPAR": "90796e63a7f7b15cd460d60c3e35af43c165c5f265ba77da5283ae9ac956d23d",
+    "C_FIXTURE_SYNTH": "2222dc29f184b5ab32d3eb7e14b2f553a6cccc385196b15f5fb66a28435601b4",
+    "D_CMD_CLAMP_02": "99a2c3c50719a8a7d02fe0d9ccb56e76af72d316e9dc1960737dfe9837c42557",
+    "D_CMD_JOIN_03": "680ebc51fb3fb934882fb479e36c02dbe6c1999a5b40df349611db697ba806f7",
+    "D_CMD_LOCATE_01": "2ea9ab9198d1638007400cd2c3bef1cc745b864b76011a0e1bc52180ac6452d4",
+    "D_CMD_RELEASE_04": "a08cde75bc0f8e23839fce4d89ad4daee9edd6bf8fbc2025b9e0a65761d3dd8f",
+    "ETA_PRIOR_MCP_AFTER_ABC": "374708fff7719dd5979ec875d56cd2286f6d3cf7ec317a3b25632aab28ec37bb",
+    "F_UPDATE_IDENTITY_2": "7b38b86d9a7e623764dc234b5d8aa67afbf388f139b4dc5a266ed0b4b7a258ea",
+    "GAP_CLAMP_02": "ce9f7ab58596c43ec6ea6f2cfcd42620f70561901fbaf823d2df5576f88f3b74",
+    "GAP_JOIN_03": "60fd157b1df2deea01bf738ce2eb7a6e6a04025611c8d40a66f7b99118b3ff68",
+    "GAP_LOCATE_01": "303156c9c10c8aa3cc12571125fa56d3dddc5f21de96ba11e47b36a4faa2ac6c",
+    "GAP_RELEASE_04": "4767c77bae7a2d6830d1817151a6641f8bd9a5f46cf638d514cacb7059c149db",
+    "G_EXT_ALL": "4f254dd664be1db80fb0796990b61db0846137d8039edd2b891da1f626141e0d",
+    "G_GAP_AB": "99133c19792bc4d64a87f6f8eef18bf66b1329a077bf4575da92164f7833acd1",
+    "G_GAP_AD": "54b314c5c7e0534039359dfc9bfd2621180173ba76fdd9e63dac4cca21c24896",
+    "G_GAP_BC": "0b588da8f66a19d2a1ba9cf5c42d5b434fda27f8da4e1a0fee42dc6083e2cb7c",
+    "G_GAP_BD": "048bacf6716c4b51ff71373345443cc19a1174e361532a9e89af6aaa72674c14",
+    "G_Q_UPDATE__MCP_AFTER_ABC__OP_TS204": "93baf8992589b520409296cc264ab85d162086b773cd6f2e61a3126bfda76340",
+    "G_Q_UPDATE__MCP_AFTER_ABC__OP_TS301": "35b066f8d9d91562d17d558f078508604edfe9ba9153c8838eb3e87e84fd155d",
+    "G_Q_UPDATE__MCP_AFTER_ABC__OP_TS302": "35b066f8d9d91562d17d558f078508604edfe9ba9153c8838eb3e87e84fd155d",
+    "G_Q_UPDATE__MCP_AFTER_ABC__OP_TS303": "35b066f8d9d91562d17d558f078508604edfe9ba9153c8838eb3e87e84fd155d",
+    "G_Q_UPDATE__MCP_AFTER_ABC__OP_TS304": "35b066f8d9d91562d17d558f078508604edfe9ba9153c8838eb3e87e84fd155d",
+    "G_SMS_P_D_OP_TS301": "a3ee5dcb7d4f495dcfed77e537d7380763989322c8d3dfd90815efbdecf76df5",
+    "G_SMS_P_D_OP_TS302": "ed7f2e8eb4eda284504f569ef487afc9578039d2d9507a61c6433b5b5df09366",
+    "G_SMS_P_D_OP_TS303": "d0473d17003480222691b928b2a7393457afd9f81f88aa1c470a1c6de461f979",
+    "G_SMS_P_D_OP_TS304": "de50f41d822a8300c01df9165b27c2b8717adb074a904cb89b5694f5197abb49",
+    "H_M_BRACKET": "ab5d3ff1118f719ee016c1422fcbb65eeaa08f19e62a86167ee12cdfe0fe32ad",
+    "H_M_PANEL": "ab5d3ff1118f719ee016c1422fcbb65eeaa08f19e62a86167ee12cdfe0fe32ad",
+    "H_M_RIB": "ab5d3ff1118f719ee016c1422fcbb65eeaa08f19e62a86167ee12cdfe0fe32ad",
+    "H_M_SPAR": "ab5d3ff1118f719ee016c1422fcbb65eeaa08f19e62a86167ee12cdfe0fe32ad",
+    "H_OBS_MCP_AFTER_ABC": "237beda42441c6060908b8e6ad5ded61088a60c1573d3382c71c844c9b57f97d",
+    "J_INTERFACE_ALL": "644bcd528844e70bd6cd7a7032632c45d7b94ccc9f348763c7316ff71279e90a",
+    "J_PART_ALL": "fc21cc4d2c0d471ee85dd08d7c7ca084323165a15f8f6582a5302f0d0f9b5572",
+    "J_PROCESS_ALL": "1332df685c45a61a0ac008a6a653295b8c5655361c1d34b6304b22ec40235fb8",
+    "J_SMS_ROLL_P_D": "1b97d93fc137600521dc050a83c5b418a3d8335aac179490e8e415d958a74cb3",
+    "KJ_ALL": "dae2c1ff7db8d161f1c7545ed2a758bb6bbc1b400fa5f64eaede391f37316781",
+    "KJ_JNT_AB": "8bf8f02d248cac981639ce4f026cc4fde3e8e9663a9842d5f3a09f7472871f2d",
+    "KJ_JNT_AD": "8bf8f02d248cac981639ce4f026cc4fde3e8e9663a9842d5f3a09f7472871f2d",
+    "KJ_JNT_BC": "8bf8f02d248cac981639ce4f026cc4fde3e8e9663a9842d5f3a09f7472871f2d",
+    "KJ_JNT_DB": "8bf8f02d248cac981639ce4f026cc4fde3e8e9663a9842d5f3a09f7472871f2d",
+    "K_GAMMA_CLAMP_02": "7584989e882999decfd16953fddd5e68a1ff249f1b561d25b19ea1525397aeae",
+    "K_GAMMA_JOIN_03": "c9b28e0e33f27b543379061beb2d90d253a9affc3bad472341f1fbeef4dccf1d",
+    "K_GAMMA_LOCATE_01": "33fb37f579556343d20e40c4dbe5e5bd00ffa3b819cb667ad3db6f2cf2e40938",
+    "K_GAMMA_RELEASE_04": "0533d7e986b6f481a043f8cad7ac65c8dd9ab2678199a361d864395bea38f20e",
+    "LAMBDA_CLAMP_02": "b65d8028a5cb7ef879cf48fdcce33489de8de3cf44317892693540c88f1bd088",
+    "LAMBDA_JOIN_03": "8265911ab4ae94b1a4d6ec4950effcc4bf6839ca6d96f8fc628506b514b9d5cf",
+    "LAMBDA_LOCATE_01": "2ea9ab9198d1638007400cd2c3bef1cc745b864b76011a0e1bc52180ac6452d4",
+    "LAMBDA_RELEASE_04": "cfa924231f5ac66dc2fbe1135e389924201cb9dbb8b5c6a5a3e11eba601cd620",
+    "LOCAL_COMPRESSION_CLAMP_02": "d6db59640d9a215dbcf82a5a64043166872ccc468e65d32bcbfda53a5fbe6bac",
+    "LOCAL_COMPRESSION_JOIN_03": "abeba5085e412951a9dc178458dabc49f8165563d826a44ea7ca71d3b3f945a4",
+    "LOCAL_COMPRESSION_LOCATE_01": "2ea9ab9198d1638007400cd2c3bef1cc745b864b76011a0e1bc52180ac6452d4",
+    "LOCAL_COMPRESSION_RELEASE_04": "18b93a949e64a14b37ed3c758a93e14293806bf9f382ad31cf24e374dfd28cc1",
+    "PREDICTED_KCP_MULTIPART": "3cc78ad618cdec13b1c6ac320d53b42bf6165cf5eeef18cb0697982714a9ed5c",
+    "PRESSURE_CLAMP_02": "4d15dc35b7067c72c47680681e331cfe13e4730a964ddd14970159e49429fe3c",
+    "PRESSURE_JOIN_03": "ffa852d9df8ea94b9a92f508204fe84f86cc6ae44dde2f6d3ef046e2f8df86e1",
+    "PRESSURE_LOCATE_01": "2ea9ab9198d1638007400cd2c3bef1cc745b864b76011a0e1bc52180ac6452d4",
+    "PRESSURE_RELEASE_04": "2f25514c56360c9298376990f2c109ae355411b0388795e5048d63f3d5177d46",
+    "P_PRIOR_MCP_AFTER_ABC": "72055454d5a9f09dcea9c44de52137cb731a4998fdc5189bc69531af16a5a45d",
+    "QA_AB_MATRIX": "d08a24a1638b7f97518e0c6dbaa0cc8e4cf2a89c4a90fbe730072cbc5deab73c",
+    "QA_AD_MATRIX": "d08a24a1638b7f97518e0c6dbaa0cc8e4cf2a89c4a90fbe730072cbc5deab73c",
+    "QA_ALL": "dbe0468df0997560e7d11b1ddc713aacd8ae7a0a84861b635e5ae7880214b34e",
+    "QA_BC_MATRIX": "d08a24a1638b7f97518e0c6dbaa0cc8e4cf2a89c4a90fbe730072cbc5deab73c",
+    "QA_BD_MATRIX": "d08a24a1638b7f97518e0c6dbaa0cc8e4cf2a89c4a90fbe730072cbc5deab73c",
+    "Q_CLAMP_02": "f14302842b842dcaf00b61a3ab83f75c8ed4d94f82df1e24244b3fcdb7f06819",
+    "Q_JOIN_03": "6b151f33788ad7c364790767eb2ffd91148f93751501935c16bf4ea55896635b",
+    "Q_LOCATE_01": "303156c9c10c8aa3cc12571125fa56d3dddc5f21de96ba11e47b36a4faa2ac6c",
+    "Q_OP_TS101": "303156c9c10c8aa3cc12571125fa56d3dddc5f21de96ba11e47b36a4faa2ac6c",
+    "Q_OP_TS102": "f14302842b842dcaf00b61a3ab83f75c8ed4d94f82df1e24244b3fcdb7f06819",
+    "Q_OP_TS103": "6b151f33788ad7c364790767eb2ffd91148f93751501935c16bf4ea55896635b",
+    "Q_OP_TS104": "94edab40fcbf909b99417722d8f1af44edef7462ee4d8ebfb53c091f6abfad25",
+    "Q_OP_TS201": "303156c9c10c8aa3cc12571125fa56d3dddc5f21de96ba11e47b36a4faa2ac6c",
+    "Q_OP_TS202": "f14302842b842dcaf00b61a3ab83f75c8ed4d94f82df1e24244b3fcdb7f06819",
+    "Q_OP_TS203": "6b151f33788ad7c364790767eb2ffd91148f93751501935c16bf4ea55896635b",
+    "Q_OP_TS204": "94edab40fcbf909b99417722d8f1af44edef7462ee4d8ebfb53c091f6abfad25",
+    "Q_OP_TS301": "303156c9c10c8aa3cc12571125fa56d3dddc5f21de96ba11e47b36a4faa2ac6c",
+    "Q_OP_TS302": "f14302842b842dcaf00b61a3ab83f75c8ed4d94f82df1e24244b3fcdb7f06819",
+    "Q_OP_TS303": "6b151f33788ad7c364790767eb2ffd91148f93751501935c16bf4ea55896635b",
+    "Q_OP_TS304": "94edab40fcbf909b99417722d8f1af44edef7462ee4d8ebfb53c091f6abfad25",
+    "Q_PROCESS_ROLLING_ZERO": "2ea9ab9198d1638007400cd2c3bef1cc745b864b76011a0e1bc52180ac6452d4",
+    "Q_RELEASE_04": "94edab40fcbf909b99417722d8f1af44edef7462ee4d8ebfb53c091f6abfad25",
+    "Q_UPDATE_ZERO_2": "66687aadf862bd776c8fc18b8e9f8e20089714856ee233b3902a591d0d5f2925",
+    "R_MEAS_MCP_AFTER_ABC": "36e13dc134d88107f27265945d9e546ed4e7e7435b2f436d6dcb81ffee12524b",
+    "SMS_BASIS_BRACKET": "e53dd443dc202a4a9447387c45f4a956eccfb47f402b6260d34f7ac641d46271",
+    "SMS_BASIS_PANEL": "e53dd443dc202a4a9447387c45f4a956eccfb47f402b6260d34f7ac641d46271",
+    "SMS_BASIS_RIB": "e53dd443dc202a4a9447387c45f4a956eccfb47f402b6260d34f7ac641d46271",
+    "SMS_BASIS_SPAR": "e53dd443dc202a4a9447387c45f4a956eccfb47f402b6260d34f7ac641d46271",
+    "U_FREE_CLAMP_02": "99a2c3c50719a8a7d02fe0d9ccb56e76af72d316e9dc1960737dfe9837c42557",
+    "U_FREE_JOIN_03": "680ebc51fb3fb934882fb479e36c02dbe6c1999a5b40df349611db697ba806f7",
+    "U_FREE_LOCATE_01": "2ea9ab9198d1638007400cd2c3bef1cc745b864b76011a0e1bc52180ac6452d4",
+    "U_FREE_OP_TS101": "2ea9ab9198d1638007400cd2c3bef1cc745b864b76011a0e1bc52180ac6452d4",
+    "U_FREE_OP_TS102": "99a2c3c50719a8a7d02fe0d9ccb56e76af72d316e9dc1960737dfe9837c42557",
+    "U_FREE_OP_TS103": "680ebc51fb3fb934882fb479e36c02dbe6c1999a5b40df349611db697ba806f7",
+    "U_FREE_OP_TS104": "a08cde75bc0f8e23839fce4d89ad4daee9edd6bf8fbc2025b9e0a65761d3dd8f",
+    "U_FREE_OP_TS201": "2ea9ab9198d1638007400cd2c3bef1cc745b864b76011a0e1bc52180ac6452d4",
+    "U_FREE_OP_TS202": "99a2c3c50719a8a7d02fe0d9ccb56e76af72d316e9dc1960737dfe9837c42557",
+    "U_FREE_OP_TS203": "680ebc51fb3fb934882fb479e36c02dbe6c1999a5b40df349611db697ba806f7",
+    "U_FREE_OP_TS204": "a08cde75bc0f8e23839fce4d89ad4daee9edd6bf8fbc2025b9e0a65761d3dd8f",
+    "U_FREE_OP_TS301": "2ea9ab9198d1638007400cd2c3bef1cc745b864b76011a0e1bc52180ac6452d4",
+    "U_FREE_OP_TS302": "99a2c3c50719a8a7d02fe0d9ccb56e76af72d316e9dc1960737dfe9837c42557",
+    "U_FREE_OP_TS303": "680ebc51fb3fb934882fb479e36c02dbe6c1999a5b40df349611db697ba806f7",
+    "U_FREE_OP_TS304": "a08cde75bc0f8e23839fce4d89ad4daee9edd6bf8fbc2025b9e0a65761d3dd8f",
+    "U_FREE_RELEASE_04": "a08cde75bc0f8e23839fce4d89ad4daee9edd6bf8fbc2025b9e0a65761d3dd8f",
+    "U_PART_BRACKET_CLAMP_02": "0775066ced279af0abe590f548ccefdc219d093e9ce844a3d1f80890b507eb46",
+    "U_PART_BRACKET_JOIN_03": "bebab67263063933593086adfec7a92391b2282ffe58862905a95e975b87560f",
+    "U_PART_BRACKET_LOCATE_01": "9d908ecfb6b256def8b49a7c504e6c889c4b0e41fe6ce3e01863dd7b61a20aa0",
+    "U_PART_BRACKET_RELEASE_04": "86d650f59b014f5f7994d7090aecacf233d1b47ae80f9a9381655347dd6b896b",
+    "U_PART_PANEL_CLAMP_02": "154dedbca5059f0cbc1188fa97a78d65614cef7bd831ab487f2b60f70f2282c0",
+    "U_PART_PANEL_JOIN_03": "444bb231befb6d6d1d741cc4472cbefb4de5d38525b06e761a85b2880541fdd8",
+    "U_PART_PANEL_LOCATE_01": "9d908ecfb6b256def8b49a7c504e6c889c4b0e41fe6ce3e01863dd7b61a20aa0",
+    "U_PART_PANEL_RELEASE_04": "6dd7b00f33f6c6750fcb5a374bef6d9cf167f3ea16f13fb14164a8a4505c6445",
+    "U_PART_RIB_CLAMP_02": "ebf2a08e4bf88f26a6c1aac145bf2b7180da0ce720c27e388ac6ad57f190ee55",
+    "U_PART_RIB_JOIN_03": "13690fa60e7e36775eb455c9dcee41e75d6c4350682d1386b8825907dce6f563",
+    "U_PART_RIB_LOCATE_01": "9d908ecfb6b256def8b49a7c504e6c889c4b0e41fe6ce3e01863dd7b61a20aa0",
+    "U_PART_RIB_RELEASE_04": "27fa676843a41115f579cbbec987fcdfa5aa07c09ceeceacc36a30520f6dfd77",
+    "U_PART_SPAR_CLAMP_02": "14c9b5ad50e23d46b0e7577ef985329f4213058ca050d8ff5eaf8e3829ce2838",
+    "U_PART_SPAR_JOIN_03": "6a9ff6afa522b485d625dccf566a366d5f406386e357bbc1f5520066fd6c4b49",
+    "U_PART_SPAR_LOCATE_01": "9d908ecfb6b256def8b49a7c504e6c889c4b0e41fe6ce3e01863dd7b61a20aa0",
+    "U_PART_SPAR_RELEASE_04": "5b12fc878eeedf03408827a17b09ab6fa17e111b9e8dee8dd79f6484587fa2d2",
+    "W_STRUCT_CLAMP_02": "a1c83ca5b13a4210f07eea2979b77fbe9573a0e34bb72d29f2b167d286644956",
+    "W_STRUCT_JOIN_03": "e8ee5343acc286c4de637293225dec5777c426fb0c5f8178ab3dd8122158d8e6",
+    "W_STRUCT_LOCATE_01": "73e71097d3787bd585719f0366f9a6c7a88031fa229312f328bfa23a5c6caef8",
+    "W_STRUCT_OP_TS101": "73e71097d3787bd585719f0366f9a6c7a88031fa229312f328bfa23a5c6caef8",
+    "W_STRUCT_OP_TS102": "a1c83ca5b13a4210f07eea2979b77fbe9573a0e34bb72d29f2b167d286644956",
+    "W_STRUCT_OP_TS103": "e8ee5343acc286c4de637293225dec5777c426fb0c5f8178ab3dd8122158d8e6",
+    "W_STRUCT_OP_TS104": "a0e69adbb38dec1666f4bf5cc2c68d7194f366f1ae65436d8bf272adadb79bab",
+    "W_STRUCT_OP_TS201": "73e71097d3787bd585719f0366f9a6c7a88031fa229312f328bfa23a5c6caef8",
+    "W_STRUCT_OP_TS202": "a1c83ca5b13a4210f07eea2979b77fbe9573a0e34bb72d29f2b167d286644956",
+    "W_STRUCT_OP_TS203": "e8ee5343acc286c4de637293225dec5777c426fb0c5f8178ab3dd8122158d8e6",
+    "W_STRUCT_OP_TS204": "a0e69adbb38dec1666f4bf5cc2c68d7194f366f1ae65436d8bf272adadb79bab",
+    "W_STRUCT_OP_TS301": "73e71097d3787bd585719f0366f9a6c7a88031fa229312f328bfa23a5c6caef8",
+    "W_STRUCT_OP_TS302": "a1c83ca5b13a4210f07eea2979b77fbe9573a0e34bb72d29f2b167d286644956",
+    "W_STRUCT_OP_TS303": "e8ee5343acc286c4de637293225dec5777c426fb0c5f8178ab3dd8122158d8e6",
+    "W_STRUCT_OP_TS304": "a0e69adbb38dec1666f4bf5cc2c68d7194f366f1ae65436d8bf272adadb79bab",
+    "W_STRUCT_RELEASE_04": "a0e69adbb38dec1666f4bf5cc2c68d7194f366f1ae65436d8bf272adadb79bab",
+    "W_TOTAL_CLAMP_02": "d7f3d39e3b945f7e34360efdb007589e1659bc90513d296d2a54b01231721402",
+    "W_TOTAL_JOIN_03": "a5d2f5b403f6a681dbfb461f96c19d1d5cc1cc548afd3223bef523bb1e8767cb",
+    "W_TOTAL_LOCATE_01": "d249e7ccd6d9a412b86b19342c5f4484884c5fb7d46ecf7a22d0f2dbdf187a7f",
+    "W_TOTAL_OP_TS101": "d249e7ccd6d9a412b86b19342c5f4484884c5fb7d46ecf7a22d0f2dbdf187a7f",
+    "W_TOTAL_OP_TS102": "d7f3d39e3b945f7e34360efdb007589e1659bc90513d296d2a54b01231721402",
+    "W_TOTAL_OP_TS103": "a5d2f5b403f6a681dbfb461f96c19d1d5cc1cc548afd3223bef523bb1e8767cb",
+    "W_TOTAL_OP_TS104": "1923891923c0798b513d5f4451d3d72da823c708c1b31ba889f46661ef7858b4",
+    "W_TOTAL_OP_TS201": "d249e7ccd6d9a412b86b19342c5f4484884c5fb7d46ecf7a22d0f2dbdf187a7f",
+    "W_TOTAL_OP_TS202": "d7f3d39e3b945f7e34360efdb007589e1659bc90513d296d2a54b01231721402",
+    "W_TOTAL_OP_TS203": "a5d2f5b403f6a681dbfb461f96c19d1d5cc1cc548afd3223bef523bb1e8767cb",
+    "W_TOTAL_OP_TS204": "1923891923c0798b513d5f4451d3d72da823c708c1b31ba889f46661ef7858b4",
+    "W_TOTAL_OP_TS301": "d249e7ccd6d9a412b86b19342c5f4484884c5fb7d46ecf7a22d0f2dbdf187a7f",
+    "W_TOTAL_OP_TS302": "d7f3d39e3b945f7e34360efdb007589e1659bc90513d296d2a54b01231721402",
+    "W_TOTAL_OP_TS303": "a5d2f5b403f6a681dbfb461f96c19d1d5cc1cc548afd3223bef523bb1e8767cb",
+    "W_TOTAL_OP_TS304": "1923891923c0798b513d5f4451d3d72da823c708c1b31ba889f46661ef7858b4",
+    "W_TOTAL_RELEASE_04": "1923891923c0798b513d5f4451d3d72da823c708c1b31ba889f46661ef7858b4"
+  }
+}

@@ -1,0 +1,2 @@
+﻿run_id,input_package_id,started_at,finished_at,status,passed_checks,total_checks,matrix_manifest_count,npz_key_count,validator
+ROLLING_FIXTURE_SELF_VALIDATION,04_POSTERIOR_VIRTUAL_SMS_ROLLING_MIN_CASE,2026-07-26T00:00:00+08:00,2026-07-26T00:00:00+08:00,PASS,66,66,173,173,scripts/posterior_virtual_sms_rolling_package_validator.py

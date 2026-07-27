@@ -1,0 +1,2 @@
+﻿checkpoint_id,topology_id,topology_step_id,source_topology_step_id,measurement_set_id,update_config_id,reference_state_id,missing_measurement_policy,rollback_policy,active_flag,notes
+MCP_AFTER_ABC,TOPOLOGY_STEP_MIN_CASE,TS205,TS204,MEAS_SET_AFTER_ABC,MUCFG_AFTER_ABC,PARENT_RUNTIME_STATE,BLOCK,ROLLBACK_TO_PREDICTED,True,Synthetic checkpoint; no engineering accuracy claim.

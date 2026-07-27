@@ -1172,7 +1172,7 @@ class StageMeasurementReportCliUiTests(unittest.TestCase):
             radio for radio in app.radio
             if radio.key == "main_page_navigation"
         )
-        navigation.set_value(navigation.options[-1]).run(timeout=90)
+        navigation.set_value(navigation.options[-2]).run(timeout=90)
         self.assertFalse(app.exception)
         self.assertTrue(any(
             box.label == "checkpoint 选择" for box in app.selectbox
@@ -1195,7 +1195,7 @@ class StageMeasurementReportCliUiTests(unittest.TestCase):
             radio for radio in app.radio
             if radio.key == "main_page_navigation"
         )
-        navigation.set_value(navigation.options[-1]).run(timeout=90)
+        navigation.set_value(navigation.options[-2]).run(timeout=90)
         self.assertFalse(app.exception)
         self.assertTrue(any(
             "未配置阶段实测后验更新" in str(item.value)

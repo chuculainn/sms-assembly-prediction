@@ -1,0 +1,2 @@
+﻿rolling_plan_id,part_id,kcp_set_id,direct_sms_matrix_id_optional,aggregation_policy,final_state_includes_direct_sms_geometry,quality_flag
+ROLL_PLAN_ABC_TO_ABCD,P_D,KCP_SET_MULTIPART,J_SMS_ROLL_P_D,ONE_SMS_PER_PART_PLUS_ONE_INCREMENT_PER_INTERFACE_STAGE,False,PASS
