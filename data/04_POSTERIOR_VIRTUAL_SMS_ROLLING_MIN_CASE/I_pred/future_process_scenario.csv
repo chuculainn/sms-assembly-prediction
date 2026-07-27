@@ -1,0 +1,2 @@
+﻿future_process_scenario_id,scenario_type,q_correction_matrix_id_optional,parameter_override_allowed,probability_weight_optional,probability_interpretation_allowed,quality_flag
+FUTURE_PROCESS_BASELINE_ZERO,DETERMINISTIC_BASELINE,Q_PROCESS_ROLLING_ZERO,False,,False,PASS

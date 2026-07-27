@@ -89,3 +89,39 @@
 - 03 本地 validator 为 38/38 PASS，MatrixManifest/NPZ 为 167/167；连续两次包级 SHA-256 均为 `c1d24323abda402b89a78ff2362fa4df37347810debb03b40b43598896511c16`。
 - 八个正式数据包 CLI 均为 exit 0 / `FINAL_STATUS=PASS` / blocking 0 / physical 0。03 包为 checkpoint 1、attempt 1、accepted 1、rollback 0、update fail 0、物理残差门 PASS；其余七包为 NOT_APPLICABLE。
 - 独立 AppTest 2/2 PASS；Streamlit 健康端点返回 HTTP 200 / `ok`，随后已停止测试进程。
+
+## 后验虚拟 SMS 滚动预测（2026-07-26）
+
+- 新增 04 确定性合成包：1 个 rolling plan、5 个显式样本、4 个未来求解步、posterior/predicted 双源对照。
+- 04 validator 当前 61/61 PASS；独立 oracle 的 40/40 q/LCP 行与 30/30 KCP 行匹配，KCP 最大绝对误差约 `1.1e-12`。
+- rolling 专项 20 项覆盖计划/source、SMS 映射、q 分解、全局 LCP、状态分支、KCP/账本、描述性汇总、报告、CLI、UI、生成器确定性和 3 维内存夹具。
+- 04 CLI 为 plan/run `1/1`、sample success/failure `5/0`、KCP `15`、physical/double-count fail `0/0`、`ROLLING_FINAL_STATUS=PASS`。
+- 04 生成器连续两次构建的包级 SHA-256 均为 `51f3ad4da7e9a1129c44f264e4711669808991b1d7a4eb534fb5385a96a877d2`。
+- 最终全量统计：224 tests、218 PASS、0 FAIL、6 个既有 V6 acceptance SKIP；修改前 204 项全部保留，新增 rolling 专项 20 项。
+- 九个正式数据包 CLI 均为 exit 0 / `FINAL_STATUS=PASS` / blocking 0 / physical 0；03/04 的 posterior physical gate 为 PASS，无 rolling plan 的八个包为 `NOT_APPLICABLE`。
+- 03 validator 为 38/38 PASS，04 validator 为 61/61 PASS；AppTest 覆盖 04/03 第 16 页与页面隔离，Streamlit 健康端点为 HTTP 200 / `ok`，随后已停止测试进程。
+
+## 后验虚拟 SMS 滚动预测独立审计定向修复（2026-07-27）
+
+- 原 224 项全部保留；新增 13 个审计测试方法及参数化故障子项。最终自动化为 237 tests、231 PASS、0 FAIL、6 个既有 V6 acceptance SKIP。
+- rolling 专项 33/33、stage measurement 70/70、topology executor 37/37、closeout 35/35、multi-part round2 23/23，`compileall` 通过。
+- 权威状态汇总统一驱动 sample、run、summary、trace、quality gate、报告、Streamlit 和 CLI；配置阻断映射 exit 1，运行时 KCP/double-count/application/immutability 失败映射 exit 2，未预期异常保留 exit 3。
+- duplicate KCP 故障为正式 sample 0/5、double-count fail 5、run FAIL、CLI exit 2；BAD_STEP 为阻断 FAIL、CLI exit 1；缺失 application 为 formal failure 1、application fail 1、run FAIL。
+- 正常 04 为 20/20 application；显式零映射 role=`EXPLICIT_ZERO_NO_EFFECT`、matrix norm=0、q correction norm=0、application trace 保留且 run PASS。
+- predicted-only 故障保持 posterior 5/5/0，baseline 5/4/1、role=`PREDICTED`，required baseline policy 使 run FAIL；多 future-part 的 10 行 sample×part 输入仍按唯一 ID 计为 5 个样本。
+- 完整 topology 不可变门覆盖 TS301；注入修改时 changed object=`TS301`、immutability FAIL、run FAIL。正常完整 topology hash 前后均为 `67695da89cb1ff964fd9087e9fbe179cfe10f32963f82367e314aa050e5e825d`。
+- 包哈希按排序相对路径、字节长度和原始文件 bytes SHA-256 组合。04 连续两次正式生成 hash 均为 `28c62d2d9278668dc6cdda3b168f77172dfbd6fef46c5cced8f7c9ccd9402ef7`，validator 62/62 PASS，MatrixManifest/NPZ 173/173。
+- 03 validator 38/38 PASS；九个正式数据包 CLI 均为 exit 0 / `FINAL_STATUS=PASS` / blocking 0 / physical 0；第 16 页 AppTest 通过；Streamlit 健康端点为 HTTP 200 / `ok`，停止后无 8501 监听进程。
+## 后验虚拟 SMS 滚动预测最终提交前定向修复（2026-07-27）
+
+- 原 237 项全部保留；新增 6 项后共 243 tests：237 PASS、0 FAIL、
+  6 个既有 V6 acceptance SKIP。
+- rolling 39/39；阶段后验 70/70；topology executor 37/37；
+  closeout 35/35；multi-part 23/23。
+- 04 的 direct SMS 布尔语义、全 formal failure UI、source posterior
+  链路闭合、POSTERIOR_ONLY 空 comparison 与重复变量声明均有真实故障注入。
+- 03 validator 38/38；04 validator 67/67；MatrixManifest/NPZ 173/173；
+  04 KCP oracle 重建前后 SHA-256 不变。
+- 九包 CLI 均 exit 0 / `FINAL_STATUS=PASS` / blocking 0 / physical 0；
+  04 source linkage PASS、rolling PASS，其余八包 rolling `NOT_APPLICABLE`。
+- Streamlit 健康端点 HTTP 200 / `ok`，停止后 8501 无残留监听。

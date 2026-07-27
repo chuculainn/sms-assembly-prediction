@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from copy import deepcopy
 from dataclasses import dataclass
+import hashlib
 import json
 from typing import Any, Iterable
 
@@ -756,6 +757,7 @@ def _execute_step(
     eps: float,
     legacy_options: dict[str, Any],
     dual_state_ids: bool = False,
+    rolling_context: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     parent_parts = parent.active_part_ids if parent is not None else []
     parent_interfaces = parent.active_interface_ids if parent is not None else []
@@ -790,6 +792,11 @@ def _execute_step(
         spec.topology_step_id,
     )
     q_base_full = np.full(m, np.nan, dtype=float)
+    q_state_correction = np.zeros(m, dtype=float)
+    q_virtual_sms_correction = np.zeros(m, dtype=float)
+    q_process_correction = np.zeros(m, dtype=float)
+    q_virtual_sms_by_part: dict[str, np.ndarray] = {}
+    sms_application_trace: list[dict[str, Any]] = []
     q_application_trace: dict[str, Any] = {
         "applied": False,
         "q_base_key": "",
@@ -845,6 +852,42 @@ def _execute_step(
                 q_base_full,
             )
             q_application_trace["q_base_key"] = matrix_keys.get("q_key", "")
+            q_state_correction = q_full - q_base_full
+            if rolling_context:
+                for part_id, raw in dict(
+                    rolling_context.get("q_virtual_sms_correction_by_part", {})
+                ).items():
+                    correction = np.asarray(raw, dtype=float).reshape(-1)
+                    if correction.shape != q_full.shape:
+                        raise TopologyStepValidationError(
+                            "rolling virtual SMS correction shape "
+                            f"{correction.shape}，期望 {q_full.shape}"
+                        )
+                    q_virtual_sms_by_part[str(part_id)] = correction.copy()
+                    q_virtual_sms_correction += correction
+                raw_process = rolling_context.get(
+                    "q_future_process_correction",
+                    np.zeros_like(q_full),
+                )
+                q_process_correction = np.asarray(
+                    raw_process, dtype=float
+                ).reshape(-1)
+                if q_process_correction.shape != q_full.shape:
+                    raise TopologyStepValidationError(
+                        "rolling future process correction shape "
+                        f"{q_process_correction.shape}，期望 {q_full.shape}"
+                    )
+                sms_application_trace = deepcopy(
+                    list(rolling_context.get("sms_application_trace", []))
+                )
+                q_full = (
+                    q_full
+                    + q_virtual_sms_correction
+                    + q_process_correction
+                )
+                q_application_trace["effective_q_hash"] = hashlib.sha256(
+                    np.ascontiguousarray(q_full).tobytes()
+                ).hexdigest()
             q_active = q_full[active_indices]
             W_active = W_total_full[np.ix_(active_indices, active_indices)]
             active_solution = solve_lcp_active_set(q_active, W_active, eps=eps)
@@ -1008,6 +1051,10 @@ def _execute_step(
         notes=[
             "预计算步骤算子用于运行时确定性统一LCP；未在线重建全阶FE算子。",
             "已有子装配体继承父状态；仅本步新加入零件读取装配前SMS。",
+            *(
+                ["显式虚拟SMS通过G_SMS映射加入本步q；未执行随机抽样。"]
+                if rolling_context else []
+            ),
         ],
         sample_id=sample_id,
         topology_id=spec.topology_id,
@@ -1083,6 +1130,32 @@ def _execute_step(
         "q_correction_norm": q_application_trace.get(
             "q_correction_norm", 0.0
         ),
+        "q_operator_base_norm": float(
+            np.linalg.norm(np.nan_to_num(q_base_full))
+        ),
+        "q_posterior_state_correction_norm": float(
+            np.linalg.norm(q_state_correction)
+        ),
+        "q_virtual_sms_correction_norm": float(
+            np.linalg.norm(q_virtual_sms_correction)
+        ),
+        "q_future_process_correction_norm": float(
+            np.linalg.norm(q_process_correction)
+        ),
+        "q_effective_norm": float(np.linalg.norm(np.nan_to_num(q_full))),
+        "q_virtual_sms_correction_by_part": {
+            key: value.tolist()
+            for key, value in q_virtual_sms_by_part.items()
+        },
+        "sms_application_trace": sms_application_trace,
+        "rolling_run_id": (
+            str(rolling_context.get("rolling_run_id", ""))
+            if rolling_context else ""
+        ),
+        "virtual_sms_sample_id": (
+            str(rolling_context.get("virtual_sms_sample_id", ""))
+            if rolling_context else ""
+        ),
         "effective_q_hash": q_application_trace.get(
             "effective_q_hash", ""
         ),
@@ -1100,6 +1173,11 @@ def _execute_step(
         "topology_step_id": spec.topology_step_id,
         "topology_step_spec": spec,
         "q_base": q_base_full,
+        "q_operator_base": q_base_full,
+        "q_posterior_state_correction": q_state_correction,
+        "q_virtual_sms_correction_by_part": q_virtual_sms_by_part,
+        "q_virtual_sms_correction": q_virtual_sms_correction,
+        "q_future_process_correction": q_process_correction,
         "q": q_full,
         "q_active": q_full[active_indices] if spec.solve_required else np.array([], dtype=float),
         "W_total": W_total_full,
@@ -1142,6 +1220,92 @@ def _execute_step(
         "force_nonuniqueness": legacy_stage_result.get("force_nonuniqueness") if legacy_stage_result is not None else None,
         "tangential_ncp": legacy_stage_result.get("tangential_ncp", pd.DataFrame()) if legacy_stage_result is not None else pd.DataFrame(),
     }
+
+
+def run_topology_steps_from_state(
+    pkg: SMSPackage,
+    ordered_specs: list[TopologyStepSpec],
+    source_state: StageState,
+    source_step_result: dict[str, Any],
+    prediction_start_step_id: str,
+    *,
+    prediction_end_step_id: str | None = None,
+    sample_id: str,
+    rolling_context_by_step: dict[str, dict[str, Any]] | None = None,
+    eps: float = 1e-9,
+) -> dict[str, dict[str, Any]]:
+    """Execute a contiguous future route from an immutable runtime state.
+
+    This entry deliberately reuses ``_execute_step`` so rolling prediction has
+    exactly the same active-layout extraction, W_total construction, global LCP,
+    JOIN/RELEASE history and non-solving inheritance semantics as the canonical
+    deterministic executor.
+    """
+    specs = list(ordered_specs)
+    if not specs:
+        raise TopologyStepValidationError("topology route is empty")
+    validation = validate_topology_steps(
+        pkg, specs, source_state.topology_id or None
+    )
+    blocking = validation[
+        validation["status"].eq("FAIL")
+        & validation["blocking"].astype(bool)
+    ]
+    if not blocking.empty:
+        raise TopologyStepValidationError(
+            blocking[["check_item", "detail"]].to_string(index=False)
+        )
+    positions = {
+        spec.topology_step_id: index for index, spec in enumerate(specs)
+    }
+    if prediction_start_step_id not in positions:
+        raise TopologyStepValidationError(
+            f"prediction start step不存在: {prediction_start_step_id}"
+        )
+    start = positions[prediction_start_step_id]
+    end = (
+        positions[prediction_end_step_id]
+        if prediction_end_step_id else len(specs) - 1
+    )
+    if end < start:
+        raise TopologyStepValidationError(
+            "prediction end step位于start step之前"
+        )
+    selected = specs[start:end + 1]
+    first_parent = selected[0].parent_topology_step_id
+    if first_parent != source_state.topology_step_id:
+        raise TopologyStepValidationError(
+            "首个未来步骤父步骤与source state不一致: "
+            f"{first_parent} != {source_state.topology_step_id}"
+        )
+    if source_step_result.get("stage_state") is None:
+        raise TopologyStepValidationError("source step result缺少stage_state")
+
+    contexts = rolling_context_by_step or {}
+    result: dict[str, dict[str, Any]] = {}
+    parent = deepcopy(source_state)
+    for spec in selected:
+        step_result = _execute_step(
+            pkg,
+            spec,
+            sample_id,
+            parent,
+            eps=eps,
+            legacy_options={},
+            dual_state_ids=True,
+            rolling_context=contexts.get(spec.topology_step_id),
+        )
+        state: StageState = step_result["stage_state"]
+        state.state_role = "PREDICTED"
+        state.predicted_state_id = state.stage_state_id
+        state.effective_state_id = state.stage_state_id
+        step_result["predicted_stage_state"] = state
+        step_result["posterior_stage_state"] = None
+        step_result["measurement_update"] = None
+        step_result["posterior_lcp_call_count"] = 0
+        result[spec.topology_step_id] = step_result
+        parent = state
+    return result
 
 
 def run_topology_steps(

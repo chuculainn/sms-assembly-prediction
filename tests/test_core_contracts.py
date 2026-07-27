@@ -301,7 +301,7 @@ class PackageAndPipelineTests(unittest.TestCase):
         self.assertIsNotNone(tab_block)
         tab_count = len(re.findall(r"^\s*['\"]", tab_block.group(1), re.M))
         guard_count = len(re.findall(r"^if active_page == TABS\[\d+\]:", source, re.M))
-        self.assertEqual(tab_count, 15)
+        self.assertEqual(tab_count, 16)
         self.assertEqual(guard_count, tab_count)
 
 

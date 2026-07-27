@@ -1,0 +1,52 @@
+{
+  "rolling_plan_id": "ROLL_PLAN_ABC_TO_ABCD",
+  "sample_count": 5,
+  "posterior_success_count": 5,
+  "posterior_failure_count": 0,
+  "baseline_attempt_count": 5,
+  "baseline_success_count": 5,
+  "baseline_failure_count": 0,
+  "baseline_quality_status": "PASS",
+  "sms_application_count": 20,
+  "double_count_fail_count": 0,
+  "immutability_status": "PASS",
+  "source_linkage_status": "PASS",
+  "source_checkpoint_id": "MCP_AFTER_ABC",
+  "source_topology_step_id": "TS205",
+  "final_state_includes_direct_sms_geometry": false,
+  "direct_sms_aggregation_action": "ADD_DIRECT_SMS_CONTRIBUTION",
+  "probability_interpretation_allowed": false,
+  "engineering_claim_allowed": false,
+  "kcp_summary": {
+    "KCP_END_GAP": {
+      "count": 5,
+      "mean": 0.009394790992617318,
+      "std": 0.0007541360699579666,
+      "min": 0.008211219941099468,
+      "max": 0.010208188945403138,
+      "p05": 0.008410916841529835,
+      "p50": 0.009562843183683714,
+      "p95": 0.010122950846252305
+    },
+    "KCP_STEP_AB": {
+      "count": 5,
+      "mean": 0.00048093275444789483,
+      "std": 0.0005203780402373052,
+      "min": -0.00011757270361770591,
+      "max": 0.0010369757735369913,
+      "p05": -8.616482754196675e-05,
+      "p50": 0.0004950869007733962,
+      "p95": 0.0010197220437867536
+    },
+    "KCP_PARALLEL_BALANCE": {
+      "count": 5,
+      "mean": 0.001968473477609452,
+      "std": 0.0005183521191092674,
+      "min": 0.0012835158673260016,
+      "max": 0.0025089638392451416,
+      "p05": 0.0013667107173778055,
+      "p50": 0.0018962398532855716,
+      "p95": 0.002498002613517218
+    }
+  }
+}

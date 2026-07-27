@@ -1,0 +1,67 @@
+﻿validation_id,check_item,status,blocking,detail
+VAL_001,interface endpoint foreign keys,PASS,True,"parts=4, interfaces=4"
+VAL_002,fixture expectation: part_count,PASS,True,"expected=4, actual=4"
+VAL_003,fixture expectation: interface_count,PASS,True,"expected=4, actual=4"
+VAL_004,fixture expectation: topology_step_count,PASS,True,"expected=14, actual=14"
+VAL_005,serial paths from actual part-interface graph,PASS,True,"[[""P_A"", ""P_B"", ""P_C""]]"
+VAL_006,parallel direct and bridge paths from actual graph,PASS,True,"[{""endpoints"": [""P_A"", ""P_B""], ""paths"": [[""P_A"", ""P_B""], [""P_A"", ""P_D"", ""P_B""]], ""path_status"": [true, true]}]"
+VAL_007,contact point foreign keys and per-interface grouping,PASS,True,"{""G_AB"": 3, ""G_AD"": 3, ""G_BC"": 3, ""G_DB"": 3}"
+VAL_008,fixture expectation: contact points per interface,PASS,True,"expected=3, actual={""G_AB"": 3, ""G_AD"": 3, ""G_BC"": 3, ""G_DB"": 3}"
+VAL_009,"vector layout contiguous, unique and data-linked",PASS,True,"dimension=12, intervals=[(0, 2), (3, 5), (6, 8), (9, 11)]"
+VAL_010,fixture expectation: vector dimension,PASS,True,"expected=12, actual=12"
+VAL_011,"topology route IDs, order and parent chain",PASS,True,"steps=['TS000', 'TS101', 'TS102', 'TS103', 'TS104', 'TS201', 'TS202', 'TS203', 'TS204', 'TS205', 'TS301', 'TS302', 'TS303', 'TS304']"
+VAL_012,topology route part/interface foreign keys,PASS,True,all activated/deactivated IDs resolve
+VAL_013,same-step multi-interface activation from route data,PASS,True,"expected_min=1, actual=['TS301']"
+VAL_014,MatrixManifest and NPZ key set,PASS,True,"manifest=173, npz=173, unique=173"
+VAL_015,"MatrixManifest shape, dtype and row/column layout",PASS,True,errors=[]
+VAL_016,precomputed topology operator completeness and identity,PASS,True,"solved_steps=['TS101', 'TS102', 'TS103', 'TS104', 'TS201', 'TS202', 'TS203', 'TS204', 'TS301', 'TS302', 'TS303', 'TS304'], errors=[]"
+VAL_017,active W_struct cross-interface block norms,PASS,True,"{""TS101"": {}, ""TS102"": {}, ""TS103"": {}, ""TS104"": {}, ""TS201"": {""G_AB|G_BC"": 0.00020759561652404902}, ""TS202"": {""G_AB|G_BC"": 0.00017645627404544166}, ""TS203"": {""G_AB|G_BC"": 0.00013493715074063185}, ""TS204"": {""G_AB|G_BC"": 0.00015569671239303677}, ""TS301"": {""G_AB|G_AD"": 0.00012666424120484835, ""G_AB|G_BC"": 0.00020759561652404902, ""G_AB|G_DB"": 0.00012186771516689728, ""G_AD|G_BC"": 6.733453794302e-05, ""G_AD|G_DB"": 7.904416487002694e-05, ""G_BC|G_DB"": 0.0001103934780682265}, ""TS302"": {""G_AB|G_AD"": 0.0001076646050241211, ""G_AB|G_BC"": 0.00017645627404544166, ""G_AB|G_DB"": 0.00010358755789186268, ""G_AD|G_BC"": 5.7234357251567e-05, ""G_AD|G_DB"": 6.71875401395229e-05, ""G_BC|G_DB"": 9.383445635799252e-05}, ""TS303"": {""G_AB|G_AD"": 8.233175678315143e-05, ""G_AB|G_BC"": 0.00013493715074063185, ""G_AB|G_DB"": 7.921401485848322e-05, ""G_AD|G_BC"": 4.376744966296301e-05, ""G_AD|G_DB"": 5.137870716551752e-05, ""G_BC|G_DB"": 7.175576074434723e-05}, ""TS304"": {""G_AB|G_AD"": 9.499818090363627e-05, ""G_AB|G_BC"": 0.00015569671239303677, ""G_AB|G_DB"": 9.140078637517296e-05, ""G_AD|G_BC"": 5.0500903457265e-05, ""G_AD|G_DB"": 5.928312365252021e-05, ""G_BC|G_DB"": 8.279510855116987e-05}}"
+VAL_018,topology_step independent LCP oracle registration,PASS,True,"oracle_steps=['TS101', 'TS102', 'TS103', 'TS104', 'TS201', 'TS202', 'TS203', 'TS204', 'TS301', 'TS302', 'TS303', 'TS304'], solved_steps=['TS101', 'TS102', 'TS103', 'TS104', 'TS201', 'TS202', 'TS203', 'TS204', 'TS301', 'TS302', 'TS303', 'TS304']"
+VAL_019,field_dictionary covers actual CSV schema and TopologyStepSpec,PASS,True,missing=[]
+VAL_020,object_file_map formal objects and files,PASS,True,missing_objects=[]
+VAL_021,synthetic-data truthfulness boundary,PASS,True,"data_nature=SYNTHETIC_NUMERICAL_CONSISTENCY_CASE, engineering_claim_allowed=False"
+VAL_022,stage measurement update required files,PASS,True,missing=[]
+VAL_023,checkpoint route relation and explicit source step,PASS,True,"checkpoints=['MCP_AFTER_ABC'], invalid=[]"
+VAL_024,measurement/config/checkpoint foreign keys,PASS,True,"measurements=['MEAS_GAP_AB_AFTER_RELEASE', 'MEAS_FORCE_AB_AFTER_RELEASE'], observations=['MEAS_GAP_AB_AFTER_RELEASE', 'MEAS_FORCE_AB_AFTER_RELEASE'], configs=['MUCFG_AFTER_ABC']"
+VAL_025,measurement data_role and frozen parameter governance,PASS,True,only CALIBRATE/UPDATE state targets; parameter_update_allowed=false
+VAL_026,posterior P/H/R/G_q matrix completeness,PASS,True,"mapping_count=5, errors=[]"
+VAL_027,stage covariance transfer F/Q registration,PASS,True,transfers=4
+VAL_028,independent posterior and LCP oracle,PASS,True,"oracle_rows=1, expected_status=POSTERIOR_ACCEPTED"
+VAL_029,oracle physical observation fields,PASS,True,missing=[]
+VAL_030,post-LCP physical residual improvement,PASS,True,raw=0.691859980228161->9.323377868711058e-06; weighted=54150.25458676836->2.101731704278381e-05
+VAL_031,H independent physical finite difference,PASS,True,source=INDEPENDENT_GLOBAL_LCP_CENTRAL_FINITE_DIFFERENCE; method=CENTRAL_DIFFERENCE; stable=True
+VAL_032,oracle uses unified observation extractor,PASS,True,extractor=core.stage_measurement_update.extract_observation_vector
+VAL_033,parameter SMS Cn W_struct frozen package hash,PASS,True,before=d4c3b204faadef449662341c9c8d39b1688eebd8a43fd1ce83211d4623fdf16b; after=d4c3b204faadef449662341c9c8d39b1688eebd8a43fd1ce83211d4623fdf16b
+VAL_034,single posterior global LCP call,PASS,True,resolve_lcp_call_count=1
+VAL_035,posterior covariance trace reduction,PASS,True,trace=0.000625->0.00022627875879919823
+VAL_036,measurement update objects registered,PASS,True,missing=[]
+VAL_037,measurement truthfulness boundary,PASS,True,"data_nature=SYNTHETIC_NUMERICAL_CONSISTENCY_CASE, measurement_data_nature=SYNTHETIC_NUMERICAL_CONSISTENCY_CASE, engineering_claim_allowed=False"
+VAL_038,rolling prediction required files,PASS,True,missing=[]
+VAL_039,rolling plan primary key and active row,PASS,True,plans=['ROLL_PLAN_ABC_TO_ABCD']
+VAL_040,explicit virtual SMS sample cardinality,PASS,True,"declared=5, rows=5"
+VAL_041,component layout and coefficient completeness,PASS,True,"component_orders=[0, 1], counts={'VSMS_COMBO': 2, 'VSMS_M1_NEG': 2, 'VSMS_M1_POS': 2, 'VSMS_M2_POS': 2, 'VSMS_REF': 2}"
+VAL_042,single zero reference SMS sample,PASS,True,"reference_ids=['VSMS_REF'], values=[0.0, 0.0]"
+VAL_043,sample assignment keys unique and complete,PASS,True,assignment_rows=5
+VAL_044,G_SMS manifest coverage and column layout,PASS,True,"G_SMS_P_D_OP_TS301:(12, 2), G_SMS_P_D_OP_TS302:(12, 2), G_SMS_P_D_OP_TS303:(12, 2), G_SMS_P_D_OP_TS304:(12, 2)"
+VAL_045,synthetic descriptive truth boundary,PASS,True,"probability=false, engineering=false, explicit deterministic samples"
+VAL_046,direct SMS final-state boolean semantics,PASS,True,"tokens=['false'], values=[False]"
+VAL_047,plan checkpoint topology and step linkage,PASS,True,"plan_topology=TOPOLOGY_STEP_MIN_CASE, checkpoint_topology=TOPOLOGY_STEP_MIN_CASE, plan_step=TS205, checkpoint_step=TS205"
+VAL_048,production static rolling quality gates,PASS,True,pass=45/45
+VAL_049,source package immutable during rolling run,PASS,True,"before=6db1f993c031861d818902b091d578349bbfe38f6e328be26ed16d693e29db6f, after=6db1f993c031861d818902b091d578349bbfe38f6e328be26ed16d693e29db6f"
+VAL_050,accepted posterior is formal source,PASS,True,state_id=STATE_SAMPLE_001_TS205_POSTERIOR
+VAL_051,runtime posterior source linkage closure,PASS,True,"{""actual_source_state_checkpoint_id"": ""MCP_AFTER_ABC"", ""actual_source_state_id"": ""STATE_SAMPLE_001_TS205_POSTERIOR"", ""actual_source_state_role"": ""POSTERIOR"", ""actual_source_state_sample_id"": ""SAMPLE_001"", ""checkpoint_topology_id"": ""TOPOLOGY_STEP_MIN_CASE"", ""checkpoint_topology_step_id"": ""TS205"", ""failure_reasons"": [], ""measurement_update_checkpoint_id"": ""MCP_AFTER_ABC"", ""measurement_update_id"": ""MEAS_UPDATE_SAMPLE_001_MCP_AFTER_ABC"", ""measurement_update_posterior_state_id"": ""STATE_SAMPLE_001_TS205_POSTERIOR"", ""plan_source_step_id"": ""TS205"", ""plan_topology_id"": ""TOPOLOGY_STEP_MIN_CASE"", ""source_linkage_status"": ""PASS""}"
+VAL_052,all explicit samples complete with isolated branches,PASS,True,"success=5, failure=0, baseline_success=5, baseline_failure=0"
+VAL_053,expected SMS application matrix complete,PASS,True,"applications=20, expected=20"
+VAL_054,independent oracle q decomposition,PASS,True,matched=40/40
+VAL_055,independent oracle global LCP solutions,PASS,True,"matched=40/40, one_call_per_step=true"
+VAL_056,oracle implementation independence declarations,PASS,True,active-set enumeration and direct KCP formula are independent
+VAL_057,independent KCP oracle agreement,PASS,True,"rows=30, max_abs_error=1.021e-12"
+VAL_058,reference sample has zero virtual SMS correction,PASS,True,reference_count=1
+VAL_059,non-reference SMS sensitivity is observable,PASS,True,distinct_kcp_vectors=5
+VAL_060,coupled W_struct cross-interface blocks preserved,PASS,True,"checked_steps=20, max_norm=2.075956e-04"
+VAL_061,KCP contribution ledger and double-count gates,PASS,True,samples=5
+VAL_062,runtime direct SMS aggregation semantics,PASS,True,"included=False, action=ADD_DIRECT_SMS_CONTRIBUTION"
+VAL_063,direct SMS contribution ledger action,PASS,True,expected_action=ADD_DIRECT_SMS_CONTRIBUTION
+VAL_064,predicted-cutoff comparison is complete,PASS,True,"policy=POSTERIOR_AND_PREDICTED_CUTOFF, rows=15"
+VAL_065,descriptive summary oracle and probability labels,PASS,True,"kcp_ids=['KCP_END_GAP', 'KCP_STEP_AB', 'KCP_PARALLEL_BALANCE']"
+VAL_066,runtime rolling quality gates,PASS,True,pass=52/52

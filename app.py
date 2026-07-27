@@ -17,10 +17,20 @@ from core.data_loader import load_package, detect_package_type
 from core.validation import validate_package
 from core.package_validator import data_truthfulness_statement, has_blocking_failures
 from core.reporting import (
+    build_rolling_prediction_report_zip,
     build_runtime_report_zip,
     coupling_ablation_export,
     measurement_update_report_tables,
     runtime_state_lineage,
+)
+from core.rolling_prediction import (
+    BASELINE_POSTERIOR_ONLY,
+    CONTRIBUTION_LEDGER_COLUMNS,
+    has_rolling_prediction_plans,
+    load_rolling_prediction_plans,
+    load_virtual_sms_samples,
+    run_posterior_virtual_sms_rolling_prediction,
+    validate_rolling_prediction_package,
 )
 from core.stage_measurement_update import (
     load_measurement_checkpoints,
@@ -788,6 +798,7 @@ TABS = [
     '⑬ 装配拓扑、阶段路径与状态传递',
     '⑭ 接口耦合诊断与对照试算',
     '⑮ 阶段实测后验更新与回代',
+    '⑯ 后验状态驱动的虚拟 SMS 滚动预测',
 ]
 active_page = st.sidebar.radio(
     '功能环节',
@@ -1598,10 +1609,28 @@ if active_page == TABS[11]:
         [coupling_block_summary(pkg, sid) for sid in result],
         ignore_index=True,
     ) if is_multi_part_package(pkg) else pd.DataFrame()
+    rolling_report_result = None
+    if has_rolling_prediction_plans(pkg):
+        active_rolling_plans = [
+            plan for plan in load_rolling_prediction_plans(pkg)
+            if plan.active_flag
+        ]
+        if active_rolling_plans:
+            try:
+                rolling_report_result = (
+                    run_posterior_virtual_sms_rolling_prediction(
+                        pkg,
+                        result,
+                        active_rolling_plans[0].rolling_plan_id,
+                    )
+                )
+            except Exception as exc:
+                st.error(f"rolling 报告生成失败：{exc}")
     report_zip = build_runtime_report_zip(
         pkg, result, validation, traces,
         mc_stats=mc_stats_for_zip, mc_samples=mc_samples_for_zip,
         physical_report=physical_report,
+        rolling_result=rolling_report_result,
     )
     measurement_report_tables, measurement_report_traces = (
         measurement_update_report_tables(pkg, result)
@@ -2182,3 +2211,366 @@ if active_page == TABS[14]:
                 width="stretch",
                 hide_index=True,
             )
+
+
+if active_page == TABS[15]:
+    st.subheader("后验状态驱动的虚拟 SMS 滚动预测")
+    if not has_rolling_prediction_plans(pkg):
+        st.info(
+            "当前数据包未配置后验状态驱动的虚拟 SMS 滚动预测，"
+            "原确定性 topology_step 和阶段后验更新流程保持不变。"
+        )
+    else:
+        st.warning(
+            "当前虚拟 SMS 库是显式、确定性的合成样本集合。"
+            "本页不是 Monte Carlo，不定义概率分布或失效概率，"
+            "也不构成真实工程预测结论。"
+        )
+        rolling_plans = [
+            plan for plan in load_rolling_prediction_plans(pkg)
+            if plan.active_flag
+        ]
+        plan_ids = [plan.rolling_plan_id for plan in rolling_plans]
+        selected_plan_id = st.selectbox(
+            "rolling plan 选择",
+            plan_ids,
+            key="rolling_plan_selector",
+        )
+        selected_plan = next(
+            plan for plan in rolling_plans
+            if plan.rolling_plan_id == selected_plan_id
+        )
+        available_samples = [
+            sample for sample in load_virtual_sms_samples(pkg)
+            if (
+                sample.sample_set_id
+                == selected_plan.virtual_sms_sample_set_id
+                and sample.part_id in selected_plan.future_part_ids
+            )
+        ]
+        ordered_sample_ids = list(dict.fromkeys(
+            sample.virtual_sms_sample_id
+            for sample in sorted(
+                available_samples,
+                key=lambda item: (
+                    item.sample_order,
+                    item.virtual_sms_sample_id,
+                ),
+            )
+        ))
+        selected_sample_ids = st.multiselect(
+            "virtual SMS 样本选择",
+            ordered_sample_ids,
+            default=ordered_sample_ids,
+            key="rolling_sample_selector",
+        )
+        plan_table = pkg.raw_tables.get(
+            "I_pred/rolling_prediction_plan.csv", pd.DataFrame()
+        )
+        st.markdown("**计划、截止状态与真实性边界**")
+        st.dataframe(
+            plan_table[
+                plan_table.get(
+                    "rolling_plan_id", pd.Series(dtype=str)
+                ).astype(str).eq(selected_plan_id)
+            ],
+            width="stretch",
+            hide_index=True,
+        )
+        rolling_gates = validate_rolling_prediction_package(pkg, result)
+        if not selected_sample_ids:
+            st.info("请选择至少一个显式虚拟 SMS 样本。")
+        elif (
+            rolling_gates["status"].astype(str).eq("FAIL")
+            & rolling_gates["blocking"].astype(bool)
+        ).any():
+            st.error("rolling 数据质量门未通过，正式滚动已阻断。")
+            st.dataframe(
+                rolling_gates, width="stretch", hide_index=True
+            )
+        else:
+            try:
+                rolling_result = (
+                    run_posterior_virtual_sms_rolling_prediction(
+                        pkg,
+                        result,
+                        selected_plan_id,
+                        selected_sample_ids,
+                    )
+                )
+            except Exception as exc:
+                st.error(f"正式 rolling 运行失败：{exc}")
+            else:
+                status = rolling_result.status_summary
+                if rolling_result.quality_status == "PASS":
+                    st.success("权威 rolling status：PASS")
+                else:
+                    st.error(
+                        "权威 rolling status：FAIL；"
+                        + (
+                            rolling_result.authoritative_failure_reason
+                            or "存在正式质量门失败"
+                        )
+                    )
+                metrics = st.columns(5)
+                metric_values = (
+                    ("计划数", 1),
+                    (
+                        "正式 posterior 样本",
+                        status["formal_sample_count"],
+                    ),
+                    (
+                        "posterior 成功/失败",
+                        f"{status['formal_success_count']}/"
+                        f"{status['formal_failure_count']}",
+                    ),
+                    (
+                        "baseline 成功/失败",
+                        f"{status['baseline_success_count']}/"
+                        f"{status['baseline_failure_count']}",
+                    ),
+                    ("运行状态", rolling_result.quality_status),
+                )
+                for column, (label, value) in zip(
+                    metrics, metric_values
+                ):
+                    column.metric(label, value)
+                detail_metrics = st.columns(5)
+                detail_values = (
+                    (
+                        "double-count fail",
+                        status["double_count_fail_count"],
+                    ),
+                    (
+                        "application fail",
+                        status["application_fail_count"],
+                    ),
+                    (
+                        "immutability",
+                        status["immutability_status"],
+                    ),
+                    (
+                        "policy validation",
+                        status["policy_validation_status"],
+                    ),
+                    (
+                        "概率解释允许",
+                        status["probability_interpretation_allowed"],
+                    ),
+                )
+                for column, (label, value) in zip(
+                    detail_metrics, detail_values
+                ):
+                    column.metric(label, value)
+                st.caption(
+                    "source linkage="
+                    f"{status.get('source_linkage_status', 'N/A')}；"
+                    "checkpoint="
+                    f"{rolling_result.trace.get('checkpoint_topology_step_id', '')}；"
+                    "posterior="
+                    f"{rolling_result.trace.get('actual_source_state_id', '')}；"
+                    "measurement update="
+                    f"{rolling_result.trace.get('measurement_update_id', '')}"
+                )
+                st.caption(
+                    "final_state_includes_direct_sms_geometry="
+                    f"{status.get('final_state_includes_direct_sms_geometry')}；"
+                    "direct SMS aggregation action="
+                    f"{status.get('direct_sms_aggregation_action', 'N/A')}"
+                )
+                if (
+                    selected_plan.baseline_comparison_policy
+                    == BASELINE_POSTERIOR_ONLY
+                ):
+                    st.info(
+                        "当前计划为 POSTERIOR_ONLY：未运行 predicted-cutoff "
+                        "对照，baseline 状态为 NOT_APPLICABLE。"
+                    )
+
+                coefficients = pkg.raw_tables.get(
+                    "I_pred/virtual_sms_coefficients.csv",
+                    pd.DataFrame(),
+                )
+                coefficients = coefficients[
+                    coefficients.get(
+                        "virtual_sms_sample_id",
+                        pd.Series(dtype=str),
+                    ).astype(str).isin(selected_sample_ids)
+                ]
+                st.markdown("**虚拟 SMS 系数与 reference / Δα**")
+                st.dataframe(
+                    coefficients, width="stretch", hide_index=True
+                )
+                delta_rows = []
+                q_rows = []
+                for sample in rolling_result.sample_results:
+                    for part_id in sample.future_part_ids:
+                        delta_rows.append({
+                            "virtual_sms_sample_id":
+                                sample.virtual_sms_sample_id,
+                            "part_id": part_id,
+                            "coefficient":
+                                sample.sms_coefficients.get(part_id, []),
+                            "reference":
+                                sample.sms_reference_coefficients.get(
+                                    part_id, []
+                                ),
+                            "delta_alpha":
+                                sample.sms_delta_coefficients.get(
+                                    part_id, []
+                                ),
+                        })
+                    for row in sample.trace.get(
+                        "q_decomposition", []
+                    ):
+                        q_rows.append({
+                            "virtual_sms_sample_id":
+                                sample.virtual_sms_sample_id,
+                            **row,
+                        })
+                st.dataframe(
+                    pd.DataFrame(delta_rows),
+                    width="stretch",
+                    hide_index=True,
+                )
+                st.markdown("**未来步骤 q 分解与全局 LCP**")
+                st.dataframe(
+                    pd.DataFrame(q_rows),
+                    width="stretch",
+                    hide_index=True,
+                )
+
+                kcp_tab, comparison_tab, summary_tab = st.tabs([
+                    "KCP 与贡献账本",
+                    "predicted / posterior 对照",
+                    "描述性汇总与接触模式",
+                ])
+                with kcp_tab:
+                    if rolling_result.kcp_predictions.empty:
+                        st.info(
+                            "没有成功的正式 posterior 样本，"
+                            "因此没有可信的 KCP 预测可展示。"
+                        )
+                    else:
+                        st.dataframe(
+                            rolling_result.kcp_predictions,
+                            width="stretch",
+                            hide_index=True,
+                        )
+                    ledger_frames = [
+                        sample.contribution_ledger
+                        for sample in rolling_result.sample_results
+                        if not sample.contribution_ledger.empty
+                    ]
+                    ledger = (
+                        pd.concat(ledger_frames, ignore_index=True)
+                        if ledger_frames
+                        else pd.DataFrame(
+                            columns=CONTRIBUTION_LEDGER_COLUMNS
+                        )
+                    )
+                    if ledger.empty:
+                        st.info(
+                            "没有成功的正式 posterior 样本，"
+                            "因此没有贡献账本记录。"
+                        )
+                    else:
+                        st.dataframe(
+                            ledger, width="stretch", hide_index=True
+                        )
+                with comparison_tab:
+                    if (
+                        selected_plan.baseline_comparison_policy
+                        == BASELINE_POSTERIOR_ONLY
+                    ):
+                        st.info(
+                            "当前计划未启用 predicted-cutoff 对照；"
+                            "该表为固定 schema 的空表，状态 NOT_APPLICABLE。"
+                        )
+                    elif rolling_result.baseline_comparison.empty:
+                        st.info("当前运行没有可展示的 baseline 对照记录。")
+                    else:
+                        st.dataframe(
+                            rolling_result.baseline_comparison,
+                            width="stretch",
+                            hide_index=True,
+                        )
+                with summary_tab:
+                    st.caption(
+                        "均值、标准差、经验分位数和超差样本占比仅描述"
+                        "当前显式样本库；超差占比不是失效概率。"
+                    )
+                    if (
+                        rolling_result.descriptive_summary.kcp_summary.empty
+                    ):
+                        st.info(
+                            "没有成功的正式 posterior 样本，"
+                            "不生成描述性 KCP 统计。"
+                        )
+                    else:
+                        st.dataframe(
+                            rolling_result.descriptive_summary.kcp_summary,
+                            width="stretch",
+                            hide_index=True,
+                        )
+                    if rolling_result.contact_mode_summary.empty:
+                        st.info(
+                            "没有成功的正式 posterior 样本，"
+                            "不生成接触模式统计。"
+                        )
+                    else:
+                        st.dataframe(
+                            rolling_result.contact_mode_summary,
+                            width="stretch",
+                            hide_index=True,
+                        )
+
+                st.markdown("**失败隔离与质量门**")
+                all_failures = [
+                    *rolling_result.sample_failures,
+                    *rolling_result.predicted_baseline_failures,
+                ]
+                if all_failures:
+                    st.dataframe(
+                        pd.DataFrame([
+                            {
+                                "virtual_sms_sample_id":
+                                    item.virtual_sms_sample_id,
+                                "quality_status": item.quality_status,
+                                "source_state_role":
+                                    item.source_state_role,
+                                "double_count_fail_count":
+                                    item.double_count_fail_count,
+                                "application_fail_count":
+                                    item.application_fail_count,
+                                "failure_reason": item.failure_reason,
+                            }
+                            for item in all_failures
+                        ]),
+                        width="stretch",
+                        hide_index=True,
+                    )
+                elif rolling_result.quality_status == "PASS":
+                    st.success("全部所选显式样本通过，失败样本数为 0。")
+                else:
+                    st.error(
+                        rolling_result.authoritative_failure_reason
+                        or "rolling 权威质量状态为 FAIL。"
+                    )
+                st.dataframe(
+                    rolling_result.quality_gates,
+                    width="stretch",
+                    hide_index=True,
+                )
+                rolling_zip = build_rolling_prediction_report_zip(
+                    pkg, rolling_result
+                )
+                st.download_button(
+                    "下载后验虚拟 SMS 滚动预测报告 ZIP",
+                    rolling_zip,
+                    file_name=(
+                        f"rolling_prediction_{selected_plan_id}.zip"
+                    ),
+                    mime="application/zip",
+                    key="rolling_report_download",
+                )

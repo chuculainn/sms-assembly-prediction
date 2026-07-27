@@ -1,0 +1,2 @@
+﻿gate_id,gate_name,target_object_ids,rule_expression,pass_fail,evidence_reference,approved_by,approval_time,notes
+ROLLING_PACKAGE_GATE,POSTERIOR_VIRTUAL_SMS_ROLLING_SELF_VALIDATION,04_POSTERIOR_VIRTUAL_SMS_ROLLING_MIN_CASE,"all blocking structural, oracle, physical and truth gates pass",PASS,validation/test_results.json,DETERMINISTIC_GENERATOR,2026-07-26T00:00:00+08:00,Synthetic numerical-consistency fixture only.

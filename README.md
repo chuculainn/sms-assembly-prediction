@@ -109,3 +109,10 @@ python scripts/run_automated_tests.py
 - 同时保留 PREDICTED/POSTERIOR 状态；成功后验传递到后续 `topology_step`，失败则生成回滚记录并保留预测状态。
 - 新增确定性 `03_STAGE_MEASUREMENT_UPDATE_MIN_CASE`、独立后验/LCP oracle、本地验证器、CLI 计数、完整报告产物与 Streamlit 第 15 页。
 - 本功能冻结参数和 SMS；合成测量只用于数值一致性验证。详见 `STAGE_MEASUREMENT_POSTERIOR_UPDATE.md`。
+
+## 后验状态驱动的虚拟 SMS 滚动预测
+
+- accepted posterior 可作为 rolling cutoff，已有子装配体继承当前状态，future parts 使用显式确定性虚拟 SMS 样本。
+- 每个未来步按 `q_operator + q_posterior + G_SMS @ Delta alpha + q_process` 组成 effective q，并保留公共 VectorLayout、跨接口 `W_struct` 块与一次全局 LCP。
+- 每个样本拥有独立状态分支、KCP 贡献账本和 predicted/posterior cutoff 对照；汇总仅为显式样本描述，不是 Monte Carlo 或 Pf。
+- 新增 04 合成最小包、独立 oracle/validator、CLI 摘要、完整报告和 Streamlit 第 16 页。详见 `POSTERIOR_VIRTUAL_SMS_ROLLING_PREDICTION.md`。

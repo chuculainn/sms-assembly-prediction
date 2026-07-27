@@ -41,7 +41,7 @@
 
 - topology_step 路线是单条、确定性、线性有序路线；没有条件分支、返修、并行调度、实测触发切换或动态重规划。
 - 每步的 `q/U_FREE/W_struct/Cn` 来自数据包预计算算子，软件没有在线调用全阶 FE，也没有从全阶 K 自动 Schur 凝聚。
-- 本轮没有实现阶段实测后验更新、后续虚拟 SMS 滚动预测或未来场景 Monte Carlo；仓库既有 Monte Carlo 原型保持兼容，但不属于本执行器的新能力。
+- 阶段实测后验更新与显式虚拟 SMS 滚动预测现作为增量层接入；未来场景 Monte Carlo 和概率预测仍未实现。仓库既有 Monte Carlo 原型保持兼容，但不属于 topology_step 执行器或本轮 rolling 的新能力。
 - 预计算 topology_step 模式不运行基于无效倍率的 Monte Carlo/单因素敏感性；本轮没有实现步骤算子在线重构。
 - `02_TOPOLOGY_STEP_MIN_CASE` 是合成数值一致性案例，不是工程验证数据；不得据此宣称 KCP 预测精度或生产级数字孪生能力。
 
@@ -73,3 +73,10 @@
 - `G_q` 行布局必须引用公共 `VectorLayout`；后验重求继续保留跨接口 `W_struct` 块并一次求解全部活动接口。
 - 接受的低维 `eta/P` 与子装配、活动接口、JOIN 锁定和 RELEASE 历史共同传递；接触活动集仅作为后续求解暖启动信息。
 - 第一版 F/Q 可以显式配置或采用有 trace 记录的 identity/zero 策略，但不表示全阶 FE 协方差传播。
+
+## 多零件后验虚拟 SMS 滚动
+
+- rolling cutoff 前的子装配体继承 accepted posterior；future parts 必须由 plan 数据声明，不能写死零件或接口名称。
+- 每个 future part 可拥有独立 SMS layout、reference 和 `G_SMS`，所有 correction 在公共接触 VectorLayout 中相加。
+- 同一步的全部活动接口仍组成一个 `W_total = W_struct + Cn` 全局 LCP；跨接口块不因样本分支而删除。
+- 显式样本、KCP 账本和描述性汇总不具有概率含义。04 四零件案例是最小集成基准，不是规模上限。

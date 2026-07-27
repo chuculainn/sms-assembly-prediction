@@ -89,10 +89,12 @@ fallback_reason=LEGACY_STAGE_COMPATIBILITY
 
 ## 当前未实现
 
-- 后续虚拟 SMS 滚动预测和未来场景 Monte Carlo；
+- 未来场景 Monte Carlo 和概率预测；
 - 在线全阶 K/FE Schur 凝聚；
 - 完整法向—切向摩擦 NCP、几何/材料非线性；
 - JSS/J-T 自动构建、真实 KCP 独立验证；
 - 条件分支、返修、并行调度、路线优化和生产级数字孪生平台。
 
 阶段实测后验更新已作为增量层接入：checkpoint 同时保留 PREDICTED/POSTERIOR，状态修正以显式 G_q 进入 q，并对当前活动接口执行一次统一全局 LCP 重求。详细合同、数据治理、回滚和真实性边界见 `STAGE_MEASUREMENT_POSTERIOR_UPDATE.md`。
+
+后验虚拟 SMS 滚动层通过 `run_topology_steps_from_state` 从 accepted posterior 恢复执行，只运行 cutoff 后步骤。每个显式样本建立独立状态分支，future-part SMS 以 `G_SMS @ Delta alpha` 加入各步骤 q；底层仍复用同一 `_execute_step`、公共 VectorLayout、完整跨接口 `W_struct` 和一次全局 LCP。详见 `POSTERIOR_VIRTUAL_SMS_ROLLING_PREDICTION.md`。

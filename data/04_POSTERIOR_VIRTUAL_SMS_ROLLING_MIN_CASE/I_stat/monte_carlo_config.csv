@@ -1,0 +1,2 @@
+mc_config_id,random_variable_ids,joint_distribution_id,sample_count,random_seed,sampling_method,batch_size,parallel_settings,mode_library_usage,high_fidelity_fallback_budget,stopping_rule_optional,metadata
+MC_DEFAULT,alpha_sms;theta;e_proc,JD_DEFAULT,1,202607,deterministic_placeholder,1,none,none,0,,"{""note"":""默认占位值；请替换为真实工程数据。"",""schema_version"":""V2.5""}"
